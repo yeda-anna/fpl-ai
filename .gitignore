@@ -1,0 +1,8 @@
+.venv/
+.cache/
+.shots/
+server.log
+__pycache__/
+*.pyc
+*.lp
+*.mps

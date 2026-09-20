@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FPL Copilot — local</title>
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>⚽</text></svg>">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand">
+      <div class="dot">⚡</div>
+      <div>FPL Copilot<small>running locally</small></div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-view="dashboard" class="on"><span class="ico">◎</span>Dashboard</button>
+      <button data-view="xpts"><span class="ico">📊</span>Expected Points</button>
+      <button data-view="solver"><span class="ico">🧮</span>Solver</button>
+      <button data-view="chips"><span class="ico">🎲</span>Chip Strategy</button>
+      <button data-view="rate"><span class="ico">⭐</span>Rate My Team</button>
+      <button data-view="compare"><span class="ico">⚖️</span>Compare</button>
+      <button data-view="league"><span class="ico">🏆</span>Mini-Leagues</button>
+      <button data-view="model"><span class="ico">🔬</span>How It Works</button>
+    </nav>
+    <div class="side-foot">
+      Data: official Fantasy Premier League API.<br>
+      Projections and optimisation run on this machine.
+      <div id="meta-foot" style="margin-top:8px"></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="view-title">Dashboard</h1>
+        <p id="view-sub">Your squad, projected forward.</p>
+      </div>
+      <div class="controls">
+        <label class="fld">Team ID
+          <input id="teamId" type="number" placeholder="e.g. 1234567" style="width:132px">
+        </label>
+        <label class="fld">Horizon
+          <select id="horizon">
+            <option>1</option><option>3</option><option selected>5</option>
+            <option>6</option><option>8</option><option>10</option>
+          </select>
+        </label>
+        <button class="btn primary" id="load">Load</button>
+      </div>
+    </div>
+
+    <section id="view-dashboard" class="view on"></section>
+    <section id="view-xpts" class="view"></section>
+    <section id="view-solver" class="view"></section>
+    <section id="view-chips" class="view"></section>
+    <section id="view-rate" class="view"></section>
+    <section id="view-compare" class="view"></section>
+    <section id="view-league" class="view"></section>
+    <section id="view-model" class="view"></section>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
