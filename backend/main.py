@@ -464,6 +464,23 @@ def copilot(req: CopilotRequest):
     return scout_mod.copilot(e, rows, req.question, ctx, req.horizon)
 
 
+@app.get("/healthz")
+def healthz():
+    """Liveness for the platform's health check - answers instantly, no model build."""
+    return {"ok": True, "model_ready": _engine["obj"] is not None}
+
+
+@app.on_event("startup")
+def _warm_up():
+    """Build the model in the background so the first visitor doesn't wait for it."""
+    def build():
+        try:
+            engine()
+        except Exception:
+            pass        # first real request will retry and surface the error
+    threading.Thread(target=build, daemon=True).start()
+
+
 @app.get("/api/health")
 def health():
     e = engine()

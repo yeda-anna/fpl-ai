@@ -12,6 +12,13 @@ live FPL data.
     ./run.sh                  # http://127.0.0.1:8787
     PORT=9000 ./run.sh        # another port
 
+### Deploy (Railway)
+
+`railway.json` sets the start command and health check, so a push is all it
+takes: `uvicorn main:app --app-dir backend --host 0.0.0.0 --port $PORT`.
+`Procfile` carries the same command for other hosts. `/healthz` answers
+instantly; the model builds in the background on startup.
+
 Enter your FPL Team ID in the top bar. It's the number in the address bar on
 your Points page: `fantasy.premierleague.com/entry/<ID>/event/5`.
 
