@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 import pulp
 
 SQUAD_SIZE = 15
+XI_SIZE = 11
 POS_QUOTA = {1: 2, 2: 5, 3: 5, 4: 3}          # GK, DEF, MID, FWD in the 15
 XI_MIN = {1: 1, 2: 3, 3: 2, 4: 1}
 XI_MAX = {1: 1, 2: 5, 3: 5, 4: 3}
@@ -19,16 +20,33 @@ MAX_PER_CLUB = 3
 HIT_COST = 4.0
 MAX_FREE_TRANSFERS = 5                         # 2025/26 rules: bank up to 5
 BENCH_WEIGHT = 0.12                            # bench points are worth something
+VICE_WEIGHT = 0.04                             # the vice only plays if the captain blanks
 DECAY = 0.87                                   # a point next week beats a point in GW+5
 
 
+SELL_ON_FEE = 0.5
+
+
+def configure(rules) -> None:
+    """Adopt the squad, formation and transfer limits FPL publishes."""
+    global SQUAD_SIZE, XI_SIZE, POS_QUOTA, XI_MIN, XI_MAX, MAX_PER_CLUB, MAX_FREE_TRANSFERS, SELL_ON_FEE
+    SQUAD_SIZE = rules.squad_size
+    XI_SIZE = rules.xi_size
+    POS_QUOTA = dict(rules.quota)
+    XI_MIN = dict(rules.xi_min)
+    XI_MAX = dict(rules.xi_max)
+    MAX_PER_CLUB = rules.club_limit
+    MAX_FREE_TRANSFERS = rules.max_free_transfers
+    SELL_ON_FEE = rules.sell_on_fee
+
+
 def selling_price(now_cost: int, purchase_price: Optional[int]) -> int:
-    """FPL sells at purchase price plus half the rise, rounded down to 0.1m."""
+    """Sell at purchase price plus the rise less FPL's sell-on fee, rounded down."""
     if purchase_price is None:
         return now_cost
     if now_cost <= purchase_price:
         return now_cost
-    return purchase_price + (now_cost - purchase_price) // 2
+    return purchase_price + int((now_cost - purchase_price) * (1.0 - SELL_ON_FEE))
 
 
 def build_pool(rows: List[Dict[str, Any]], current_ids: List[int], pool_size: int = 160):
@@ -66,7 +84,9 @@ def solve(rows: List[Dict[str, Any]],
           wildcard_gw: Optional[int] = None,
           free_hit_gw: Optional[int] = None,
           pool_size: int = 160,
-          time_limit: int = 25) -> Dict[str, Any]:
+          time_limit: int = 25,
+          forbid: Optional[List[List[Any]]] = None,
+          gap: float = 0.005) -> Dict[str, Any]:
     """Return an optimal transfer plan.
 
     current_squad: [{"id": int, "purchase_price": int}, ...] - may be empty, in which
@@ -99,6 +119,7 @@ def solve(rows: List[Dict[str, Any]],
     squad = pulp.LpVariable.dicts("squad", (ids, T), cat="Binary")
     lineup = pulp.LpVariable.dicts("xi", (ids, T), cat="Binary")
     capt = pulp.LpVariable.dicts("cap", (ids, T), cat="Binary")
+    vice = pulp.LpVariable.dicts("vice", (ids, T), cat="Binary")
     tin = pulp.LpVariable.dicts("in", (ids, T), cat="Binary")
     tout = pulp.LpVariable.dicts("out", (ids, T), cat="Binary")
     hits = pulp.LpVariable.dicts("hits", T, lowBound=0, upBound=max_hits, cat="Integer")
@@ -118,7 +139,7 @@ def solve(rows: List[Dict[str, Any]],
         for c in clubs:
             prob += pulp.lpSum(squad[p][t] for p in ids if club[p] == c) <= MAX_PER_CLUB
 
-        prob += pulp.lpSum(lineup[p][t] for p in ids) == 11
+        prob += pulp.lpSum(lineup[p][t] for p in ids) == XI_SIZE
         for q in (1, 2, 3, 4):
             members = [lineup[p][t] for p in ids if pos[p] == q]
             prob += pulp.lpSum(members) >= XI_MIN[q]
@@ -126,7 +147,10 @@ def solve(rows: List[Dict[str, Any]],
         for p in ids:
             prob += lineup[p][t] <= squad[p][t]
             prob += capt[p][t] <= lineup[p][t]
+            prob += vice[p][t] <= lineup[p][t]
+            prob += capt[p][t] + vice[p][t] <= 1      # captain and vice are different players
         prob += pulp.lpSum(capt[p][t] for p in ids) == 1
+        prob += pulp.lpSum(vice[p][t] for p in ids) == 1
 
         # squad continuity
         for p in ids:
@@ -147,8 +171,10 @@ def solve(rows: List[Dict[str, Any]],
             prob += ft[t] == min(MAX_FREE_TRANSFERS, max(1, free_transfers))
         else:
             prev_made = pulp.lpSum(tin[p][t - 1] for p in ids)
-            if (wildcard_gw == gws[t - 1]) or (free_hit_gw == gws[t - 1]):
-                prob += ft[t] <= ft[t - 1] + 1        # chips don't spend transfers
+            built_from_scratch = (not have_squad and t - 1 == 0)
+            if (wildcard_gw == gws[t - 1]) or (free_hit_gw == gws[t - 1]) or built_from_scratch:
+                # chips - and picking a squad from nothing - don't spend free transfers
+                prob += ft[t] <= ft[t - 1] + 1
             else:
                 prob += ft[t] <= ft[t - 1] - prev_made + 1
 
@@ -163,12 +189,22 @@ def solve(rows: List[Dict[str, Any]],
         d = DECAY ** t
         objective.append(d * pulp.lpSum(xp[(p, t)] * lineup[p][t] for p in ids))
         objective.append(d * pulp.lpSum(xp[(p, t)] * capt[p][t] for p in ids))
+        objective.append(d * VICE_WEIGHT * pulp.lpSum(xp[(p, t)] * vice[p][t] for p in ids))
         objective.append(d * BENCH_WEIGHT * pulp.lpSum(
             xp[(p, t)] * (squad[p][t] - lineup[p][t]) for p in ids))
         objective.append(-d * HIT_COST * hits[t])
     prob += pulp.lpSum(objective)
 
-    status = prob.solve(pulp.PULP_CBC_CMD(msg=0, timeLimit=time_limit))
+    # No-good cuts: each forbidden plan is ruled out so the solver must find a
+    # genuinely different route rather than returning the same answer again.
+    for banned in (forbid or []):
+        terms = [tin[p][t] for p, t in banned if p in index and t in T]
+        if terms:
+            prob += pulp.lpSum(terms) <= len(terms) - 1
+
+    # Stop once the plan is provably within GAP of the best possible. Projections
+    # carry far more uncertainty than 0.5%, so proving the last sliver is wasted time.
+    status = prob.solve(pulp.PULP_CBC_CMD(msg=0, timeLimit=time_limit, gapRel=gap))
 
     def val(v):
         return int(round(v.value() or 0))
@@ -180,14 +216,21 @@ def solve(rows: List[Dict[str, Any]],
         xi = [index[p] for p in ids if val(lineup[p][t]) == 1]
         sq = [index[p] for p in ids if val(squad[p][t]) == 1]
         cap_id = next((p for p in ids if val(capt[p][t]) == 1), None)
+        vice_id = next((p for p in ids if val(vice[p][t]) == 1), None)
         bench = [r for r in sq if r["id"] not in {x["id"] for x in xi}]
         xi.sort(key=lambda r: (r["position"], -xp[(r["id"], t)]))
-        bench.sort(key=lambda r: -xp[(r["id"], t)])
+        # FPL benches the reserve keeper separately, then three outfielders in order
+        bench.sort(key=lambda r: (r["position"] != 1, -xp[(r["id"], t)]))
 
-        def light(r):
+        def light(r, t=t):
+            week = next((g for g in r["per_gw"] if g["gw"] == gws[t]), None)
+            legs = week["fixtures"] if week else []
+            opp = ", ".join("%s (%s)" % (f["opponent_short"], "H" if f["home"] else "A")
+                            for f in legs) or "Blank"
             return {"id": r["id"], "web_name": r["web_name"], "team_short": r["team_short"],
-                    "position": r["position"], "price": r["price"],
-                    "xpts": round(xp[(r["id"], t)], 2)}
+                    "team": r["team"], "position": r["position"], "price": r["price"],
+                    "selected_by_percent": r.get("selected_by_percent", 0.0),
+                    "opp": opp, "xpts": round(xp[(r["id"], t)], 2)}
 
         xi_pts = sum(xp[(r["id"], t)] for r in xi)
         cap_pts = xp[(cap_id, t)] if cap_id else 0.0
@@ -201,6 +244,7 @@ def solve(rows: List[Dict[str, Any]],
             "free_transfers": val(ft[t]),
             "bank": round(val(bank_v[t]) / 10.0, 1),
             "captain": light(index[cap_id]) if cap_id else None,
+            "vice_captain": light(index[vice_id]) if vice_id else None,
             "starting_xi": [light(r) for r in xi],
             "bench": [light(r) for r in bench],
             "chip": ("Wildcard" if wildcard_gw == gws[t]
@@ -209,7 +253,14 @@ def solve(rows: List[Dict[str, Any]],
             "xpts_before_hits": round(xi_pts + cap_pts, 2),
         })
 
+    # sol_status > 0 means CBC holds a genuine integer-feasible plan (optimal, or the
+    # best found before the time limit). Anything else and the variables are junk.
+    feasible = getattr(prob, "sol_status", 1) > 0 and pulp.LpStatus[status] != "Infeasible"
+    signature = [(p, t) for t in T for p in ids if val(tin[p][t]) == 1]
+
     return {
+        "signature": signature,
+        "feasible": feasible,
         "status": pulp.LpStatus[status],
         "horizon": horizon,
         "total_xpts": round(sum(g["xpts"] for g in plan), 2),

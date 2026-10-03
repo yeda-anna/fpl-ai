@@ -74,14 +74,20 @@ def squad_split(squad_rows: List[Dict[str, Any]], gw_index: int = 0):
 # --- chip strategy ---------------------------------------------------------
 
 def chip_strategy(engine, rows, squad_rows, current_squad, bank, free_transfers,
-                  horizon, chips_used=None):
+                  horizon, chips_history=None):
     """Score every gameweek for every chip, then rank whole chip plans.
 
     Bench Boost and Triple Captain are read straight off the projected squad.
     Free Hit and Wildcard each need their own optimisation - a Free Hit is the best
     possible eleven for one week, a Wildcard is a fresh squad kept from then on.
     """
-    chips_used = set(chips_used or [])
+    history = list(chips_history or [])
+    R = engine.rules
+
+    def can(name, gw):
+        # 2026/27 runs two sets of chips: one for GW1-19, one for GW20-38
+        return R.chip_available(name, gw, history)
+
     index = {r["id"]: r for r in rows}
     gws = [g["gw"] for g in rows[0]["per_gw"]] if rows else []
 
@@ -101,17 +107,19 @@ def chip_strategy(engine, rows, squad_rows, current_squad, bank, free_transfers,
 
     for t, gw in enumerate(gws):
         base = baseline[t]
-        if "bboost" not in chips_used:
+        if can("bboost", gw):
             options["BB"].append({"gw": gw, "gain": round(base["bench_xpts"], 2),
                                   "detail": "Bench projects %.1f pts" % base["bench_xpts"]})
-        if "3xc" not in chips_used:
+        if can("3xc", gw):
             options["TC"].append({"gw": gw, "gain": round(base["captain_xpts"], 2),
                                   "detail": "Extra captain leg: %s" % (base["captain"] or "-")})
 
     # Free Hit: best legal eleven money can buy for a single week.
-    if "freehit" not in chips_used:
+    if any(can("freehit", g) for g in gws):
         budget = bank + sum(r["price"] for r in squad_rows)
         for t, gw in enumerate(gws):
+            if not can("freehit", gw):
+                continue
             fh = _one_week_dream_team(rows, t, budget)
             gain = round(fh["total"] - baseline[t]["total"], 2)
             options["FH"].append({"gw": gw, "gain": gain,
@@ -120,11 +128,13 @@ def chip_strategy(engine, rows, squad_rows, current_squad, bank, free_transfers,
                                   "xi": fh["xi"], "captain": fh["captain"]})
 
     # Wildcard: re-solve the rest of the horizon with one free rebuild.
-    if "wildcard" not in chips_used and current_squad:
+    if current_squad and any(can("wildcard", g) for g in gws[:4]):
         base_plan = solver_mod.solve(rows, current_squad, bank, free_transfers, len(gws),
                                      max_hits=2, pool_size=95, time_limit=8)
         base_total = base_plan["total_xpts"]
         for t, gw in enumerate(gws[:min(len(gws), 4)]):
+            if not can("wildcard", gw):
+                continue
             wc = solver_mod.solve(rows, current_squad, bank, free_transfers, len(gws),
                                   max_hits=2, wildcard_gw=gw, pool_size=95, time_limit=8)
             options["WC"].append({"gw": gw, "gain": round(wc["total_xpts"] - base_total, 2),
@@ -160,7 +170,9 @@ def chip_strategy(engine, rows, squad_rows, current_squad, bank, free_transfers,
         "baseline": baseline,
         "options": options,
         "best_plans": plans[:8],
-        "chips_used": sorted(chips_used),
+        "chips_used": sorted({"%s (GW%d)" % (h["name"], h["event"]) for h in history}),
+        "windows": {name: R.chip_windows_left(name, gws[0] if gws else 1, history)
+                    for name in ("wildcard", "freehit", "bboost", "3xc")},
     }
 
 
@@ -217,36 +229,78 @@ def _one_week_dream_team(rows, gw_index, budget):
 
 # --- rate my team ----------------------------------------------------------
 
+_BENCH_CACHE: Dict[Any, Any] = {}
+
+
+def optimal_squad(rows, budget: float, horizon: int):
+    """The best legal squad money can buy right now, found by the MIP solver.
+
+    This is the yardstick for the team rating: not an abstract "perfect team" but
+    the strongest fifteen your own budget could field over the same horizon.
+    """
+    key = (round(budget, 1), horizon, id(rows))
+    if key in _BENCH_CACHE:
+        return _BENCH_CACHE[key]
+    plan = solver_mod.solve(rows, [], budget, 1, horizon, max_hits=0,
+                            pool_size=130, time_limit=12, gap=0.01)
+    index = {r["id"]: r for r in rows}
+    gw0 = plan["gameweeks"][0] if plan.get("gameweeks") else None
+    squad = []
+    if gw0 and plan.get("feasible"):
+        squad = [index[p["id"]] for p in gw0["starting_xi"] + gw0["bench"] if p["id"] in index]
+    if len(squad) != solver_mod.SQUAD_SIZE:
+        squad = []          # caller falls back to the greedy benchmark
+    if len(_BENCH_CACHE) > 32:
+        _BENCH_CACHE.clear()
+    _BENCH_CACHE[key] = squad
+    return squad
+
+
+def _closeness(ratio: float, floor: float = 0.65, ceil: float = 0.95) -> float:
+    """Map 'share of the best possible' onto 0-100.
+
+    65% of the optimum is easy - any sensible squad gets there - so that is zero.
+    The optimum is a free rebuild no real manager can make, so 95% of it already
+    counts as perfect. The scale is spent on the range that separates managers.
+    """
+    return round(max(0.0, min(1.0, (ratio - floor) / (ceil - floor))) * 100.0, 1)
+
+
 def rate_team(engine, rows, squad_rows, entry, bank, horizon):
     split = squad_split(squad_rows, 0)
     all_sorted = sorted(rows, key=lambda r: -r["xpts_total"])
     squad_total = sum(r["xpts_total"] for r in squad_rows)
-
-    # a realistic "very good squad" benchmark, not a fantasy unlimited-budget one
-    bench_mark = sum(r["xpts_total"] for r in _benchmark_squad(all_sorted))
-    efficiency = min(1.0, squad_total / bench_mark) if bench_mark else 0.0
-
     value = sum(r["price"] for r in squad_rows) + bank
+
+    best = optimal_squad(rows, value, horizon) or _benchmark_squad(all_sorted)
+    best_total = sum(r["xpts_total"] for r in best) or 1e-6
+    best_split = squad_split(best, 0) if best else split
+    best_value = best_total / max(0.1, sum(r["price"] for r in best) or value)
+
     flagged = [r for r in squad_rows if r["status"] != "a"]
     premium = [r for r in squad_rows if r["price"] >= 9.0]
     dead = [r for r in squad_rows if r["xpts_total"] < horizon * 1.2]
     diffs = [r for r in squad_rows if r["selected_by_percent"] < 10.0]
     templates = [r for r in squad_rows if r["selected_by_percent"] > 35.0]
+    starters_flagged = [r for r in split["xi"] if r["status"] != "a"]
 
     scores = {
-        "projection": round(100 * efficiency, 1),
-        "structure": round(100 * min(1.0, split["xi_xpts"] / max(1e-6, 0.82 * squad_total / horizon * 1.0)), 1) if horizon else 0.0,
+        # how much of the best affordable squad's output you'd get
+        "projection": _closeness(squad_total / best_total),
+        # next week's best XI against the optimum's best XI
+        "structure": _closeness(split["xi_xpts"] / max(1e-6, best_split["xi_xpts"])),
+        # a bench worth about 8 points a week is one you can actually use
         "bench": round(min(100.0, split["bench_xpts"] / 8.0 * 100), 1),
-        "fitness": round(max(0.0, 100 - 18.0 * len(flagged)), 1),
-        "value": round(min(100.0, squad_total / max(0.1, value) * 100 / 0.62), 1),
+        # flags hurt, and flags in the starting eleven hurt more
+        "fitness": round(max(0.0, 100 - 10.0 * len(flagged) - 12.0 * len(starters_flagged)), 1),
+        # points per £m against what the optimum squeezes from the same money
+        "value": _closeness((squad_total / max(0.1, value)) / max(1e-6, best_value)),
     }
-    scores["structure"] = max(0.0, min(100.0, scores["structure"]))
     overall = round(0.45 * scores["projection"] + 0.15 * scores["structure"]
                     + 0.10 * scores["bench"] + 0.15 * scores["fitness"]
                     + 0.15 * scores["value"], 1)
-
-    grade = ("A+" if overall >= 90 else "A" if overall >= 83 else "B+" if overall >= 76
-             else "B" if overall >= 68 else "C+" if overall >= 60 else "C" if overall >= 50 else "D")
+    grade = ("A+" if overall >= 90 else "A" if overall >= 82 else "B+" if overall >= 74
+             else "B" if overall >= 65 else "C+" if overall >= 56 else "C" if overall >= 45 else "D")
 
     notes = []
     if flagged:
@@ -254,42 +308,49 @@ def rate_team(engine, rows, squad_rows, entry, bank, horizon):
                      % (len(flagged), "" if len(flagged) == 1 else "s",
                         ", ".join(r["web_name"] for r in flagged)))
     if dead:
-        notes.append("Projecting under 1.2 pts a week: %s. These are the transfers that pay."
+        notes.append("Projecting under 1.2 points a week: %s. These are the transfers that pay."
                      % ", ".join(r["web_name"] for r in dead[:4]))
+    gap = best_total - squad_total
+    if gap > 3:
+        notes.append("The best squad your £%.1fm could buy projects %.1f more points over %d gameweeks. "
+                      "The upgrades on the right close most of that gap."
+                      % (value, gap, horizon))
     if split["bench_xpts"] < 4:
-        notes.append("Your bench projects only %.1f pts over the next gameweek, which makes a Bench Boost weak and leaves you exposed to a late injury."
-                     % split["bench_xpts"])
+        notes.append("Your bench projects only %.1f points next gameweek, which makes a Bench Boost weak "
+                     "and leaves you exposed to a late injury." % split["bench_xpts"])
     if len(premium) < 2:
-        notes.append("You own %d player at 9.0m or above. Elite attackers carry most of the ceiling in FPL, and a squad without them tends to track the average."
-                     % len(premium))
+        notes.append("You own %d player at £9.0m or above. Elite attackers carry most of the ceiling, "
+                     "and a squad without them tends to track the average." % len(premium))
     if len(diffs) < 2:
-        notes.append("Almost everything you own is widely held, so you will move with the pack. One or two sub-10%% picks give you a way to climb.")
+        notes.append("Almost everything you own is widely held, so you will move with the pack. "
+                     "One or two picks under 10% ownership give you a way to climb.")
     if len(templates) >= 8:
-        notes.append("%d of your players are owned by over 35%% of managers - a very template squad. Safe, but hard to gain rank with." % len(templates))
+        notes.append("%d of your players are owned by over 35%% of managers — a very template squad. "
+                     "Safe, but hard to gain rank with." % len(templates))
     if bank >= 3.0:
-        notes.append("You are sitting on %.1fm in the bank. Money on the sidelines scores nothing." % bank)
+        notes.append("You have £%.1fm in the bank. Money on the sidelines scores nothing." % bank)
     if not notes:
-        notes.append("No structural problems stand out. Your squad is projecting near the top of what your budget allows.")
+        notes.append("No structural problems stand out. Your squad projects close to the best your budget allows.")
 
+    owned = {s["id"] for s in squad_rows}
     upgrades = []
     for r in squad_rows:
         better = [c for c in all_sorted
-                  if c["position"] == r["position"]
-                  and c["price"] <= r["price"] + bank
-                  and c["id"] not in {s["id"] for s in squad_rows}
-                  and c["status"] == "a"]
+                  if c["position"] == r["position"] and c["price"] <= r["price"] + bank
+                  and c["id"] not in owned and c["status"] == "a"]
         if better:
             b = better[0]
-            gain = b["xpts_total"] - r["xpts_total"]
-            if gain > 1.5:
-                upgrades.append({"out": light(r), "in": light(b), "gain": round(gain, 2)})
+            g = b["xpts_total"] - r["xpts_total"]
+            if g > 1.5:
+                upgrades.append({"out": light(r), "in": light(b), "gain": round(g, 2)})
     upgrades.sort(key=lambda u: -u["gain"])
 
     return {
         "grade": grade, "overall": overall, "scores": scores,
         "squad_xpts": round(squad_total, 2),
-        "benchmark_xpts": round(bench_mark, 2),
-        "efficiency": round(100 * efficiency, 1),
+        "benchmark_xpts": round(best_total, 2),
+        "benchmark_squad": [light(r) for r in best],
+        "efficiency": round(100 * squad_total / best_total, 1),
         "formation": split["formation"],
         "xi_xpts": split["xi_xpts"], "bench_xpts": split["bench_xpts"],
         "captain": light(split["captain"]) if split["captain"] else None,

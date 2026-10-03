@@ -1,66 +1,78 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FPL Copilot — local</title>
-<link rel="stylesheet" href="/static/styles.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>⚽</text></svg>">
+<title>FPL AI</title>
+<script>
+  // apply the saved theme before first paint so the page never flashes
+  try{ var t = JSON.parse(localStorage.getItem('fplai_theme')); if(t) document.documentElement.dataset.theme = t; }catch(e){}
+</script>
+<link rel="stylesheet" href="/static/styles.css?v=5">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%233A86FF'/><path d='M16 6l2.6 7.4L26 16l-7.4 2.6L16 26l-2.6-7.4L6 16l7.4-2.6z' fill='white'/></svg>">
 </head>
 <body>
-<div class="shell">
-  <aside class="side">
-    <div class="brand">
-      <div class="dot">⚡</div>
-      <div>FPL Copilot<small>running locally</small></div>
+<header class="nav-bar">
+  <div class="nav-in">
+    <div class="brand" data-go="dashboard" title="Dashboard">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.4 6.6 6.6 2.4-6.6 2.4L12 20.5l-2.4-6.6L3 11.5l6.6-2.4z" fill="#fff"/><circle cx="19" cy="4.5" r="1.6" fill="#fff" opacity=".7"/></svg></div>
+      <b>FPL AI</b>
     </div>
-    <nav class="nav" id="nav">
-      <button data-view="dashboard" class="on"><span class="ico">◎</span>Dashboard</button>
-      <button data-view="xpts"><span class="ico">📊</span>Expected Points</button>
-      <button data-view="solver"><span class="ico">🧮</span>Solver</button>
-      <button data-view="chips"><span class="ico">🎲</span>Chip Strategy</button>
-      <button data-view="rate"><span class="ico">⭐</span>Rate My Team</button>
-      <button data-view="compare"><span class="ico">⚖️</span>Compare</button>
-      <button data-view="league"><span class="ico">🏆</span>Mini-Leagues</button>
-      <button data-view="model"><span class="ico">🔬</span>How It Works</button>
+    <nav class="links" id="nav">
+      <button data-view="dashboard" class="on">Dashboard</button>
+      <button data-view="xpts">Expected Points</button>
+      <button data-view="solver">Solver</button>
+      <button data-view="copilot">Copilot</button>
+      <button data-view="chips">Chip Strategies</button>
+      <button data-view="league">Minileagues</button>
+      <button data-view="rate">Rate My Team</button>
+      <button data-view="compare">Compare</button>
+      <button data-view="scout">Scout</button>
+      <button data-view="model">How It Works</button>
     </nav>
-    <div class="side-foot">
-      Data: official Fantasy Premier League API.<br>
-      Projections and optimisation run on this machine.
-      <div id="meta-foot" style="margin-top:8px"></div>
-    </div>
-  </aside>
-
-  <main class="main">
-    <div class="topbar">
-      <div>
-        <h1 id="view-title">Dashboard</h1>
-        <p id="view-sub">Your squad, projected forward.</p>
+    <div class="nav-right">
+      <div class="team-chip">
+        <label for="teamId">Team</label>
+        <input id="teamId" type="number" inputmode="numeric" placeholder="Team ID">
+        <button class="btn primary sm" id="load">Load</button>
       </div>
-      <div class="controls">
-        <label class="fld">Team ID
-          <input id="teamId" type="number" placeholder="e.g. 1234567" style="width:132px">
-        </label>
-        <label class="fld">Horizon
-          <select id="horizon">
-            <option>1</option><option>3</option><option selected>5</option>
-            <option>6</option><option>8</option><option>10</option>
-          </select>
-        </label>
-        <button class="btn primary" id="load">Load</button>
-      </div>
+      <button class="icon-btn" id="themeBtn" title="Switch light / dark" aria-label="Switch theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+      </button>
     </div>
+  </div>
+</header>
 
-    <section id="view-dashboard" class="view on"></section>
-    <section id="view-xpts" class="view"></section>
-    <section id="view-solver" class="view"></section>
-    <section id="view-chips" class="view"></section>
-    <section id="view-rate" class="view"></section>
-    <section id="view-compare" class="view"></section>
-    <section id="view-league" class="view"></section>
-    <section id="view-model" class="view"></section>
-  </main>
-</div>
-<script src="/static/app.js"></script>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1 id="view-title">Dashboard</h1>
+      <p id="view-sub">Your squad, projected forward.</p>
+    </div>
+    <div class="controls">
+      <span class="tag" id="rail-foot">Loading gameweek…</span>
+      <label class="fld">Horizon
+        <select id="horizon">
+          <option value="1">1 GW</option><option value="3">3 GW</option>
+          <option value="5" selected>5 GW</option><option value="6">6 GW</option>
+          <option value="8">8 GW</option><option value="10">10 GW</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <section id="view-dashboard" class="view on"></section>
+  <section id="view-xpts" class="view"></section>
+  <section id="view-solver" class="view"></section>
+  <section id="view-chips" class="view"></section>
+  <section id="view-copilot" class="view"></section>
+  <section id="view-rate" class="view"></section>
+  <section id="view-compare" class="view"></section>
+  <section id="view-league" class="view"></section>
+  <section id="view-scout" class="view"></section>
+  <section id="view-model" class="view"></section>
+</main>
+<div id="sheet-root"></div>
+<script src="/static/app.js?v=5"></script>
 </body>
 </html>

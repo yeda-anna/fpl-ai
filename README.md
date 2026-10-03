@@ -1,63 +1,76 @@
-# FPL Copilot — local clone
+# FPL AI
 
-A local rebuild of the tools on fplcopilot.com, running entirely on this machine
-against the official Fantasy Premier League public API.
+A local Fantasy Premier League planner: expected points for every player, a
+multi-gameweek transfer solver, chip planning, team rating, mini-league
+analysis and a rules-based Copilot — all running on your own machine against
+live FPL data.
 
 ## Run
 
-    ./run.sh            # http://127.0.0.1:8787
-    PORT=9000 ./run.sh  # different port
+    python3 -m venv .venv
+    ./.venv/bin/pip install -r requirements.txt
+    ./run.sh                  # http://127.0.0.1:8787
+    PORT=9000 ./run.sh        # another port
+
+Enter your FPL Team ID in the top bar. It's the number in the address bar on
+your Points page: `fantasy.premierleague.com/entry/<ID>/event/5`.
 
 ## What's inside
 
-    backend/fpl_api.py   official FPL endpoints + disk cache
-    backend/xpts.py      the expected-points rule engine
-    backend/solver.py    multi-gameweek MIP transfer optimiser (PuLP/CBC)
-    backend/analysis.py  chips, rate-my-team, compare, weekly picks, mini-leagues
-    backend/main.py      FastAPI routes + static hosting
-    frontend/            single-page app (no build step)
+| Tool | What it does |
+| --- | --- |
+| Dashboard | Rank, last gameweek vs average, best XI on the pitch, captain picks, differentials, value picks, dream team |
+| Expected Points | Every player across the horizon. Click any minutes figure to set your own — every other tool then uses it |
+| Solver | Mixed-integer program over squad, XI, captain, vice and transfers for every gameweek at once; returns up to three distinct plans with a template rating |
+| Chip Strategies | Each chip scored in every gameweek, respecting FPL's two chip windows, then combined into the best plan |
+| Copilot | Plain-English questions answered straight from the model and solver |
+| Rate My Team | Score out of 100 against the best squad your own budget could buy |
+| Compare | Two players side by side, week by week |
+| Minileagues | Rival ownership, effective ownership, and Monte Carlo win probability |
+| Scout | Price-change odds, set-piece takers, defensive-contribution leaders, predicted line-ups |
+
+## The model
+
+**Rules come from FPL, not from code.** Scoring (including 2026/27's 10-point
+goalkeeper goal), squad and club limits, budget, banked-transfer cap, sell-on
+fee, formation limits and chip windows are all read from
+`bootstrap-static` (`game_config`, `game_settings`, `element_types`, `chips`).
+
+**Club strength** starts from ClubElo ratings (via the FPL-Core-Insights match
+files) and is pulled toward this season's xG and xG conceded as games are
+played. The goals-per-Elo-point slope is fitted from the current season.
+
+**Minutes** come from FPL's per-gameweek `event/{gw}/live` data, weighted toward
+recent weeks. The model learns each player's minutes when he starts, eases
+injury returners back in (about 60′, then 75′), lets doubtful flags recover
+over the horizon, regresses longer-range weeks toward a player's usual role,
+and zeroes weeks where a loanee can't face his parent club (`scout_risks`).
+
+**Points** follow a Poisson model of each fixture with home advantage, the
+player's share of his club's xG and xA (shrunk toward a price-based prior when
+his sample is thin), and FPL's published scoring.
+
+**Solver** uses CBC via PuLP, stops within 0.5% of optimal, and re-solves with
+each found plan ruled out to give genuinely different alternatives.
 
 ## Data sources
 
-Every number traces back to these public, unauthenticated endpoints:
+- Fantasy Premier League API — players, fixtures, squads, live gameweek
+  stats, price-change progress, set pieces, scoring and game rules
+- [FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights) — club Elo
+  ratings from its match files
 
-| Endpoint | Used for |
-| --- | --- |
-| `/api/bootstrap-static/` | players, teams, gameweeks, per-90 stats, prices, ownership |
-| `/api/fixtures/` | full season fixture list with difficulty ratings |
-| `/api/entry/{id}/` | manager profile, squad value, overall rank |
-| `/api/entry/{id}/history/` | gameweek history and chips already played |
-| `/api/entry/{id}/event/{gw}/picks/` | the 15 players in a squad, purchase prices, bank |
-| `/api/element-summary/{id}/` | per-fixture player history |
-| `/api/leagues-classic/{id}/standings/` | mini-league tables |
+Responses are cached under `.cache/`. If the API is unreachable the last good
+copy is served.
 
-Responses are cached under `.cache/` with short TTLs so repeated requests
-don't hammer the API. If the API is unreachable the last good copy is served.
+## Layout
 
-## The expected-points model
-
-1. **Team strength.** Season xG and xG conceded per game, shrunk toward the
-   league average of 1.45 goals (a six-game prior), give each club an attack
-   and a defence multiplier.
-2. **Fixture.** Poisson means for both sides, with a 1.10 / 0.92 home-away split.
-3. **Minutes.** Availability (status and chance-of-playing) times start rate,
-   producing P(play), P(60+) and expected minutes. Overridable per player.
-4. **Returns.** A player's xG and xA per 90 are shrunk toward a prior fitted
-   from his price, then taken as a share of his team's attack and scaled onto
-   the fixture's expected goals.
-5. **Scoring.** FPL's own table — 6/6/5/4 per goal by position, 3 per assist,
-   Poisson clean sheets, −1 per two conceded, one point per three saves,
-   2 points for clearing the defensive-contribution threshold (10 for
-   defenders, 12 for midfielders and forwards), bonus estimated from BPS per 90,
-   cards, and appearance points.
-
-## The solver
-
-A mixed-integer program over the whole horizon at once: squad, starting eleven,
-captain and transfers are all decision variables. Constraints are the real FPL
-rules — 15 players, 2/5/5/3, three per club, legal formations, actual bank and
-selling prices (profit halved), free transfers banking up to five, −4 per extra
-transfer. Bench points count at 12%, and each further gameweek is discounted 13%.
-
-The candidate pool is trimmed to the ~160 best-projecting players plus everyone
-you already own, which keeps CBC to a few seconds.
+    backend/fpl_api.py   FPL endpoints + disk cache
+    backend/rules.py     game rules read from bootstrap-static
+    backend/priors.py    Elo prior and recent-form data
+    backend/xpts.py      expected-points engine
+    backend/solver.py    multi-gameweek MIP optimiser
+    backend/analysis.py  chips, rating, compare, picks, mini-leagues
+    backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
+    backend/main.py      FastAPI routes + static hosting
+    frontend/            single-page app, no build step; dark and light themes

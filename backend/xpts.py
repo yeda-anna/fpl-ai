@@ -19,6 +19,8 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List, Optional
 
+from rules import Rules, DC_THRESHOLD as RULE_DC_THRESHOLD, SAVES_PER_POINT
+
 # --- FPL scoring rules (2025/26) -------------------------------------------
 GOAL_PTS = {1: 6, 2: 6, 3: 5, 4: 4}
 CS_PTS = {1: 4, 2: 4, 3: 1, 4: 0}
@@ -34,8 +36,15 @@ AWAY_ADV = 0.92
 SHRINK_GAMES = 6.0                # prior weight, in games, for team ratings
 PLAYER_SHRINK_90S = 2.5           # prior weight, in 90s, for player rates
 SUB_MINUTES = 22.0                # minutes credited to a likely substitute
-STARTER_MINUTES = 84.0            # minutes credited to a nailed starter
+STARTER_MINUTES = 87.0            # minutes credited to a nailed starter
 P60_GIVEN_START = 0.90
+RECENT_DECAY = 0.72               # each gameweek further back counts 28% less
+RECENT_WEIGHT_CAP = 0.70          # recent form never fully overrides the season
+ELO_K_DEFAULT = 0.0011            # goals multiplier per Elo point, if it can't be fitted
+ELO_K_RANGE = (0.0006, 0.0020)
+RETURN_RAMP = (60.0, 75.0)        # minutes in a player's first and second games back
+RETURN_NEWS_DAYS = 28             # a flag this recent marks a player as coming back
+REVERT_RATE = 0.50                # per gameweek ahead, the share of the gap to his usual role that remains
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -82,8 +91,14 @@ def bonus_from_bps(bps_per_90: float) -> float:
 class Engine(object):
     """Holds derived ratings for one snapshot of the FPL data."""
 
-    def __init__(self, bootstrap: Dict[str, Any], fixtures: List[Dict[str, Any]]):
+    def __init__(self, bootstrap: Dict[str, Any], fixtures: List[Dict[str, Any]],
+                 elo: Optional[Dict[int, Dict[str, Any]]] = None,
+                 live_by_gw: Optional[Dict[int, Dict[str, Any]]] = None):
         self.bootstrap = bootstrap
+        self.rules = Rules(bootstrap)
+        self.elo = elo or {}
+        self.live_by_gw = live_by_gw or {}
+        self.elo_k = ELO_K_DEFAULT
         self.fixtures = fixtures
         self.teams = {t["id"]: t for t in bootstrap["teams"]}
         self.players = {p["id"]: p for p in bootstrap["elements"]}
@@ -91,9 +106,11 @@ class Engine(object):
         self.current_gw = self._current_gw()
         self.next_gw = self._next_gw()
         self._played = self._games_played()
-        self._team_rates = self._team_ratings()
         self._fixtures_by_gw = self._index_fixtures()
+        self._team_rates = self._team_ratings()
+        self._recent = self._recent_form()
         self._priors = self._fit_priors()
+        self._blocked = self._blocked_weeks()
 
     # -- calendar ----------------------------------------------------------
     def _current_gw(self) -> int:
@@ -130,7 +147,11 @@ class Engine(object):
 
     # -- team strength -----------------------------------------------------
     def _team_ratings(self) -> Dict[int, Dict[str, float]]:
-        """Attack, creativity and defence multipliers relative to the league average."""
+        """Attack and defence multipliers relative to the league average.
+
+        Observed xG and xG conceded are shrunk toward a prior. With Elo available the
+        prior is the club's own Elo-implied strength; without it, league average.
+        """
         xg, xa, xgc = {}, {}, {}
         for p in self.bootstrap["elements"]:
             t = p["team"]
@@ -140,27 +161,124 @@ class Engine(object):
             # over-count it by a factor of 11.
             xgc[t] = xgc.get(t, 0.0) + _f(p.get("expected_goals_conceded"))
 
-        ratings = {}
+        observed = {}
         for tid in self.teams:
             games = max(1, self._played.get(tid, 0))
-            n = float(self._played.get(tid, 0))
+            observed[tid] = {
+                "xg_pg": xg.get(tid, 0.0) / games,
+                "xa_pg": xa.get(tid, 0.0) / games,
+                "xgc_pg": (xgc.get(tid, 0.0) / games) / 11.0,
+                "n": float(self._played.get(tid, 0)),
+            }
+
+        # Elo prior. Fit how many goals an Elo point is worth from this season's
+        # own numbers, so the prior is calibrated rather than assumed.
+        elos = {tid: self.elo[tid]["elo"] for tid in self.teams if tid in self.elo}
+        mean_elo = (sum(elos.values()) / len(elos)) if elos else None
+        if elos and len(elos) >= 12:
+            xs, ys = [], []
+            for tid, e in elos.items():
+                o = observed[tid]
+                if o["n"] <= 0 or o["xg_pg"] <= 0 or o["xgc_pg"] <= 0:
+                    continue
+                xs.append(e - mean_elo)
+                ys.append(0.5 * (math.log(o["xg_pg"] / LEAGUE_GOALS_PER_TEAM)
+                                 - math.log(o["xgc_pg"] / LEAGUE_GOALS_PER_TEAM)))
+            den = sum(x * x for x in xs)
+            if den > 0:
+                k = sum(x * y for x, y in zip(xs, ys)) / den
+                self.elo_k = max(ELO_K_RANGE[0], min(ELO_K_RANGE[1], k))
+
+        ratings = {}
+        for tid in self.teams:
+            o = observed[tid]
+            n = o["n"]
             w = n / (n + SHRINK_GAMES)          # how much to trust the observed rate
 
-            xg_pg = xg.get(tid, 0.0) / games
-            xa_pg = xa.get(tid, 0.0) / games
-            xgc_pg = (xgc.get(tid, 0.0) / games) / 11.0
+            if mean_elo is not None and tid in elos:
+                z = elos[tid] - mean_elo
+                prior_att = math.exp(self.elo_k * z)
+                prior_def = math.exp(-self.elo_k * z)
+            else:
+                prior_att = prior_def = 1.0
 
-            att = w * (xg_pg / LEAGUE_GOALS_PER_TEAM) + (1 - w) * 1.0
-            dfn = w * (xgc_pg / LEAGUE_GOALS_PER_TEAM) + (1 - w) * 1.0
+            att_obs = o["xg_pg"] / LEAGUE_GOALS_PER_TEAM if n else prior_att
+            def_obs = o["xgc_pg"] / LEAGUE_GOALS_PER_TEAM if n else prior_def
+            att = w * att_obs + (1 - w) * prior_att
+            dfn = w * def_obs + (1 - w) * prior_def
             ratings[tid] = {
                 "attack": max(0.45, min(2.2, att)),
                 "defence": max(0.45, min(2.2, dfn)),   # >1 means leaky
-                "xg_per_game": max(0.25, xg_pg if n else LEAGUE_GOALS_PER_TEAM),
-                "xa_per_game": max(0.18, xa_pg if n else LEAGUE_GOALS_PER_TEAM * 0.7),
-                "xgc_per_game": max(0.25, xgc_pg if n else LEAGUE_GOALS_PER_TEAM),
+                "attack_prior": round(prior_att, 3),
+                "defence_prior": round(prior_def, 3),
+                "elo": round(elos[tid], 1) if tid in elos else None,
+                "xg_per_game": max(0.25, o["xg_pg"] if n else LEAGUE_GOALS_PER_TEAM * prior_att),
+                "xa_per_game": max(0.18, o["xa_pg"] if n else LEAGUE_GOALS_PER_TEAM * 0.7 * prior_att),
+                "xgc_per_game": max(0.25, o["xgc_pg"] if n else LEAGUE_GOALS_PER_TEAM * prior_def),
                 "games": self._played.get(tid, 0),
             }
         return ratings
+
+    def _blocked_weeks(self) -> Dict[int, set]:
+        """Gameweeks a player cannot play for contractual reasons.
+
+        bootstrap-static's scout_risks lists loanees who may not face their parent
+        club in a given gameweek. That's certain, so it's a hard zero rather than a
+        probability.
+        """
+        out: Dict[int, set] = {}
+        for p in self.bootstrap["elements"]:
+            for risk in p.get("scout_risks") or []:
+                if risk.get("property") == "loan_ineligible" and risk.get("gameweek"):
+                    out.setdefault(p["id"], set()).add(int(risk["gameweek"]))
+        return out
+
+    def blocked(self, player_id: int, gw: Optional[int]) -> bool:
+        return gw is not None and gw in self._blocked.get(player_id, ())
+
+    # -- recent form -------------------------------------------------------
+    def _recent_form(self) -> Dict[int, Dict[str, float]]:
+        """Recency-weighted minutes and starts from the last few finished gameweeks.
+
+        A gameweek in which a player's club had no fixture is skipped rather than
+        counted as zero minutes; a double gameweek is split per fixture.
+        """
+        out: Dict[int, Dict[str, float]] = {}
+        if not self.live_by_gw:
+            return out
+        gws = sorted(self.live_by_gw.keys(), reverse=True)
+        fixtures_per_team: Dict[int, Dict[int, int]] = {}
+        for gw in gws:
+            counts = {}
+            for f in self._fixtures_by_gw.get(gw, []):
+                for side in ("team_h", "team_a"):
+                    counts[f[side]] = counts.get(f[side], 0) + 1
+            fixtures_per_team[gw] = counts
+
+        for k, gw in enumerate(gws):
+            weight = RECENT_DECAY ** k
+            payload = self.live_by_gw[gw] or {}
+            for el in payload.get("elements", []):
+                pid = el.get("id")
+                p = self.players.get(pid)
+                if not p:
+                    continue
+                n_fix = fixtures_per_team.get(gw, {}).get(p["team"], 0)
+                if n_fix <= 0:
+                    continue
+                st = el.get("stats", {})
+                mins = _f(st.get("minutes")) / n_fix
+                starts = min(1.0, _f(st.get("starts")) / n_fix)
+                r = out.setdefault(pid, {"w": 0.0, "minutes": 0.0, "starts": 0.0,
+                                         "start_minutes": 0.0, "start_w": 0.0, "games": 0})
+                r["w"] += weight
+                r["minutes"] += weight * mins
+                r["starts"] += weight * starts
+                r["games"] += 1
+                if starts > 0 and mins > 0:
+                    r["start_minutes"] += weight * mins
+                    r["start_w"] += weight
+        return out
 
     def team_rating(self, team_id: int) -> Dict[str, float]:
         return self._team_rates[team_id]
@@ -185,35 +303,103 @@ class Engine(object):
             return 0.5 if chance is None else max(0.0, min(1.0, chance / 100.0))
         return 0.0     # i (injured), s (suspended), u (unavailable), n (not in squad)
 
-    def minutes_model(self, p: Dict[str, Any], minutes_override: Optional[float] = None):
+    def _returning(self, p: Dict[str, Any], recent_avg: float) -> bool:
+        """Fit (or nearly) but with almost no recent minutes, and recently flagged.
+
+        That pattern is an injury absence, not a player who has been dropped, so his
+        minutes should come from his normal role rather than from the empty weeks.
+        """
+        if self.availability(p) <= 0 or recent_avg >= 20:
+            return False
+        if p.get("status") == "d" or p.get("news"):
+            return True
+        added = p.get("news_added")
+        if added:
+            try:
+                import datetime as _dt
+                ts = _dt.datetime.strptime(added[:19], "%Y-%m-%dT%H:%M:%S")
+                return (_dt.datetime.utcnow() - ts).days <= RETURN_NEWS_DAYS
+            except Exception:
+                return False
+        return False
+
+    def minutes_model(self, p: Dict[str, Any], minutes_override: Optional[float] = None,
+                      gw_offset: int = 0):
         games = max(1, self._played.get(p["team"], 0))
         avail = self.availability(p)
-        starts = _f(p.get("starts"))
-        minutes = _f(p.get("minutes"))
+        # FPL's chance-of-playing figure is for the next round only. A doubtful
+        # player's odds recover the further ahead we look; injured and suspended
+        # players stay out until the data says otherwise.
+        if gw_offset > 0 and p.get("status") == "d" and avail > 0:
+            avail = avail + (1.0 - avail) * (1.0 - REVERT_RATE ** gw_offset)
+        season_start = min(1.0, _f(p.get("starts")) / games)
+        season_avg = _f(p.get("minutes")) / games
 
-        start_rate = min(1.0, starts / games)
-        avg_minutes = minutes / games
-        # a player averaging well under a start's worth of minutes is a rotation risk
-        if start_rate <= 0 and avg_minutes <= 0:
-            start_rate = 0.0
+        start_rate, avg_minutes, starter_mins = season_start, season_avg, STARTER_MINUTES
+        recent = self._recent.get(p["id"])
+        trend = None
+        if recent and recent["w"] > 0:
+            # how far to lean on the last few weeks grows with how many we have
+            lean = min(RECENT_WEIGHT_CAP, 0.25 + 0.11 * recent["games"])
+            r_start = recent["starts"] / recent["w"]
+            r_avg = recent["minutes"] / recent["w"]
+            start_rate = lean * r_start + (1 - lean) * season_start
+            avg_minutes = lean * r_avg + (1 - lean) * season_avg
+            trend = round(r_avg - season_avg, 1)
+            if recent["start_w"] > 0:
+                # minutes a player actually gets when he starts - this is what moves
+                # a winger who's subbed at 70 below a centre-back who plays 90
+                own = recent["start_minutes"] / recent["start_w"]
+                trust = recent["start_w"] / (recent["start_w"] + 1.5)
+                starter_mins = max(55.0, min(90.0, trust * own + (1 - trust) * STARTER_MINUTES))
 
-        p_start = avail * start_rate
-        cameo = avail * max(0.0, min(0.85, (avg_minutes - start_rate * STARTER_MINUTES) / SUB_MINUTES))
+        returning = False
+        recent_avg = (recent["minutes"] / recent["w"]) if (recent and recent["w"] > 0) else season_avg
+        if self._returning(p, recent_avg):
+            returning = True
+            price = p["now_cost"] / 10.0
+            start_rate = max(start_rate, min(0.95, self._prior_for(p["element_type"], "start_rate", price)))
+            # ease back in: limited minutes for the first two games, then his usual
+            if gw_offset < len(RETURN_RAMP):
+                starter_mins = min(starter_mins, RETURN_RAMP[gw_offset])
+            avg_minutes = start_rate * starter_mins
+
+        # Further ahead, regress toward his established role. Next week's minutes are
+        # mostly about recent selection; minutes in five weeks are mostly about who
+        # the player is. Only applies upward, to available players priced as regulars.
+        if gw_offset > 0 and not returning and avail > 0:
+            price = p["now_cost"] / 10.0
+            role = min(0.95, self._prior_for(p["element_type"], "start_rate", price))
+            pull = 1.0 - REVERT_RATE ** gw_offset
+            if role > start_rate:
+                start_rate += (role - start_rate) * pull
+            if starter_mins < STARTER_MINUTES and role >= 0.6:
+                starter_mins += (STARTER_MINUTES - starter_mins) * pull
+            avg_minutes = max(avg_minutes, start_rate * starter_mins)
+
+        p_start = avail * max(0.0, min(1.0, start_rate))
+        cameo = avail * max(0.0, min(0.85, (avg_minutes - start_rate * starter_mins) / SUB_MINUTES))
         p_play = min(1.0, p_start + (1.0 - p_start) * cameo)
-        p60 = p_start * P60_GIVEN_START
+        p60 = p_start * (P60_GIVEN_START if starter_mins >= 70 else
+                         max(0.35, P60_GIVEN_START * (starter_mins - 45) / 25.0))
 
-        xmins = p_start * STARTER_MINUTES + max(0.0, p_play - p_start) * SUB_MINUTES
-        if minutes_override is not None:
+        xmins = p_start * starter_mins + max(0.0, p_play - p_start) * SUB_MINUTES
+        overridden = minutes_override is not None
+        if overridden:
             xmins = max(0.0, min(90.0, float(minutes_override)))
-            p_start = avail * min(1.0, xmins / STARTER_MINUTES)
+            p_start = avail * min(1.0, xmins / max(60.0, starter_mins))
             p_play = avail * (1.0 if xmins > 0 else 0.0)
-            p60 = avail * (1.0 if xmins >= 60 else 0.0) * P60_GIVEN_START if xmins >= 60 else 0.0
+            p60 = (avail * P60_GIVEN_START) if xmins >= 60 else 0.0
         return {
             "availability": round(avail, 3),
             "p_start": round(p_start, 3),
             "p_play": round(p_play, 3),
             "p60": round(p60, 3),
             "xmins": round(xmins, 1),
+            "starter_minutes": round(starter_mins, 1),
+            "recent_trend": trend,
+            "returning": returning,
+            "overridden": overridden,
         }
 
     # -- player rates ------------------------------------------------------
@@ -242,6 +428,17 @@ class Engine(object):
             pool = [p for p in self.bootstrap["elements"]
                     if p["element_type"] == pos and _f(p.get("minutes")) >= 180]
             out = {}
+            # how often a fit player at this price starts - the prior for anyone
+            # whose own recent minutes were wiped out by an injury
+            sx, sy = [], []
+            for p in pool:
+                if p.get("status") != "a" or p.get("news"):
+                    continue
+                g = max(1, self._played.get(p["team"], 0))
+                sx.append(p["now_cost"] / 10.0)
+                sy.append(min(1.0, _f(p.get("starts")) / g))
+            fit = self._least_squares(sx, sy)
+            out["start_rate"] = {"fit": fit, "mean": (sum(sy) / len(sy)) if sy else 0.5}
             for key, field in (("xg90", "expected_goals_per_90"),
                                ("xa90", "expected_assists_per_90"),
                                ("dc90", "defensive_contribution_per_90"),
@@ -290,7 +487,8 @@ class Engine(object):
 
     # -- the projection ----------------------------------------------------
     def player_fixture_xpts(self, player_id: int, fixture: Dict[str, Any],
-                            minutes_override: Optional[float] = None) -> Dict[str, Any]:
+                            minutes_override: Optional[float] = None,
+                            gw_offset: int = 0) -> Dict[str, Any]:
         p = self.players[player_id]
         pos = p["element_type"]
         team = p["team"]
@@ -298,7 +496,11 @@ class Engine(object):
         opponent = fixture["team_a"] if home else fixture["team_h"]
 
         lam_for, lam_against = self.fixture_goals(team, opponent, home)
-        mins = self.minutes_model(p, minutes_override)
+        R = self.rules
+        loan_block = self.blocked(player_id, fixture.get("event"))
+        if loan_block:
+            minutes_override = 0.0
+        mins = self.minutes_model(p, minutes_override, gw_offset)
         rates = self.player_rates(p)
         share = mins["xmins"] / 90.0
 
@@ -309,29 +511,31 @@ class Engine(object):
         xg = goal_share * lam_for * share
         xa = assist_share * (lam_for * 0.72) * share    # ~72% of goals are assisted
 
-        pts_goals = xg * GOAL_PTS[pos]
-        pts_assists = xa * ASSIST_PTS
+        # every points value below comes from FPL's own game_config.scoring
+        pts_goals = xg * R.goal(pos)
+        pts_assists = xa * R.assist()
 
         p_cs = math.exp(-lam_against) * mins["p60"]
-        pts_cs = p_cs * CS_PTS[pos]
+        pts_cs = p_cs * R.clean_sheet(pos)
 
         pts_conceded = 0.0
-        if pos in (1, 2):
-            pts_conceded = -expected_concede_penalty(lam_against) * mins["p60"]
+        if R.conceded(pos):
+            pts_conceded = R.conceded(pos) * expected_concede_penalty(lam_against) * mins["p60"]
 
         pts_saves = 0.0
         if pos == 1:
-            pts_saves = (rates["saves90"] * share) / SAVE_PER_POINT
+            pts_saves = (rates["saves90"] * share) / SAVES_PER_POINT * R.save_point()
 
         pts_dc = 0.0
-        threshold = DC_THRESHOLD[pos]
-        if threshold and rates["dc90"] > 0:
+        threshold = RULE_DC_THRESHOLD[pos]
+        if threshold and rates["dc90"] > 0 and R.dc_points(pos):
             lam_dc = rates["dc90"] * share
-            pts_dc = poisson_at_least(threshold, lam_dc) * DC_PTS
+            pts_dc = poisson_at_least(threshold, lam_dc) * R.dc_points(pos)
 
-        pts_appearance = mins["p_play"] * 1.0 + mins["p60"] * 1.0
-        pts_bonus = bonus_from_bps(rates["bps90"]) * share
-        pts_cards = -rates["yc90"] * share
+        # short_play for 1-59 minutes, long_play for 60+ (not additive)
+        pts_appearance = (mins["p_play"] - mins["p60"]) * R.short_play() + mins["p60"] * R.long_play()
+        pts_bonus = bonus_from_bps(rates["bps90"]) * share * R.bonus_unit()
+        pts_cards = rates["yc90"] * share * R.yellow()
 
         total = (pts_appearance + pts_goals + pts_assists + pts_cs + pts_conceded
                  + pts_saves + pts_dc + pts_bonus + pts_cards)
@@ -347,6 +551,7 @@ class Engine(object):
             "lam_for": round(lam_for, 3),
             "lam_against": round(lam_against, 3),
             "clean_sheet_prob": round(math.exp(-lam_against), 3),
+            "loan_blocked": loan_block,
             "xmins": mins["xmins"],
             "p_start": mins["p_start"],
             "breakdown": {
@@ -377,7 +582,8 @@ class Engine(object):
         per_gw = []
         for gw in range(start_gw, min(38, start_gw + horizon - 1) + 1):
             fixtures = self.fixtures_for_team(p["team"], gw)
-            legs = [self.player_fixture_xpts(player_id, f, minutes_override) for f in fixtures]
+            legs = [self.player_fixture_xpts(player_id, f, minutes_override, gw - start_gw)
+                    for f in fixtures]
             per_gw.append({
                 "gw": gw,
                 "fixtures": legs,

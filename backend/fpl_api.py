@@ -24,6 +24,7 @@ TTL = {
     "picks": 300,
     "history": 600,
     "live": 120,
+    "live_final": 6 * 3600,
     "standings": 600,
     "summary": 1800,
 }
@@ -126,6 +127,11 @@ def entry_transfers(team_id: int) -> List[Dict[str, Any]]:
 
 def live(gw: int) -> Dict[str, Any]:
     return get("/event/%d/live/" % gw, "live-%d" % gw, "live")
+
+
+def live_final(gw: int) -> Dict[str, Any]:
+    """Per-player stats for a gameweek, cached long because finished weeks don't change."""
+    return get("/event/%d/live/" % gw, "live-%d" % gw, "live_final")
 
 
 def element_summary(player_id: int) -> Dict[str, Any]:
