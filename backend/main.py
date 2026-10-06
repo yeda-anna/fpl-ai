@@ -1,14 +1,16 @@
 """FastAPI app: serves the API and the single-page frontend."""
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 import threading
 import time
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -492,10 +494,81 @@ def health():
 
 
 # --- frontend --------------------------------------------------------------
+# Browsers (and home-screen apps on iOS especially) hold on to a page they've
+# seen before. To make every visit pick up the latest design:
+#   * index.html is served with `no-cache`, so it is revalidated on every open;
+#   * each /static/*.css|js reference in it is rewritten to `?v=<content hash>`,
+#     so a changed file gets a new URL and those URLs can be cached forever;
+#   * the page carries a build id; app.js compares it with /version when the app
+#     comes back to the foreground and reloads if a newer build has shipped.
+# Nothing to bump by hand.
+_ASSET_REF = re.compile(r'(/static/([\w.-]+\.(?:css|js)))(?:\?v=[\w.-]*)?(?=["\'])')
+_page = {"key": None, "html": "", "build": ""}
+_page_lock = threading.Lock()
+
+
+def _file_key(name: str):
+    st = os.stat(os.path.join(FRONTEND, name))
+    return (name, st.st_mtime_ns, st.st_size)
+
+
+def _render_index():
+    """index.html with fingerprinted assets, rebuilt only when a file changes."""
+    html_path = os.path.join(FRONTEND, "index.html")
+    with _page_lock:
+        with open(html_path, encoding="utf-8") as fh:
+            raw = fh.read()
+        names = sorted(set(m.group(2) for m in _ASSET_REF.finditer(raw)
+                           if os.path.isfile(os.path.join(FRONTEND, m.group(2)))))
+        key = tuple([_file_key("index.html")] + [_file_key(n) for n in names])
+        if _page["key"] != key:
+            digests = {}
+            for n in names:
+                with open(os.path.join(FRONTEND, n), "rb") as fh:
+                    digests[n] = hashlib.sha256(fh.read()).hexdigest()[:12]
+
+            def stamp(m):
+                name = m.group(2)
+                return "%s?v=%s" % (m.group(1), digests[name]) if name in digests else m.group(0)
+
+            html = _ASSET_REF.sub(stamp, raw)
+            build = hashlib.sha256(
+                (raw + "".join(digests[n] for n in names)).encode("utf-8")).hexdigest()[:12]
+            html = html.replace("</head>", '<meta name="app-build" content="%s">\n</head>' % build, 1)
+            _page.update(key=key, html=html, build=build)
+        return _page["html"], _page["build"]
+
+
+@app.middleware("http")
+async def cache_policy(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/"):
+        if request.query_params.get("v") and path.endswith((".css", ".js")):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "no-cache"
+    elif path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store")
+    return response
+
+
 if os.path.isdir(FRONTEND):
     app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
 
 
-@app.get("/")
-def index():
-    return FileResponse(os.path.join(FRONTEND, "index.html"))
+@app.get("/version")
+def version():
+    """The current frontend build, for open apps to notice a new deploy."""
+    _, build = _render_index()
+    return JSONResponse({"build": build}, headers={"Cache-Control": "no-store"})
+
+
+@app.api_route("/", methods=["GET", "HEAD"])
+def index(request: Request):
+    html, build = _render_index()
+    etag = '"%s"' % build
+    headers = {"Cache-Control": "no-cache, must-revalidate", "ETag": etag}
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers=headers)
+    return HTMLResponse(html, headers=headers)

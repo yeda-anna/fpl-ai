@@ -81,6 +81,25 @@ its data and renders HTML strings. State that survives a reload lives in
 `localStorage` under `fplai_*` keys (team, team name, theme, minute overrides,
 last league). See `DESIGN.md` for the visual system.
 
+## Freshness (cache policy)
+
+Every open must show the latest design, including home-screen apps that
+iOS keeps alive for days. `main.py` handles it with no build step:
+
+| What | Header / behaviour |
+| --- | --- |
+| `/` (index.html) | `Cache-Control: no-cache, must-revalidate` + `ETag` = build id → the browser asks every time and gets a cheap `304` when nothing changed |
+| `/static/*.css`, `/static/*.js` | the server rewrites their links in index.html to `?v=<sha256[:12]>` of the file; those URLs are `immutable`, cached for a year |
+| other `/static/*` (icon, manifest) | `no-cache` |
+| `/api/*` | `no-store` unless the route sets its own |
+| `/version` | `{"build": "<id>"}`, `no-store` |
+
+The page carries `<meta name="app-build">`. `app.js` calls `/version` when the app
+returns to the foreground (`visibilitychange`, `focus`, back/forward-cache
+`pageshow`), at most once a minute, and reloads if the build has changed. The
+hashes are recomputed whenever a file's mtime or size changes, so local edits
+show up on reload without restarting the server.
+
 ## Why these choices
 
 - **Rules from bootstrap-static.** FPL changes scoring between seasons (the

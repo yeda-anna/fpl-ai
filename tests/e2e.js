@@ -198,6 +198,15 @@ async function desktop(browser){
   await page.fill('#obTeam', '1'); await page.click('#obGo');
   await page.waitForSelector('#view-dashboard .pitch-card', { timeout: 30000 });
   ok('desktop: links visible, tab dock hidden', await page.isVisible('#nav') && !(await page.isVisible('#tabbar')));
+  {
+    const build = await page.$eval('meta[name="app-build"]', m => m.content).catch(() => '');
+    const live = await page.evaluate(() => fetch('/version', { cache: 'no-store' }).then(r => r.json()).then(j => j.build).catch(() => ''));
+    ok('desktop: page carries a build id matching /version', !!build && build === live, `${build} vs ${live}`);
+    const refs = await page.$$eval('link[rel=stylesheet][href^="/static/"], script[src^="/static/"]', els => els.map(e => e.getAttribute('href') || e.getAttribute('src')));
+    ok('desktop: CSS and JS are content-fingerprinted', refs.length >= 2 && refs.every(u => /\?v=[0-9a-f]{12}$/.test(u)), refs.join(', '));
+    const head = await page.evaluate(() => fetch('/', { cache: 'no-store' }).then(r => r.headers.get('cache-control')));
+    ok('desktop: page is revalidated on every open', /no-cache/.test(head || ''), head);
+  }
   await page.screenshot({ path: `${OUT}/d-02-dashboard.png` });
   for (const v of ['xpts', 'solver', 'chips', 'copilot', 'rate', 'compare', 'league', 'scout', 'model']) {
     await page.click(`#nav button[data-view="${v}"]`);

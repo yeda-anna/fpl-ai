@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-06 — Always fresh
+
+- Returning visitors no longer see an old stylesheet. `index.html` is served
+  `no-cache` with an ETag; CSS/JS links are rewritten to content hashes and
+  cached as immutable; `/version` lets an open or home-screen app notice a new
+  deploy and reload itself when brought back to the foreground.
+- The manual `?v=N` cache-buster is gone.
+- e2e: three new checks (build id, fingerprinted assets, revalidation) — 67.
+
 ## 2026-10-06 — Forest & lime
 
 - **New palette, 60:30:10.** Forest `#1B4332` background (60%), mint `#96E6A1`

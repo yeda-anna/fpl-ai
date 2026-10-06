@@ -105,7 +105,7 @@ house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 64 headless checks, phone + desktop
+    npm --prefix tests test            # 67 headless checks, phone + desktop
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).
@@ -127,7 +127,7 @@ See [`docs/TESTING.md`](docs/TESTING.md).
 ## Working on it with Claude
 
 - [`CLAUDE.md`](CLAUDE.md) — project instructions: commands, file map and the
-  rules of the road (Python 3.9, rules from FPL, tokens only, bump `?v=N`,
+  rules of the road (Python 3.9, rules from FPL, tokens only, no build step,
   nothing wider than a phone). [`AGENTS.md`](AGENTS.md) points other agents there.
 - [`.claude/agents/`](.claude/agents) — specialists: `model-analyst`,
   `solver-engineer`, `ui-designer`, `qa-tester`, `fpl-data-scout`,

@@ -901,3 +901,27 @@ document.querySelector('.brand').addEventListener('click', ()=>go('dashboard'));
   go(location.hash.slice(1));
 })();
 window.addEventListener('hashchange', ()=>{ const h = location.hash.slice(1); if(VIEWS[h] && h!==current) go(h); });
+
+/* Fresh on every open. The server stamps each page with a build id; when the
+   app returns to the foreground (switching tabs, reopening the home-screen app,
+   restoring from the back/forward cache) we ask for the current build and
+   reload if a newer one has shipped. Checks are throttled to one a minute. */
+(function freshness(){
+  const meta = document.querySelector('meta[name="app-build"]');
+  const mine = meta && meta.content;
+  if(!mine) return;
+  let last = 0, reloading = false;
+  async function check(){
+    if(reloading || Date.now() - last < 60000) return;
+    last = Date.now();
+    try{
+      const r = await fetch('/version', {cache:'no-store'});
+      if(!r.ok) return;
+      const {build} = await r.json();
+      if(build && build !== mine){ reloading = true; location.reload(); }
+    }catch(e){ /* offline: keep what we have */ }
+  }
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') check(); });
+  window.addEventListener('pageshow', e=>{ if(e.persisted){ last = 0; check(); } });
+  window.addEventListener('focus', check);
+})();

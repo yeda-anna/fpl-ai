@@ -115,6 +115,7 @@ the ball once. `prefers-reduced-motion` stops all of it.
 
 1. Colours from tokens only — no new hex literals in components.
 2. Text on lime/sky uses `--on-accent`.
-3. Bump `?v=N` on `styles.css` and `app.js` in `index.html`.
+3. Nothing to bump — the server fingerprints CSS/JS by content (see
+   `ARCHITECTURE.md` → Freshness).
 4. Run `npm --prefix tests test` — 0 failures, then look at the phone and
    desktop screenshots in `tests/screenshots/`.

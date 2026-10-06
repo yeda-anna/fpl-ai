@@ -11,9 +11,7 @@ The full instructions live in [`CLAUDE.md`](CLAUDE.md). The essentials:
   Keep it at 0 failures.
 - **Python 3.9-compatible** backend code. Game rules come from `backend/rules.py`,
   never hardcoded.
-- **Frontend:** no build step. Bump `?v=N` in `frontend/index.html` after editing
-  CSS/JS. Colours from tokens only, 60:30:10 (forest / mint / lime). Text on
-  highlights is forest, never white.
+- **Frontend:** no build step. Cache-busting is automatic (content-hashed `?v=` added by the server); don't add version numbers by hand.
 - **Brand:** original artwork only; light British humour, never in errors or numbers.
 - **Deploy:** pushing `main` deploys to Railway; check `/healthz` afterwards.
 

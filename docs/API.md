@@ -66,9 +66,10 @@ Rules-based; no language model involved.
 
 | Path | Purpose |
 | --- | --- |
+| `/version` | Current frontend build id, `no-store`; open apps poll it to reload after a deploy |
 | `/healthz` | Liveness. Instant, never builds the model: `{"ok": true, "model_ready": bool}` |
 | `/api/health` | Readiness. Builds the model if needed and reports gameweeks |
-| `/` | the single-page app; other static files are served from `frontend/` |
+| `/` | the single-page app (`no-cache`, ETag, CSS/JS links content-hashed); other files under `/static/` |
 
 ## Examples
 

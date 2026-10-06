@@ -32,14 +32,16 @@ Railway builds with **Railpack** and redeploys on every push to `main` of
 ### Ship it
 
 1. `npm --prefix tests test` against a local server — 0 failures.
-2. Bump `?v=N` in `index.html` if CSS or JS changed.
+2. Nothing to bump: CSS/JS URLs are content-hashed by the server, and open apps
+   reload themselves when they notice the new build.
 3. Commit and `git push origin main`.
 4. Watch the deployment reach **SUCCESS** in Railway.
 5. Smoke test the live site:
    ```bash
    U=https://fpl-ai-production-966c.up.railway.app
    curl -s $U/healthz
-   curl -s $U/ | grep -o 'styles.css?v=[0-9]*'
+   curl -s $U/version                                          # build id
+   curl -s $U/ | grep -o 'styles.css?v=[0-9a-f]*'               # content hash
    curl -s -o /dev/null -w '%{http_code}\n' $U/api/entry/1          # 200
    curl -s -o /dev/null -w '%{http_code}\n' $U/api/entry/999999999  # 404
    ```

@@ -27,7 +27,7 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 64 checks, phone 390×844 + desktop 1440×900
+npm --prefix tests test        # 67 checks, phone 390×844 + desktop 1440×900
 node --check frontend/app.js   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
@@ -73,8 +73,10 @@ suite at **0 failures** — see `docs/TESTING.md`.
 
 **Frontend**
 - No build step, no framework, no CDN dependencies. Plain JS in `app.js`.
-- After changing `styles.css` or `app.js`, **bump the `?v=N` cache-buster** on both
-  `<link>`/`<script>` tags in `index.html`.
+- Cache-busting is automatic: the server rewrites `/static/*.css|js` links in
+  `index.html` to `?v=<content hash>`, serves the page `no-cache`, and `app.js`
+  reloads when `/version` reports a newer build. Never hand-write `?v=` numbers,
+  and keep new CSS/JS referenced as `/static/<file>` so they're fingerprinted too.
 - Colours come from tokens only (`docs/DESIGN.md`). The palette follows
   **60:30:10** — forest `#1B4332` background, mint `#96E6A1`/`#84FAB0` content,
   lime `#D4FC79`/sky `#8FD3F4` highlights. Text on a highlight is always forest
