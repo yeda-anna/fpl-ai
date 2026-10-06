@@ -7,16 +7,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Lucky Socks">
+<meta name="apple-mobile-web-app-title" content="Mug’s Game">
 <meta name="description" content="Fantasy Premier League planner: expected points, a multi-week transfer solver, chips, mini-leagues and more.">
-<title>Lucky Socks · FPL planner</title>
+<title>Mug’s Game FC · FPL planner</title>
 <script>
   // apply the saved theme before first paint so the page never flashes
   try{ var t = JSON.parse(localStorage.getItem('fplai_theme')); if(t){ document.documentElement.dataset.theme = t;
     document.querySelector('meta[name=theme-color]').content = t === 'light' ? '#DDE7F3' : '#08111F'; } }catch(e){}
 </script>
 <link rel="manifest" href="/static/manifest.json">
-<link rel="stylesheet" href="/static/styles.css?v=11">
+<link rel="stylesheet" href="/static/styles.css?v=12">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 </head>
 <body>
@@ -28,10 +28,29 @@
       <stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>
       <stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
   </defs>
-  <symbol id="sock" viewBox="0 0 24 24"><g transform="rotate(-12 12 12) translate(0.6 0)">
-    <path d="M8.2 2.2h7.1v10.1c0 .9.35 1.75 1 2.4l2.35 2.35a3.4 3.4 0 0 1-4.8 4.8l-4.9-4.9A5.2 5.2 0 0 1 7.4 13.2V3a.8.8 0 0 1 .8-.8z" fill="#fff"/>
-    <path d="M7.4 3a.8.8 0 0 1 .8-.8h7.1v3.1H7.4z" fill="#2C3E57"/>
-    <path d="M7.4 7.3h7.9v1.7H7.4zM7.4 10.6h7.9v1.7H7.4z" fill="#2C3E57"/></g></symbol>
+  <symbol id="logo" viewBox="0 0 32 32"><defs><clipPath id="mgClipSym"><circle cx="15" cy="11.6" r="5.6"/></clipPath></defs>
+  <g class="mg-steam" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round">
+    <path class="s1" d="M7.4 9.6c-1.4-1.3 1.3-2.4 0-4.1"/>
+    <path class="s2" d="M23.4 10c-1.4-1.3 1.3-2.4 0-4.1"/>
+  </g>
+  <g class="mg-ball">
+    <circle cx="15" cy="11.6" r="5.6" fill="#fff"/>
+    <g clip-path="url(#mgClipSym)" fill="#2C3E57">
+      <path d="M15 9.5l2 1.45-.76 2.35h-2.48l-.76-2.35z"/>
+      <circle cx="15" cy="5.3" r="2"/><circle cx="21.1" cy="9.8" r="2"/><circle cx="18.8" cy="17" r="2"/>
+      <circle cx="11.2" cy="17" r="2"/><circle cx="8.9" cy="9.8" r="2"/>
+    </g>
+    <g stroke="#2C3E57" stroke-width=".7" stroke-linecap="round">
+      <path d="M15 9.5V7.2M17 10.95l2.2-.7M16.24 13.3l1.35 1.9M13.76 13.3l-1.35 1.9M13 10.95l-2.2-.7"/>
+    </g>
+    <circle cx="15" cy="11.6" r="5.6" fill="none" stroke="#2C3E57" stroke-width=".8"/>
+  </g>
+  <g class="mg-mug">
+    <path d="M23 15.4h1.6a3.4 3.4 0 0 1 0 6.8H23" fill="none" stroke="#fff" stroke-width="2.3"/>
+    <path d="M6.2 14.2h17v8.6a4.8 4.8 0 0 1-4.8 4.8h-7.4a4.8 4.8 0 0 1-4.8-4.8z" fill="#fff"/>
+    <path d="M6.2 18.4h17v2.6h-17z" fill="#2C3E57"/>
+    <path d="M6.2 18.4h17v.8h-17z" fill="#3A86FF"/>
+  </g></symbol>
   <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.8l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-6h-5.6v6H5A1.5 1.5 0 0 1 3.5 19z"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6.5h16M4 12h16M4 17.5h16"/><circle cx="7.5" cy="6.5" r=".1"/><path d="M9.5 4v16"/></symbol>
   <symbol id="i-solver" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="18" r="2.2"/><circle cx="18.5" cy="6" r="2.2"/><path d="M7.6 17.2c5.5-1 3.2-9.6 8.8-10.4"/><path d="M15 4.5l1.3 1.6-1.6 1.3"/></symbol>
@@ -52,9 +71,31 @@
 
 <header class="nav-bar">
   <div class="nav-in">
-    <div class="brand" title="Lucky Socks — home">
-      <div class="mark"><svg aria-hidden="true"><use href="#sock"/></svg></div>
-      <b>Lucky Socks</b>
+    <div class="brand" title="Mug’s Game FC — home">
+      <div class="mark"><svg class="mg-logo" viewBox="0 0 32 32" aria-hidden="true"><defs><clipPath id="mgClipNav"><circle cx="15" cy="11.6" r="5.6"/></clipPath></defs>
+  <g class="mg-steam" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round">
+    <path class="s1" d="M7.4 9.6c-1.4-1.3 1.3-2.4 0-4.1"/>
+    <path class="s2" d="M23.4 10c-1.4-1.3 1.3-2.4 0-4.1"/>
+  </g>
+  <g class="mg-ball">
+    <circle cx="15" cy="11.6" r="5.6" fill="#fff"/>
+    <g clip-path="url(#mgClipNav)" fill="#2C3E57">
+      <path d="M15 9.5l2 1.45-.76 2.35h-2.48l-.76-2.35z"/>
+      <circle cx="15" cy="5.3" r="2"/><circle cx="21.1" cy="9.8" r="2"/><circle cx="18.8" cy="17" r="2"/>
+      <circle cx="11.2" cy="17" r="2"/><circle cx="8.9" cy="9.8" r="2"/>
+    </g>
+    <g stroke="#2C3E57" stroke-width=".7" stroke-linecap="round">
+      <path d="M15 9.5V7.2M17 10.95l2.2-.7M16.24 13.3l1.35 1.9M13.76 13.3l-1.35 1.9M13 10.95l-2.2-.7"/>
+    </g>
+    <circle cx="15" cy="11.6" r="5.6" fill="none" stroke="#2C3E57" stroke-width=".8"/>
+  </g>
+  <g class="mg-mug">
+    <path d="M23 15.4h1.6a3.4 3.4 0 0 1 0 6.8H23" fill="none" stroke="#fff" stroke-width="2.3"/>
+    <path d="M6.2 14.2h17v8.6a4.8 4.8 0 0 1-4.8 4.8h-7.4a4.8 4.8 0 0 1-4.8-4.8z" fill="#fff"/>
+    <path d="M6.2 18.4h17v2.6h-17z" fill="#2C3E57"/>
+    <path d="M6.2 18.4h17v.8h-17z" fill="#3A86FF"/>
+  </g></svg></div>
+      <b>Mug’s Game <em class="fc">FC</em></b>
     </div>
     <nav class="links" id="nav" aria-label="Main">
       <button data-view="dashboard" class="on" title="Dashboard"><span class="l">Dashboard</span><span class="s">Home</span></button>
@@ -70,7 +111,7 @@
     </nav>
     <div class="nav-right">
       <button class="team-pill" id="teamBtn" title="Your FPL team" aria-label="Change team">
-        <span class="avatar" id="teamAvatar"><svg aria-hidden="true"><use href="#sock"/></svg></span>
+        <span class="avatar" id="teamAvatar"><svg aria-hidden="true"><use href="#logo"/></svg></span>
         <span id="teamLabel">Add team</span>
       </button>
       <button class="icon-btn" id="themeBtn" title="Switch light / dark" aria-label="Switch theme"><svg aria-hidden="true"><use href="#i-sun"/></svg></button>
@@ -141,10 +182,32 @@
 <!-- asked on every launch; skippable -->
 <div class="ob" id="onboard" hidden>
   <form class="ob-card" id="obForm" autocomplete="off" novalidate>
-    <div class="ob-mark"><svg aria-hidden="true"><use href="#sock"/></svg></div>
+    <div class="ob-mark"><svg class="mg-logo" viewBox="0 0 32 32" aria-hidden="true"><defs><clipPath id="mgClipOb"><circle cx="15" cy="11.6" r="5.6"/></clipPath></defs>
+  <g class="mg-steam" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round">
+    <path class="s1" d="M7.4 9.6c-1.4-1.3 1.3-2.4 0-4.1"/>
+    <path class="s2" d="M23.4 10c-1.4-1.3 1.3-2.4 0-4.1"/>
+  </g>
+  <g class="mg-ball">
+    <circle cx="15" cy="11.6" r="5.6" fill="#fff"/>
+    <g clip-path="url(#mgClipOb)" fill="#2C3E57">
+      <path d="M15 9.5l2 1.45-.76 2.35h-2.48l-.76-2.35z"/>
+      <circle cx="15" cy="5.3" r="2"/><circle cx="21.1" cy="9.8" r="2"/><circle cx="18.8" cy="17" r="2"/>
+      <circle cx="11.2" cy="17" r="2"/><circle cx="8.9" cy="9.8" r="2"/>
+    </g>
+    <g stroke="#2C3E57" stroke-width=".7" stroke-linecap="round">
+      <path d="M15 9.5V7.2M17 10.95l2.2-.7M16.24 13.3l1.35 1.9M13.76 13.3l-1.35 1.9M13 10.95l-2.2-.7"/>
+    </g>
+    <circle cx="15" cy="11.6" r="5.6" fill="none" stroke="#2C3E57" stroke-width=".8"/>
+  </g>
+  <g class="mg-mug">
+    <path d="M23 15.4h1.6a3.4 3.4 0 0 1 0 6.8H23" fill="none" stroke="#fff" stroke-width="2.3"/>
+    <path d="M6.2 14.2h17v8.6a4.8 4.8 0 0 1-4.8 4.8h-7.4a4.8 4.8 0 0 1-4.8-4.8z" fill="#fff"/>
+    <path d="M6.2 18.4h17v2.6h-17z" fill="#2C3E57"/>
+    <path d="M6.2 18.4h17v.8h-17z" fill="#3A86FF"/>
+  </g></svg></div>
     <div id="obWelcome"></div>
-    <h2>Lucky Socks</h2>
-    <p class="tagline">Every FPL manager has a superstition. This one does the maths.</p>
+    <h2>Mug’s Game <span class="fc">FC</span></h2>
+    <p class="tagline">Fantasy football is a mug’s game. Might as well do the maths.</p>
     <div class="ob-field">
       <label for="obTeam">Your FPL Team ID</label>
       <input id="obTeam" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 1234567" enterkeyhint="go">
@@ -154,12 +217,12 @@
     <div class="ob-err" id="obErr" role="alert"></div>
     <div class="ob-actions">
       <button type="submit" class="cta" id="obGo"><svg aria-hidden="true"><use href="#i-play"/></svg><span>Load my team</span></button>
-      <button type="button" class="btn ghost" id="obSkip">Skip for now — just browse</button>
+      <button type="button" class="btn ghost" id="obSkip">Skip for now — just having a nose</button>
     </div>
   </form>
 </div>
 
 <div id="sheet-root"></div>
-<script src="/static/app.js?v=11"></script>
+<script src="/static/app.js?v=12"></script>
 </body>
 </html>

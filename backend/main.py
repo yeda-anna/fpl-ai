@@ -22,7 +22,7 @@ import xpts
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
 
-app = FastAPI(title="Lucky Socks", version="1.1.0")
+app = FastAPI(title="Mug’s Game FC", version="1.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 _lock = threading.Lock()

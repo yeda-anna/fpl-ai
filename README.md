@@ -1,6 +1,6 @@
-# Lucky Socks 🧦
+# Mug’s Game FC ☕⚽
 
-Every FPL manager has a superstition. This one does the maths.
+Fantasy football is a mug’s game. Might as well do the maths.
 
 A Fantasy Premier League planner: expected points for every player, a
 multi-gameweek transfer solver, chip planning, team rating, mini-league

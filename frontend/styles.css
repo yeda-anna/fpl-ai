@@ -1,5 +1,5 @@
 /* =====================================================================
-   Lucky Socks — glass design system
+   Mug’s Game FC — glass design system
    Palette: #DDE7F3 · #FFFFFF · #B3C2D6 · #2C3E57 · #3A86FF
    Surfaces are frosted glass floating over a slowly drifting field of
    blurred colour. Phones get an app shell: top bar, floating tab dock and
@@ -129,8 +129,10 @@ button{font:inherit}
 .mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;
   background:linear-gradient(140deg,#7FB3FF,#3A86FF 55%,#2A6BD6);
   box-shadow:0 1px 0 rgba(255,255,255,.4) inset, var(--sh-accent)}
-.mark svg{width:26px;height:26px}
-.brand b{font-size:18px;font-weight:800;letter-spacing:-.035em}
+.mark svg{width:31px;height:31px}
+.brand b{font-size:18px;font-weight:800;letter-spacing:-.035em;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.fc{font-style:normal;font-size:10.5px;font-weight:850;letter-spacing:.06em;padding:2px 6px;border-radius:6px;color:#fff;
+  background:linear-gradient(140deg,#6AA6FF,#3A86FF);box-shadow:0 2px 8px -2px rgba(58,134,255,.7);vertical-align:3px}
 .links{display:flex;gap:2px;flex:1;min-width:0;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
 .links > :first-child{margin-left:auto}.links > :last-child{margin-right:auto}
 .links .s{display:none}
@@ -156,6 +158,28 @@ button{font:inherit}
   background:var(--glass-2);border:1px solid var(--glass-line);box-shadow:var(--glass-hi);color:var(--ink-2);transition:.2s var(--ease)}
 .icon-btn:hover{color:var(--ink);transform:translateY(-1px);background:var(--glass-3)}
 .icon-btn svg{width:19px;height:19px}
+
+
+/* ============================ animated logo ============================ */
+/* A club mug with a football dunked in it like a biscuit. Steam curls rise and
+   fade, the ball bobs, the mug clinks when you hover the logo, and on the
+   welcome screen the ball pops out now and then and splashes back in. */
+.mg-logo{overflow:visible;display:block}
+.mg-logo .mg-ball{transform-box:fill-box;transform-origin:50% 50%;animation:mgBob 2.8s ease-in-out infinite}
+.mg-logo .mg-steam path{opacity:0;transform-box:fill-box;transform-origin:50% 100%;animation:mgSteam 2.8s ease-in-out infinite}
+.mg-logo .mg-steam .s2{animation-delay:1.4s}
+.mg-logo .mg-mug{transform-box:fill-box;transform-origin:50% 100%}
+.brand:hover .mg-mug{animation:mgClink .6s ease-in-out}
+.brand:hover .mg-ball{animation:mgHop .8s cubic-bezier(.3,.7,.3,1)}
+.ob-mark .mg-ball{animation:mgDunk 5.2s cubic-bezier(.3,.7,.3,1) infinite}
+@keyframes mgBob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-1.1px) rotate(16deg)}}
+@keyframes mgSteam{0%{opacity:0;transform:translateY(2px) scaleY(.55)}30%{opacity:.95}100%{opacity:0;transform:translateY(-3.5px) scaleY(1.15)}}
+@keyframes mgClink{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}55%{transform:rotate(6deg)}80%{transform:rotate(-2deg)}}
+@keyframes mgHop{0%,100%{transform:translateY(0) rotate(0)}40%{transform:translateY(-6px) rotate(-120deg)}75%{transform:translateY(.5px) rotate(-200deg)}}
+@keyframes mgDunk{0%,58%,100%{transform:translateY(0) rotate(0)}
+  68%{transform:translateY(-8px) rotate(-110deg)}76%{transform:translateY(-8.6px) rotate(-170deg)}
+  86%{transform:translateY(.8px) rotate(-230deg)}92%{transform:translateY(-1px) rotate(-236deg)}96%{transform:translateY(0) rotate(-240deg)}}
+.avatar svg{width:24px;height:24px}
 
 /* ============================ page ============================ */
 .page{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:30px 24px 80px;overflow-x:clip}
@@ -432,7 +456,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 .ob-mark{width:78px;height:78px;margin:0 auto 18px;border-radius:24px;display:grid;place-items:center;
   background:linear-gradient(140deg,#7FB3FF,#3A86FF 55%,#2A6BD6);box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 18px 40px -10px rgba(58,134,255,.8);
   animation:bob 4s ease-in-out infinite}
-.ob-mark svg{width:52px;height:52px}
+.ob-mark svg{width:64px;height:64px}
 @keyframes bob{50%{transform:translateY(-5px) rotate(-3deg)}}
 .ob-card h2{font-size:28px;font-weight:850;letter-spacing:-.04em}
 .ob-card .tagline{color:var(--ink-2);margin:6px 0 24px;font-size:15px}
@@ -522,7 +546,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
   .nav-in{height:58px;padding:0 14px;gap:10px}
   .brand{flex:1;min-width:0}
   .brand b{font-size:17px}
-  .mark{width:34px;height:34px;border-radius:11px}.mark svg{width:23px;height:23px}
+  .mark{width:34px;height:34px;border-radius:11px}.mark svg{width:28px;height:28px}
   .team-pill{height:38px;max-width:150px;padding:0 12px 0 4px;font-size:13px}
   .avatar{width:30px;height:30px}
   .icon-btn{width:38px;height:38px;border-radius:12px}
@@ -617,7 +641,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
   .ob{place-items:end center;padding:0}
   .ob-card{border-radius:30px 30px 0 0;padding:28px 20px calc(22px + var(--safe-b));width:100%}
   .ob-card h2{font-size:25px}
-  .ob-mark{width:68px;height:68px}.ob-mark svg{width:44px;height:44px}
+  .ob-mark{width:68px;height:68px}.ob-mark svg{width:56px;height:56px}
   .need-team .btn{width:100%}
 }
 

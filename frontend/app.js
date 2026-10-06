@@ -1,4 +1,4 @@
-/* Lucky Socks — frontend. Plain JS, no build step. */
+/* Mug’s Game FC — frontend. Plain JS, no build step. */
 'use strict';
 
 const store = {
@@ -54,9 +54,9 @@ const tile = (lbl, val, sub, cls='') => `<div class="tile"><div class="lbl">${lb
 function needTeam(){
   if(S.teamId) return null;
   return `<div class="card need-team">
-    <div class="mark big"><svg aria-hidden="true"><use href="#sock"/></svg></div>
+    <div class="mark big"><svg aria-hidden="true"><use href="#logo"/></svg></div>
     <div style="flex:1;min-width:200px"><h3 style="margin-bottom:6px">This tool needs your team</h3>
-      <p class="sub" style="margin:0">Add your FPL Team ID to plan transfers, grade your squad and time your chips. Everything else works without it.</p></div>
+      <p class="sub" style="margin:0">We can read xG, not minds. Add your FPL Team ID to plan transfers, grade your squad and time your chips — everything else works without it.</p></div>
     <button class="btn primary" onclick="openOnboard()">Add my team</button></div>`;
 }
 
@@ -101,7 +101,7 @@ const initials = n => (n||'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0
 function updateTeamPill(){
   const named = S.teamId && S.teamName;
   el('teamLabel').textContent = S.teamId ? (S.teamName || 'Team '+S.teamId) : 'Add team';
-  el('teamAvatar').innerHTML = named ? esc(initials(S.teamName)) : '<svg aria-hidden="true"><use href="#sock"/></svg>';
+  el('teamAvatar').innerHTML = named ? esc(initials(S.teamName)) : '<svg aria-hidden="true"><use href="#logo"/></svg>';
   el('moreTeam').querySelector('span').textContent = S.teamId ? 'Change team' : 'Add team';
 }
 function openOnboard(){
@@ -111,7 +111,7 @@ function openOnboard(){
   el('obWelcome').innerHTML = (remembered && rname)
     ? `<span class="ob-welcome"><span class="avatar">${esc(initials(rname))}</span>Welcome back, ${esc(rname)}</span>` : '';
   el('obGo').querySelector('span').textContent = (remembered || S.teamId) ? 'Continue' : 'Load my team';
-  el('obSkip').textContent = S.teamId ? 'Keep my current team' : 'Skip for now — just browse';
+  el('obSkip').textContent = S.teamId ? 'Keep my current team' : 'Skip for now — just having a nose';
   el('onboard').hidden = false;
   closeMore();
   if(!el('obTeam').value){ setTimeout(()=>{ try{ el('obTeam').focus({preventScroll:true}); }catch(e){} }, 80); }
@@ -243,9 +243,9 @@ async function viewDashboard(t){
       </div>`;
     } else {
       head = `<div class="card need-team mb">
-        <div class="mark big"><svg aria-hidden="true"><use href="#sock"/></svg></div>
+        <div class="mark big"><svg aria-hidden="true"><use href="#logo"/></svg></div>
         <div style="flex:1;min-width:200px"><h3 style="margin-bottom:6px">Browsing without a team</h3>
-          <p class="sub" style="margin:0">Add your FPL Team ID to see your squad on the pitch, run the solver and grade your team. Everything below works without one.</p></div>
+          <p class="sub" style="margin:0">Just having a nose? Fair enough. Add your FPL Team ID to see your squad on the pitch, run the solver and grade your team — everything below works without one.</p></div>
         <button class="btn primary" onclick="openOnboard()">Add my team</button></div>`;
     }
 
@@ -480,7 +480,7 @@ async function viewSolver(t){
     el('adv').open = false;
     if(SV.key === key && SV.r){ draw(); return; }
     el('runSolve').disabled = true;
-    el('runSolve').innerHTML = 'Optimising '+S.horizon+' gameweeks…';
+    el('runSolve').innerHTML = 'Putting the kettle on — optimising '+S.horizon+' gameweeks…';
     el('svLeft').innerHTML = `<div class="skel" style="height:86px;margin-bottom:16px"></div><div class="skel" style="height:640px;border-radius:24px"></div>`;
     el('svRight').innerHTML = `<div class="skel" style="height:70px;margin:22px 0 18px"></div><div class="skel" style="height:96px;margin-bottom:12px"></div><div class="skel" style="height:300px"></div>`;
     try{
@@ -548,7 +548,7 @@ async function viewSolver(t){
 const CHIP = {WC:'Wildcard', FH:'Free Hit', BB:'Bench Boost', TC:'Triple Captain'};
 async function viewChips(t){
   const n = needTeam(); if(n){ t.innerHTML = n; return; }
-  t.innerHTML = loading('Scoring every chip in every gameweek — the Wildcard re-solves take around half a minute');
+  t.innerHTML = loading('Scoring every chip in every gameweek — about half a minute, so long enough to brew');
   try{
     const body = {team_id:+S.teamId, horizon:S.horizon}; const ov = ovParam(); if(ov) body.overrides = ov;
     const r = await post('/api/chips', body);
