@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="forest">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -12,8 +12,13 @@
 <title>Mug’s Game FC · FPL planner</title>
 <script>
   // apply the saved theme before first paint so the page never flashes
-  try{ var t = JSON.parse(localStorage.getItem('fplai_theme')); if(t){ document.documentElement.dataset.theme = t;
-    document.querySelector('meta[name=theme-color]').content = t === 'light' ? '#F2FBEC' : '#1B4332'; } }catch(e){}
+  try{
+    var t = JSON.parse(localStorage.getItem('fplai_theme')) || 'forest';
+    t = ({dark:'forest', light:'chalk'})[t] || t;
+    if(t === 'auto') t = matchMedia('(prefers-color-scheme: light)').matches ? 'chalk' : 'forest';
+    var c = ({forest:'#1B4332', midnight:'#0E1726', graphite:'#17191C', chalk:'#F2FBEC'})[t];
+    if(c){ document.documentElement.dataset.theme = t; document.querySelector('meta[name=theme-color]').content = c; }
+  }catch(e){}
 </script>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="stylesheet" href="/static/styles.css">
@@ -64,6 +69,8 @@
   <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8h.01"/></symbol>
   <symbol id="i-team" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 4 4 6.2 2.5 10.5l3 1.2V20h13v-8.3l3-1.2L20 6.2 15.5 4a3.6 3.6 0 0 1-7 0z"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.2 0-1 .8-1.7 1.8-1.7h2.1A4.3 4.3 0 0 0 21 10.9C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="7.4" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></symbol>
 </svg>
 
@@ -114,7 +121,7 @@
         <span class="avatar" id="teamAvatar"><svg aria-hidden="true"><use href="#logo"/></svg></span>
         <span id="teamLabel">Add team</span>
       </button>
-      <button class="icon-btn" id="themeBtn" title="Switch light / dark" aria-label="Switch theme"><svg aria-hidden="true"><use href="#i-sun"/></svg></button>
+      <button class="icon-btn" id="themeBtn" title="Theme" aria-label="Choose theme" aria-haspopup="dialog" aria-expanded="false" aria-controls="themePop"><svg aria-hidden="true"><use href="#i-palette"/></svg></button>
     </div>
   </div>
 </header>
@@ -174,7 +181,7 @@
     </div>
     <div class="more-actions">
       <button class="btn" id="moreTeam"><svg><use href="#i-team"/></svg><span>Change team</span></button>
-      <button class="btn" id="moreTheme"><svg><use href="#i-sun"/></svg><span>Light / dark</span></button>
+      <button class="btn" id="moreTheme"><svg><use href="#i-palette"/></svg><span>Theme</span></button>
     </div>
   </div>
 </div>
@@ -220,6 +227,12 @@
       <button type="button" class="btn ghost" id="obSkip">Skip for now — just having a nose</button>
     </div>
   </form>
+</div>
+
+<!-- theme picker: a popover under the top bar on desktop, a panel above the tab dock on phones -->
+<div class="theme-pop" id="themePop" role="dialog" aria-label="Theme" hidden>
+  <div class="tp-head"><h4>Theme</h4><span class="tp-sub">Same maths, different kit</span></div>
+  <div class="tp-list" id="themeList"></div>
 </div>
 
 <div id="sheet-root"></div>

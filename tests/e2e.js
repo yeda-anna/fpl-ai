@@ -154,11 +154,24 @@ async function phone(browser){
   await page.screenshot({ path: `${OUT}/m-09-player-sheet.png` });
   await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 
-  // light theme
+  // theme picker: opens from More, lists every theme, each one applies
   await page.click('#tabbar button[data-more]'); await page.waitForTimeout(400);
-  await page.click('#moreTheme'); await page.waitForTimeout(300);
-  ok('phone: theme switches to light', await page.$eval('html', e => e.dataset.theme === 'light'));
-  await page.click('#more .more-scrim', { position: { x: 20, y: 20 } }); await page.waitForTimeout(400);
+  await page.click('#moreTheme'); await page.waitForTimeout(350);
+  ok('phone: theme picker opens from More', await page.isVisible('#themePop'));
+  ok('phone: theme picker lists 4 themes + system', (await page.$$('#themeList button')).length === 5);
+  ok('phone: theme picker fits width', await noOverflow(page), lastOverflow.join(', '));
+  await page.screenshot({ path: `${OUT}/m-10a-theme-picker.png` });
+  const COLORS = { forest: '#1B4332', midnight: '#0E1726', graphite: '#17191C', chalk: '#F2FBEC' };
+  for (const id of ['midnight', 'graphite', 'forest', 'chalk']) {
+    await page.click(`#themeList button[data-theme-id="${id}"]`); await page.waitForTimeout(250);
+    const st = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme,
+      color: document.querySelector('meta[name=theme-color]').content,
+      base: getComputedStyle(document.body).backgroundColor }));
+    ok(`phone: ${id} theme applies (+ browser bar colour)`, st.theme === id && st.color === COLORS[id], JSON.stringify(st));
+  }
+  await page.mouse.click(30, 160); await page.waitForTimeout(300);
+  ok('phone: tapping outside closes the picker', !(await page.isVisible('#themePop')));
+  ok('phone: chalk (light) theme is on', await page.$eval('html', e => e.dataset.theme === 'chalk'));
   await page.screenshot({ path: `${OUT}/m-10-dashboard-light.png` });
   await page.click('#tabbar button[data-view="solver"]');
   await page.waitForSelector('#svLeft .path', { timeout: 90000 });
@@ -167,6 +180,7 @@ async function phone(browser){
   // relaunch: asked again, remembered, skippable
   await page.reload({ waitUntil: 'networkidle' });
   ok('phone: asked again on relaunch', await page.isVisible('#onboard'));
+  ok('phone: theme choice survives a relaunch', await page.$eval('html', e => e.dataset.theme === 'chalk'));
   ok('phone: remembers the team (welcome back + prefilled)', (await page.inputValue('#obTeam')) === '1' && /welcome back/i.test(await page.textContent('#obWelcome')));
   await page.screenshot({ path: `${OUT}/m-12-onboard-return.png` });
   await page.click('#obSkip');
@@ -217,8 +231,27 @@ async function desktop(browser){
     ok(`desktop: ${v} renders without error`, (await errBoxes(page, v)).length === 0, (await errBoxes(page, v)).join(' | '));
     if (v === 'solver') await page.screenshot({ path: `${OUT}/d-03-solver.png` });
   }
-  await page.click('#themeBtn'); await page.click('#nav button[data-view="dashboard"]'); await page.waitForTimeout(500);
-  await page.screenshot({ path: `${OUT}/d-04-dashboard-light.png` });
+  // theme picker on desktop: a popover under the top bar
+  await page.click('#nav button[data-view="dashboard"]'); await page.waitForTimeout(600);
+  await page.click('#themeBtn'); await page.waitForTimeout(300);
+  const box = await page.$eval('#themePop', e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom }; });
+  ok('desktop: theme popover opens inside the window', box.l >= 0 && box.r <= 1440 && box.t >= 60 && box.b <= 900, JSON.stringify(box));
+  ok('desktop: theme button reports expanded', (await page.getAttribute('#themeBtn', 'aria-expanded')) === 'true');
+  await page.screenshot({ path: `${OUT}/d-04a-theme-picker.png` });
+  for (const id of ['midnight', 'graphite', 'chalk']) {
+    await page.click(`#themeList button[data-theme-id="${id}"]`); await page.waitForTimeout(250);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+    await page.screenshot({ path: `${OUT}/d-04-dashboard-${id}.png` });
+    if (id !== 'chalk') { await page.click('#themeBtn'); await page.waitForTimeout(250); }
+  }
+  ok('desktop: Escape closes the picker', !(await page.isVisible('#themePop')));
+  // an old saved "light" / "dark" choice still works
+  await page.evaluate(() => localStorage.setItem('fplai_theme', JSON.stringify('light')));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  ok('desktop: old "light" setting maps to chalk', await page.$eval('html', e => e.dataset.theme === 'chalk'));
+  await page.evaluate(() => localStorage.setItem('fplai_theme', JSON.stringify('dark')));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  ok('desktop: old "dark" setting maps to forest', await page.$eval('html', e => e.dataset.theme === 'forest'));
   ok('desktop: no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 4).join(' || '));
   await ctx.close();
 }

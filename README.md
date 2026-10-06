@@ -90,14 +90,21 @@ copy is served.
 
 ## Look and feel
 
-Glass panels over a deep forest pitch, coloured **60 : 30 : 10**:
+Crisp frosted glass: evenly lit panels with a fine light rim along the top
+edge and a soft shadow, coloured **60 : 30 : 10** (background : content :
+highlight). Pick a theme from the palette button (or **More → Theme** on a
+phone):
 
-| 60% background | 30% content | 10% highlight |
-| --- | --- | --- |
-| forest `#1B4332` | mint `#96E6A1` · sea green `#84FAB0` | lime `#D4FC79` · sky `#8FD3F4` |
+| Theme | 60% background | 30% content | 10% highlight |
+| --- | --- | --- | --- |
+| Forest (default) | `#1B4332` | mint glass | lime `#D4FC79` · sky `#8FD3F4` |
+| Midnight | `#0E1726` | sky-tinted glass | lime · sky |
+| Graphite | `#17191C` | neutral glass | lime · sky |
+| Chalk (light) | `#F2FBEC` | white glass | lime · forest |
+| Match system | Chalk by day, Forest at night | | |
 
 Lime is for "do this" (buttons, active tab, captain), sky for information.
-Text on either is forest. Light and dark themes share the same split. The
+Every theme passes WCAG AA for all text. The
 full system — tokens, glass rules, breakpoints, the animated mug logo and the
 house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
@@ -105,7 +112,7 @@ house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 67 headless checks, phone + desktop
+    npm --prefix tests test            # 81 headless checks, phone + desktop
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).
@@ -147,7 +154,7 @@ See [`docs/TESTING.md`](docs/TESTING.md).
     backend/analysis.py  chips, rating, compare, picks, mini-leagues
     backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
     backend/main.py      FastAPI routes + static hosting
-    frontend/            single-page app, no build step; dark and light themes
+    frontend/            single-page app, no build step; four themes + match-system
     tests/               Playwright end-to-end suite
     scripts/calibrate.py projection sanity check
     docs/                the documentation above

@@ -27,7 +27,7 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 67 checks, phone 390×844 + desktop 1440×900
+npm --prefix tests test        # 81 checks, phone 390×844 + desktop 1440×900
 node --check frontend/app.js   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
@@ -77,10 +77,15 @@ suite at **0 failures** — see `docs/TESTING.md`.
   `index.html` to `?v=<content hash>`, serves the page `no-cache`, and `app.js`
   reloads when `/version` reports a newer build. Never hand-write `?v=` numbers,
   and keep new CSS/JS referenced as `/static/<file>` so they're fingerprinted too.
-- Colours come from tokens only (`docs/DESIGN.md`). The palette follows
-  **60:30:10** — forest `#1B4332` background, mint `#96E6A1`/`#84FAB0` content,
-  lime `#D4FC79`/sky `#8FD3F4` highlights. Text on a highlight is always forest
-  (`--on-accent`), never white.
+- Colours come from tokens only (`docs/DESIGN.md`). Every theme follows
+  **60:30:10** — base background, tinted glass content, lime `#D4FC79`/sky
+  `#8FD3F4` highlights. Text on a highlight uses `--on-accent`, never white.
+- Four themes: `forest` (default), `midnight`, `graphite`, `chalk`, plus `auto`.
+  A new theme touches three places: its token block in `styles.css`, `THEMES`
+  in `app.js`, and the colour map in the pre-paint script in `index.html`.
+  Every text token must pass AA in every theme.
+- Glass is crisp frosted: `--glass-fill`, a hairline border, the top `--rim`
+  highlight and two-layer shadows. No coloured glows inside cards.
 - Live `backdrop-filter` only on floating chrome: `.nav-bar, .tabbar, .more-panel,
   .sheet, .ob-card, .adv-body`. In-page cards stay flat translucent glass.
 - Single-column grids use `minmax(0,1fr)`, never bare `1fr` (it blows out on phones).

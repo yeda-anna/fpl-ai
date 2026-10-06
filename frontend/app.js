@@ -92,7 +92,7 @@ el('more').addEventListener('click', e=>{
   const b = e.target.closest('#moreGrid button'); if(b) go(b.dataset.view);
 });
 el('moreTeam').addEventListener('click', ()=>{ closeMore(); openOnboard(); });
-el('moreTheme').addEventListener('click', ()=>toggleTheme());
+el('moreTheme').addEventListener('click', ()=>{ closeMore(); openThemePicker(); });
 function invalidate(){ S.loaded = {}; S.entry = null; }
 el('horizon').addEventListener('change', ()=>{ S.horizon = +el('horizon').value; invalidate(); render(current); });
 
@@ -145,6 +145,7 @@ el('obSkip').addEventListener('click', ()=>{
 document.addEventListener('keydown', e=>{
   if(e.key !== 'Escape') return;
   if(!el('onboard').hidden) el('obSkip').click();
+  else if(!el('themePop').hidden) closeThemePicker(true);
   else closeMore();
 });
 
@@ -879,12 +880,60 @@ async function viewModel(t){
 /* ---------------- boot ---------------- */
 const VIEWS = {dashboard:viewDashboard, xpts:viewXpts, solver:viewSolver, chips:viewChips, copilot:viewCopilot,
                rate:viewRate, compare:viewCompare, league:viewLeague, scout:viewScout, model:viewModel};
-function setTheme(th){
-  document.documentElement.dataset.theme = th; store.set('fplai_theme', th);
-  const m = document.querySelector('meta[name=theme-color]'); if(m) m.content = th === 'light' ? '#F2FBEC' : '#1B4332';
+/* ---------------- themes ----------------
+   Each theme is a set of tokens in styles.css. `sw` is its 60:30:10 split
+   (background, content, highlight) drawn as the swatch. */
+const THEMES = [
+  {id:'forest',   name:'Forest',       note:'Deep green. The house colours.',      sw:['#1B4332','#96E6A1','#D4FC79'], color:'#1B4332'},
+  {id:'midnight', name:'Midnight',     note:'Floodlit navy for late deadlines.',   sw:['#0E1726','#8FD3F4','#D4FC79'], color:'#0E1726'},
+  {id:'graphite', name:'Graphite',     note:'Matte charcoal. Just the numbers.', sw:['#17191C','#C7CCD2','#D4FC79'], color:'#17191C'},
+  {id:'chalk',    name:'Chalk',        note:'Light, for sunny Saturdays.',         sw:['#F2FBEC','#96E6A1','#1B4332'], color:'#F2FBEC'},
+  {id:'auto',     name:'Match system', note:'Forest at night, Chalk by day.',      sw:null},
+];
+const LEGACY_THEME = {dark:'forest', light:'chalk'};
+const lightQuery = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
+const themePref = () => { const t = store.get('fplai_theme', 'forest'); return LEGACY_THEME[t] || (THEMES.some(x=>x.id===t) ? t : 'forest'); };
+const resolveTheme = pref => pref === 'auto' ? (lightQuery && lightQuery.matches ? 'chalk' : 'forest') : pref;
+function applyTheme(pref){
+  const id = resolveTheme(pref), th = THEMES.find(x=>x.id===id) || THEMES[0];
+  document.documentElement.dataset.theme = th.id;
+  const m = document.querySelector('meta[name=theme-color]'); if(m) m.content = th.color;
+  document.querySelectorAll('#themeList button').forEach(b=>b.setAttribute('aria-checked', String(b.dataset.themeId === pref)));
 }
-function toggleTheme(){ setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); }
-el('themeBtn').addEventListener('click', toggleTheme);
+function setTheme(pref){ store.set('fplai_theme', pref); applyTheme(pref); }
+if(lightQuery) (lightQuery.addEventListener ? lightQuery.addEventListener('change', ()=>{ if(themePref()==='auto') applyTheme('auto'); })
+                                           : lightQuery.addListener(()=>{ if(themePref()==='auto') applyTheme('auto'); }));
+
+function swatch(t){
+  if(!t.sw) return `<span class="tp-sw tp-auto" aria-hidden="true"><i style="background:#1B4332"></i><i style="background:#F2FBEC"></i></span>`;
+  const [bg, content, hi] = t.sw;   // 60 : 30 : 10 as a ring
+  return `<span class="tp-sw" aria-hidden="true" style="background:conic-gradient(${bg} 0 216deg, ${content} 216deg 324deg, ${hi} 324deg 360deg)"></span>`;
+}
+el('themeList').innerHTML = THEMES.map(t=>`
+  <button type="button" role="menuitemradio" data-theme-id="${t.id}" aria-checked="false">
+    ${swatch(t)}<span class="tp-t"><b>${t.name}</b><small>${t.note}</small></span>
+    <svg class="tp-ok" aria-hidden="true"><use href="#i-check"/></svg>
+  </button>`).join('');
+el('themeList').setAttribute('role', 'menu');
+el('themeList').addEventListener('click', e=>{ const b = e.target.closest('button[data-theme-id]'); if(b) setTheme(b.dataset.themeId); });
+
+function openThemePicker(){
+  const pop = el('themePop');
+  pop.hidden = false; el('themeBtn').setAttribute('aria-expanded','true');
+  requestAnimationFrame(()=>pop.classList.add('open'));
+  const cur = pop.querySelector('button[aria-checked="true"]') || pop.querySelector('button');
+  if(cur) cur.focus({preventScroll:true});
+}
+function closeThemePicker(refocus){
+  const pop = el('themePop'); if(pop.hidden) return;
+  pop.classList.remove('open'); pop.hidden = true; el('themeBtn').setAttribute('aria-expanded','false');
+  if(refocus) el('themeBtn').focus({preventScroll:true});
+}
+el('themeBtn').addEventListener('click', e=>{ e.stopPropagation(); el('themePop').hidden ? openThemePicker() : closeThemePicker(); });
+document.addEventListener('pointerdown', e=>{
+  if(!el('themePop').hidden && !e.target.closest('#themePop, #themeBtn, #moreTheme')) closeThemePicker();
+});
+applyTheme(themePref());
 document.querySelector('.brand').addEventListener('click', ()=>go('dashboard'));
 
 (async function boot(){

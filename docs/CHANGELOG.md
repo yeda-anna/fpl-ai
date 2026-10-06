@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-06 — Crisp glass and themes
+
+- **Crisp frosted glass.** Panels are evenly lit with a fine light rim along
+  the top edge and a two-layer soft shadow; the coloured glow in the corner of
+  stat tiles is gone; backdrop orbs are quieter.
+- **Theme picker** (palette button, or More → Theme): Forest, Midnight,
+  Graphite, Chalk and Match system. Each follows 60:30:10 with the same lime and
+  sky highlights, and every text colour passes WCAG AA in every theme. Old
+  light/dark settings carry over.
+- Keyboard focus ring in the highlight colour.
+- e2e: 81 checks (theme picker, every theme, persistence, legacy settings).
+
 ## 2026-10-06 — Always fresh
 
 - Returning visitors no longer see an old stylesheet. `index.html` is served

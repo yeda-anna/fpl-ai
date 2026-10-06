@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes:
-phone 390×844 and desktop 1440×900. 67 checks.
+phone 390×844 and desktop 1440×900. 81 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -33,7 +33,10 @@ What it covers:
 - Solver: returns plans, controls sit above the pitch, the pitch steps through
   gameweeks, switching plans works.
 - Copilot answers; minileague analysis completes; the player bottom sheet opens.
-- Theme switches to light.
+- Theme picker: opens from More and from the top bar, lists four themes plus
+  Match system, each theme applies and sets the browser-bar colour, closes on an
+  outside tap and on Escape, survives a relaunch; old `light`/`dark` settings
+  map to Chalk/Forest. Screenshots of the dashboard in every theme.
 - Freshness: the page carries a build id equal to `/version`, CSS/JS URLs are
   content-hashed, and `/` is served `no-cache`.
 - No console errors and no failed requests (besides the deliberate unknown
