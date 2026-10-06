@@ -1,0 +1,81 @@
+# API reference
+
+All routes are served by `backend/main.py`. JSON in, JSON out. Interactive
+docs: `/docs` (Swagger) and `/redoc` while the server runs.
+
+**Common parameters**
+
+- `horizon` — gameweeks ahead, 1–10 (route defaults differ; see below).
+- `overrides` — the manager's minute edits as `"<player_id>:<minutes>,…"`,
+  e.g. `12:70,328:0`. Minutes clamp to 0–90; malformed pairs are ignored.
+
+**Errors**: unknown team or league → `404` with a readable `detail`. FPL
+unreachable with nothing cached → `503`.
+
+## Read routes
+
+| Method | Path | Parameters | Returns |
+| --- | --- | --- | --- |
+| GET | `/api/meta` | — | current/next gameweek, teams, positions, rules summary, deadlines |
+| GET | `/api/players` | `horizon`=5, `position` (1–4), `team`, `max_price`, `min_minutes`=0, `search`, `available_only`=false, `sort`=`xpts_total`, `limit`=60, `offset`=0, `overrides` | paged projection rows with `total` |
+| GET | `/api/player/{id}` | `horizon`=6, `minutes` | one player's per-fixture breakdown and minutes model |
+| GET | `/api/entry/{team_id}` | `horizon`=5, `overrides` | manager, rank, bank, free transfers, squad with xPts, best XI, captain picks |
+| GET | `/api/rate/{team_id}` | `horizon`=5, `overrides` | grade out of 100, sub-scores, strengths, weaknesses |
+| GET | `/api/picks` | `horizon`=5 | captains, differentials, value picks and dream team for next gameweek |
+| GET | `/api/compare` | `a`, `b`, `horizon`=6 | two players side by side, week by week |
+| GET | `/api/league/{league_id}` | `horizon`=5, `rivals`=12 (2–25) | rival ownership, effective ownership, Monte Carlo win odds |
+| GET | `/api/scout` | `horizon`=5 | price-change odds, set-piece takers, DEFCON leaders |
+| GET | `/api/lineups` | `horizon`=1 | predicted XIs per club |
+
+## Action routes
+
+### `POST /api/solve`
+
+```json
+{
+  "team_id": 1,
+  "horizon": 5,
+  "max_hits": 2,
+  "wildcard_gw": null,
+  "free_hit_gw": null,
+  "free_transfers": null,
+  "bank": null,
+  "pool_size": 160,
+  "paths": 3,
+  "overrides": null
+}
+```
+
+`free_transfers` and `bank` default to the manager's real values. The response
+has up to `paths` plans, each with per-gameweek transfers, XI, bench, captain,
+vice, hits and xPts, plus the do-nothing baseline and a `feasible` flag.
+
+### `POST /api/chips`
+
+`{"team_id": 1, "horizon": 8, "overrides": null}` — every chip scored in every
+gameweek within FPL's chip windows, then the best combined plan.
+
+### `POST /api/copilot`
+
+`{"question": "Who should I captain?", "team_id": 1, "horizon": 5,
+"overrides": null}` — detects the intent (captain, hit, transfer, rate, chip,
+differential, bench, price, overview) and answers from the model's numbers.
+Rules-based; no language model involved.
+
+## Platform routes
+
+| Path | Purpose |
+| --- | --- |
+| `/healthz` | Liveness. Instant, never builds the model: `{"ok": true, "model_ready": bool}` |
+| `/api/health` | Readiness. Builds the model if needed and reports gameweeks |
+| `/` | the single-page app; other static files are served from `frontend/` |
+
+## Examples
+
+```bash
+curl -s localhost:8787/api/meta | python3 -m json.tool | head
+curl -s "localhost:8787/api/players?position=3&max_price=7&limit=5"
+curl -s -X POST localhost:8787/api/solve -H 'content-type: application/json' \
+     -d '{"team_id":1,"horizon":4,"paths":2}'
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8787/api/entry/999999999   # 404
+```

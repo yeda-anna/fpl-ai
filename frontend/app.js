@@ -168,9 +168,9 @@ const KIT = {ARS:['#DB1F2B','#FFFFFF'], AVL:['#76203F','#9CC3E8'], BHA:['#1A5FBF
   EVE:['#1D42A0','#FFFFFF'], FUL:['#F3F5F8','#1B1B1B'], HUL:['#F0A23A','#1B1B1B'], IPS:['#2F5DA9','#FFFFFF'],
   LEE:['#F3F5F8','#1F4590'], LIV:['#C41230','#E9E2CF'], MCI:['#80BBE6','#FFFFFF'], MUN:['#CF2A21','#FFFFFF'],
   NEW:['#1D1D1D','#F3F5F8'], NFO:['#C9232B','#FFFFFF'], SUN:['#D9252F','#FFFFFF'], TOT:['#F3F5F8','#17275E']};
-const GK_KIT = ['#E7C83C','#2C3E57'];
+const GK_KIT = ['#E7C83C','#1B4332'];
 function shirt(team, isGk){
-  const [body, trim] = isGk ? GK_KIT : (KIT[team] || ['#3A86FF','#FFFFFF']);
+  const [body, trim] = isGk ? GK_KIT : (KIT[team] || ['#84FAB0','#1B4332']);
   return `<svg class="shirt" viewBox="0 0 64 60" aria-hidden="true">
     <path d="M22 4L11 8.5 1.5 20.5l8.5 8 6-4.2V55.5Q32 59 48 55.5V24.3l6 4.2 8.5-8L53 8.5 42 4Q32 11.5 22 4z" fill="${body}" stroke="rgba(0,0,0,.22)" stroke-width="1"/>
     <path d="M11 8.5L1.5 20.5l8.5 8 6-4.2V14z" fill="${trim}"/><path d="M53 8.5l9.5 12-8.5 8-6-4.2V14z" fill="${trim}"/>
@@ -881,7 +881,7 @@ const VIEWS = {dashboard:viewDashboard, xpts:viewXpts, solver:viewSolver, chips:
                rate:viewRate, compare:viewCompare, league:viewLeague, scout:viewScout, model:viewModel};
 function setTheme(th){
   document.documentElement.dataset.theme = th; store.set('fplai_theme', th);
-  const m = document.querySelector('meta[name=theme-color]'); if(m) m.content = th === 'light' ? '#DDE7F3' : '#08111F';
+  const m = document.querySelector('meta[name=theme-color]'); if(m) m.content = th === 'light' ? '#F2FBEC' : '#1B4332';
 }
 function toggleTheme(){ setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); }
 el('themeBtn').addEventListener('click', toggleTheme);

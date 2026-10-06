@@ -7,6 +7,8 @@ multi-gameweek transfer solver, chip planning, team rating, mini-league
 analysis and a rules-based Copilot — all running on your own machine against
 live FPL data.
 
+**Live:** https://fpl-ai-production-966c.up.railway.app
+
 ## Run
 
     python3 -m venv .venv
@@ -86,6 +88,55 @@ each found plan ruled out to give genuinely different alternatives.
 Responses are cached under `.cache/`. If the API is unreachable the last good
 copy is served.
 
+## Look and feel
+
+Glass panels over a deep forest pitch, coloured **60 : 30 : 10**:
+
+| 60% background | 30% content | 10% highlight |
+| --- | --- | --- |
+| forest `#1B4332` | mint `#96E6A1` · sea green `#84FAB0` | lime `#D4FC79` · sky `#8FD3F4` |
+
+Lime is for "do this" (buttons, active tab, captain), sky for information.
+Text on either is forest. Light and dark themes share the same split. The
+full system — tokens, glass rules, breakpoints, the animated mug logo and the
+house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
+
+## Tests
+
+    FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
+    npm --prefix tests ci              # once
+    npm --prefix tests test            # 64 headless checks, phone + desktop
+    ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
+
+See [`docs/TESTING.md`](docs/TESTING.md).
+
+## Documentation
+
+| Doc | What's in it |
+| --- | --- |
+| [ARCHITECTURE](docs/ARCHITECTURE.md) | components, data flow, caching, startup |
+| [MODEL](docs/MODEL.md) | how xPts are built, every constant |
+| [SOLVER](docs/SOLVER.md) | the MIP: variables, constraints, objective, alternatives |
+| [API](docs/API.md) | every route and parameter |
+| [DESIGN](docs/DESIGN.md) | palette, tokens, glass, layout, logo, voice |
+| [DATA_SOURCES](docs/DATA_SOURCES.md) | FPL endpoints, FPL-Core-Insights, TTLs |
+| [TESTING](docs/TESTING.md) | e2e suite, quick checks, calibration |
+| [DEPLOYMENT](docs/DEPLOYMENT.md) | Railway, smoke tests, rollback, env vars |
+| [CHANGELOG](docs/CHANGELOG.md) | what changed and when |
+
+## Working on it with Claude
+
+- [`CLAUDE.md`](CLAUDE.md) — project instructions: commands, file map and the
+  rules of the road (Python 3.9, rules from FPL, tokens only, bump `?v=N`,
+  nothing wider than a phone). [`AGENTS.md`](AGENTS.md) points other agents there.
+- [`.claude/agents/`](.claude/agents) — specialists: `model-analyst`,
+  `solver-engineer`, `ui-designer`, `qa-tester`, `fpl-data-scout`,
+  `release-manager`.
+- [`.claude/skills/`](.claude/skills) — procedures: `run-locally`, `e2e-test`,
+  `calibrate-xpts`, `deploy-railway`, `brand-and-design`, `add-feature`.
+- [`.claude/settings.json`](.claude/settings.json) — safe commands allowed,
+  commits/pushes/deploys ask first, force-push and `.env` reads denied.
+
 ## Layout
 
     backend/fpl_api.py   FPL endpoints + disk cache
@@ -97,3 +148,7 @@ copy is served.
     backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
     backend/main.py      FastAPI routes + static hosting
     frontend/            single-page app, no build step; dark and light themes
+    tests/               Playwright end-to-end suite
+    scripts/calibrate.py projection sanity check
+    docs/                the documentation above
+    .claude/             agents, skills and settings for Claude Code

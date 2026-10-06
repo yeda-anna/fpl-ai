@@ -6,3 +6,8 @@ __pycache__/
 *.pyc
 *.lp
 *.mps
+node_modules/
+tests/node_modules/
+tests/screenshots/
+.DS_Store
+.env

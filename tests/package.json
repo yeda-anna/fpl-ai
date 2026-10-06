@@ -1,0 +1,12 @@
+{
+  "name": "mugs-game-fc-tests",
+  "private": true,
+  "description": "End-to-end checks for Mug's Game FC (Playwright, headless Chromium).",
+  "scripts": {
+    "postinstall": "playwright install chromium",
+    "test": "node e2e.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.55.0"
+  }
+}
