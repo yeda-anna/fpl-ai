@@ -1,4 +1,4 @@
-/* FPL AI — frontend. Plain JS, no build step. */
+/* Lucky Socks — frontend. Plain JS, no build step. */
 'use strict';
 
 const store = {
@@ -53,34 +53,100 @@ const tile = (lbl, val, sub, cls='') => `<div class="tile"><div class="lbl">${lb
 
 function needTeam(){
   if(S.teamId) return null;
-  return `<div class="card" style="max-width:640px">
-    <h3>Team ID needed</h3>
-    <p style="margin:0 0 10px;color:var(--ink-2)">Enter your FPL Team ID at the top and press <b>Load team</b>.</p>
-    <div class="note">Find it on the FPL site under <b>Points</b> — it’s the number in the address bar:
-      <code>fantasy.premierleague.com/entry/<b>1234567</b>/event/5</code></div></div>`;
+  return `<div class="card need-team">
+    <div class="mark big"><svg aria-hidden="true"><use href="#sock"/></svg></div>
+    <div style="flex:1;min-width:200px"><h3 style="margin-bottom:6px">This tool needs your team</h3>
+      <p class="sub" style="margin:0">Add your FPL Team ID to plan transfers, grade your squad and time your chips. Everything else works without it.</p></div>
+    <button class="btn primary" onclick="openOnboard()">Add my team</button></div>`;
 }
 
 /* ---------------- navigation ---------------- */
 let current = 'dashboard';
+const TAB_VIEWS = ['dashboard','xpts','solver','copilot'];
 function go(view){
+  if(!VIEWS[view]) view = 'dashboard';
   current = view;
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.view===view));
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',
+    b.dataset.view ? b.dataset.view===view : !TAB_VIEWS.includes(view)));
+  document.querySelectorAll('#moreGrid button').forEach(b=>b.classList.toggle('on', b.dataset.view===view));
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='view-'+view));
   el('view-title').textContent = TITLES[view][0];
   el('view-sub').textContent   = TITLES[view][1];
+  closeMore();
+  if(location.hash.slice(1) !== view){ try{ history.replaceState(null, '', '#'+view); }catch(e){} }
   render(view);
   window.scrollTo({top:0, behavior:'smooth'});
 }
 el('nav').addEventListener('click', e=>{
   const b = e.target.closest('button[data-view]'); if(b) go(b.dataset.view);
 });
-function invalidate(){ S.loaded = {}; S.entry = null; }
-el('load').addEventListener('click', ()=>{
-  S.teamId = el('teamId').value.trim(); store.set('fplai_team', S.teamId);
-  invalidate(); render(current);
+el('tabbar').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.more) openMore(); else go(b.dataset.view);
 });
-el('teamId').addEventListener('keydown', e=>{ if(e.key==='Enter') el('load').click(); });
+function openMore(){ el('more').classList.add('open'); el('more').setAttribute('aria-hidden','false'); }
+function closeMore(){ el('more').classList.remove('open'); el('more').setAttribute('aria-hidden','true'); }
+el('more').addEventListener('click', e=>{
+  if(e.target.dataset && e.target.dataset.close) return closeMore();
+  const b = e.target.closest('#moreGrid button'); if(b) go(b.dataset.view);
+});
+el('moreTeam').addEventListener('click', ()=>{ closeMore(); openOnboard(); });
+el('moreTheme').addEventListener('click', ()=>toggleTheme());
+function invalidate(){ S.loaded = {}; S.entry = null; }
 el('horizon').addEventListener('change', ()=>{ S.horizon = +el('horizon').value; invalidate(); render(current); });
+
+/* ---------------- your team: asked on every launch, always skippable ---------------- */
+const initials = n => (n||'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
+function updateTeamPill(){
+  const named = S.teamId && S.teamName;
+  el('teamLabel').textContent = S.teamId ? (S.teamName || 'Team '+S.teamId) : 'Add team';
+  el('teamAvatar').innerHTML = named ? esc(initials(S.teamName)) : '<svg aria-hidden="true"><use href="#sock"/></svg>';
+  el('moreTeam').querySelector('span').textContent = S.teamId ? 'Change team' : 'Add team';
+}
+function openOnboard(){
+  const remembered = store.get('fplai_team', ''), rname = store.get('fplai_team_name', '');
+  el('obTeam').value = S.teamId || remembered || '';
+  el('obErr').textContent = '';
+  el('obWelcome').innerHTML = (remembered && rname)
+    ? `<span class="ob-welcome"><span class="avatar">${esc(initials(rname))}</span>Welcome back, ${esc(rname)}</span>` : '';
+  el('obGo').querySelector('span').textContent = (remembered || S.teamId) ? 'Continue' : 'Load my team';
+  el('obSkip').textContent = S.teamId ? 'Keep my current team' : 'Skip for now — just browse';
+  el('onboard').hidden = false;
+  closeMore();
+  if(!el('obTeam').value){ setTimeout(()=>{ try{ el('obTeam').focus({preventScroll:true}); }catch(e){} }, 80); }
+}
+function closeOnboard(){ el('onboard').hidden = true; }
+el('teamBtn').addEventListener('click', openOnboard);
+el('obTeam').addEventListener('input', ()=>{ el('obErr').textContent = ''; });
+el('obForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const id = el('obTeam').value.replace(/\D/g, '');
+  if(!id){ el('obErr').textContent = 'Enter your Team ID — or skip and just browse.'; return; }
+  const btn = el('obGo'), label = btn.querySelector('span').textContent;
+  btn.disabled = true; btn.querySelector('span').textContent = 'Finding your team…';
+  try{
+    const ent = await api(`/api/entry/${id}?horizon=${S.horizon}${ovQuery()}`);
+    S.teamId = id; S.teamName = (ent.entry && ent.entry.name) || ('Team '+id);
+    store.set('fplai_team', id); store.set('fplai_team_name', S.teamName);
+    closeOnboard(); updateTeamPill(); invalidate(); S.entry = ent; render(current);
+  }catch(err){
+    el('obErr').textContent = /no fpl team|not found|404/i.test(err.message)
+      ? 'We couldn’t find team '+id+'. Check the number and try again.'
+      : 'Couldn’t load that team right now ('+err.message+').';
+  }finally{ btn.disabled = false; btn.querySelector('span').textContent = label; }
+});
+el('obSkip').addEventListener('click', ()=>{
+  const hadTeam = !!S.teamId;
+  closeOnboard();
+  if(hadTeam) return;                 // "keep my current team"
+  S.teamId = ''; S.teamName = ''; updateTeamPill(); invalidate(); render(current);
+});
+document.addEventListener('keydown', e=>{
+  if(e.key !== 'Escape') return;
+  if(!el('onboard').hidden) el('obSkip').click();
+  else closeMore();
+});
 
 function render(view){
   const key = [view, S.horizon, S.teamId, ovParam()].join('|');
@@ -176,9 +242,11 @@ async function viewDashboard(t){
         </div>
       </div>`;
     } else {
-      head = `<div class="card mb"><h3>Start here</h3>
-        <p style="margin:0;color:var(--ink-2)">Add your Team ID at the top to load your squad, run the solver and grade your team.
-        Everything else on this page works without one.</p></div>`;
+      head = `<div class="card need-team mb">
+        <div class="mark big"><svg aria-hidden="true"><use href="#sock"/></svg></div>
+        <div style="flex:1;min-width:200px"><h3 style="margin-bottom:6px">Browsing without a team</h3>
+          <p class="sub" style="margin:0">Add your FPL Team ID to see your squad on the pitch, run the solver and grade your team. Everything below works without one.</p></div>
+        <button class="btn primary" onclick="openOnboard()">Add my team</button></div>`;
     }
 
     const pulse = `<div class="grid g4 mb">
@@ -211,7 +279,7 @@ async function viewDashboard(t){
 }
 
 /* ---------------- Expected Points ---------------- */
-const XP = { limit: 40, offset: 0 };
+const XP = { limit: 40, offset: 0, seq: 0 };
 async function viewXpts(t){
   const nEdits = Object.keys(S.overrides).length;
   t.innerHTML = `
@@ -248,8 +316,10 @@ async function viewXpts(t){
     });
     const ov = ovParam(); if(ov) q.set('overrides', ov);
     if(!append) el('xpTable').innerHTML = loading('Projecting');
+    const mine = ++XP.seq;              // only the newest request may paint the table
     try{
       const d = await api('/api/players?'+q);
+      if(mine !== XP.seq || !el('xpTable')) return;
       const gws = d.players.length ? d.players[0].per_gw.map(g=>g.gw) : [];
       const showFdr = el('fFdr').value === 'fdr';
       const rowHtml = p => {
@@ -285,7 +355,7 @@ async function viewXpts(t){
         : `<span class="sub">All ${d.count} shown.</span>`;
       if(el('moreBtn')) el('moreBtn').onclick = ()=>{ XP.offset = shown; XP.limit = 40; run(true); };
       if(el('allBtn'))  el('allBtn').onclick  = ()=>{ XP.offset = shown; XP.limit = d.count; run(true); };
-    }catch(e){ el('xpTable').innerHTML = errBox(e); }
+    }catch(e){ if(mine === XP.seq && el('xpTable')) el('xpTable').innerHTML = errBox(e); }
   };
 
   // click a minutes figure to type your own
@@ -368,8 +438,7 @@ async function viewSolver(t){
   const n = needTeam(); if(n){ t.innerHTML = n; return; }
   const hOpts = [1,3,5,6,8,10].map(h=>`<option value="${h}" ${h===S.horizon?'selected':''}>${h} GW</option>`).join('');
   t.innerHTML = `<div class="ws">
-    <div class="ws-left" id="svLeft"><div class="skel" style="height:86px;margin-bottom:16px"></div><div class="skel" style="height:640px;border-radius:24px"></div></div>
-    <div class="ws-right">
+    <div class="ws-cmd">
       <div class="ws-controls">
         <select id="sPaths" title="How many alternative plans"><option value="1">1 Path</option><option value="2">2 Paths</option><option value="3" selected>3 Paths</option></select>
         <select id="sH" title="Planning horizon">${hOpts}</select>
@@ -382,8 +451,10 @@ async function viewSolver(t){
         </div></details>
       </div>
       <button class="cta" id="runSolve"><svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4.5v15l12.5-7.5z"/></svg>Suggest transfers</button>
-      <div id="svRight"><div class="skel" style="height:70px;margin:22px 0 18px"></div><div class="skel" style="height:96px;margin-bottom:12px"></div><div class="skel" style="height:300px"></div></div>
-    </div></div>`;
+    </div>
+    <div class="ws-left" id="svLeft"><div class="skel" style="height:86px;margin-bottom:16px"></div><div class="skel" style="height:640px;border-radius:24px"></div></div>
+    <div class="ws-res" id="svRight"><div class="skel" style="height:70px;margin:22px 0 18px"></div><div class="skel" style="height:96px;margin-bottom:12px"></div><div class="skel" style="height:300px"></div></div>
+  </div>`;
 
   let e;
   try{
@@ -810,25 +881,23 @@ const VIEWS = {dashboard:viewDashboard, xpts:viewXpts, solver:viewSolver, chips:
                rate:viewRate, compare:viewCompare, league:viewLeague, scout:viewScout, model:viewModel};
 function setTheme(th){
   document.documentElement.dataset.theme = th; store.set('fplai_theme', th);
+  const m = document.querySelector('meta[name=theme-color]'); if(m) m.content = th === 'light' ? '#DDE7F3' : '#08111F';
 }
-el('themeBtn').addEventListener('click', ()=>{
-  setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
-});
+function toggleTheme(){ setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); }
+el('themeBtn').addEventListener('click', toggleTheme);
 document.querySelector('.brand').addEventListener('click', ()=>go('dashboard'));
-document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <linearGradient id="shirtShade" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>
-    <stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient></defs></svg>`);
+
 (async function boot(){
-  el('teamId').value = S.teamId || '';
   S.horizon = +el('horizon').value;
+  S.teamId = ''; S.teamName = '';     // nothing loads until you confirm or skip
+  updateTeamPill();
+  openOnboard();
   try{
     S.meta = await api('/api/meta');
     const ev = S.meta.events.find(e=>e.id===S.meta.next_gw);
     const dl = ev ? new Date(ev.deadline) : null;
     el('rail-foot').textContent = `GW${S.meta.next_gw} deadline · ${dl?dl.toLocaleString([], {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}):'—'}`;
   }catch(e){ el('rail-foot').textContent = 'Model offline'; }
-  const h = location.hash.replace('#','');
-  go(VIEWS[h] ? h : 'dashboard');
+  go(location.hash.slice(1));
 })();
-window.addEventListener('hashchange', ()=>{ const h = location.hash.replace('#',''); if(VIEWS[h] && h!==current) go(h); });
+window.addEventListener('hashchange', ()=>{ const h = location.hash.slice(1); if(VIEWS[h] && h!==current) go(h); });

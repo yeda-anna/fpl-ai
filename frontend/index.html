@@ -2,43 +2,78 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FPL AI</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08111F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lucky Socks">
+<meta name="description" content="Fantasy Premier League planner: expected points, a multi-week transfer solver, chips, mini-leagues and more.">
+<title>Lucky Socks · FPL planner</title>
 <script>
   // apply the saved theme before first paint so the page never flashes
-  try{ var t = JSON.parse(localStorage.getItem('fplai_theme')); if(t) document.documentElement.dataset.theme = t; }catch(e){}
+  try{ var t = JSON.parse(localStorage.getItem('fplai_theme')); if(t){ document.documentElement.dataset.theme = t;
+    document.querySelector('meta[name=theme-color]').content = t === 'light' ? '#DDE7F3' : '#08111F'; } }catch(e){}
 </script>
-<link rel="stylesheet" href="/static/styles.css?v=5">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%233A86FF'/><path d='M16 6l2.6 7.4L26 16l-7.4 2.6L16 26l-2.6-7.4L6 16l7.4-2.6z' fill='white'/></svg>">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="stylesheet" href="/static/styles.css?v=11">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 </head>
 <body>
+
+<!-- one sprite of symbols, reused everywhere with <use> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="shirtShade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+  </defs>
+  <symbol id="sock" viewBox="0 0 24 24"><g transform="rotate(-12 12 12) translate(0.6 0)">
+    <path d="M8.2 2.2h7.1v10.1c0 .9.35 1.75 1 2.4l2.35 2.35a3.4 3.4 0 0 1-4.8 4.8l-4.9-4.9A5.2 5.2 0 0 1 7.4 13.2V3a.8.8 0 0 1 .8-.8z" fill="#fff"/>
+    <path d="M7.4 3a.8.8 0 0 1 .8-.8h7.1v3.1H7.4z" fill="#2C3E57"/>
+    <path d="M7.4 7.3h7.9v1.7H7.4zM7.4 10.6h7.9v1.7H7.4z" fill="#2C3E57"/></g></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.8l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-6h-5.6v6H5A1.5 1.5 0 0 1 3.5 19z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6.5h16M4 12h16M4 17.5h16"/><circle cx="7.5" cy="6.5" r=".1"/><path d="M9.5 4v16"/></symbol>
+  <symbol id="i-solver" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="18" r="2.2"/><circle cx="18.5" cy="6" r="2.2"/><path d="M7.6 17.2c5.5-1 3.2-9.6 8.8-10.4"/><path d="M15 4.5l1.3 1.6-1.6 1.3"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.2c0 4-3.6 7-8 7-1.2 0-2.3-.2-3.3-.6L4 20l1.3-3.6A6.7 6.7 0 0 1 4 12.2c0-4 3.6-7.2 8-7.2s8 3.2 8 7.2z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="5" y="3.5" width="11" height="15" rx="2.2" transform="rotate(-8 10.5 11)"/><rect x="9" y="5.5" width="11" height="15" rx="2.2" transform="rotate(8 14.5 13)"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="m12 3.8 2.5 5.1 5.6.8-4 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4-4 5.6-.8z"/></symbol>
+  <symbol id="i-compare" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M17 4v16M4 8l3-4 3 4M14 16l3 4 3-4"/></symbol>
+  <symbol id="i-scout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.3-4.3M11 8v6M8 11h6"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8h.01"/></symbol>
+  <symbol id="i-team" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 4 4 6.2 2.5 10.5l3 1.2V20h13v-8.3l3-1.2L20 6.2 15.5 4a3.6 3.6 0 0 1-7 0z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></symbol>
+</svg>
+
+<div class="backdrop" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><i class="orb o4"></i><div class="grain"></div></div>
+
 <header class="nav-bar">
   <div class="nav-in">
-    <div class="brand" data-go="dashboard" title="Dashboard">
-      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.4 6.6 6.6 2.4-6.6 2.4L12 20.5l-2.4-6.6L3 11.5l6.6-2.4z" fill="#fff"/><circle cx="19" cy="4.5" r="1.6" fill="#fff" opacity=".7"/></svg></div>
-      <b>FPL AI</b>
+    <div class="brand" title="Lucky Socks — home">
+      <div class="mark"><svg aria-hidden="true"><use href="#sock"/></svg></div>
+      <b>Lucky Socks</b>
     </div>
-    <nav class="links" id="nav">
-      <button data-view="dashboard" class="on">Dashboard</button>
-      <button data-view="xpts">Expected Points</button>
-      <button data-view="solver">Solver</button>
-      <button data-view="copilot">Copilot</button>
-      <button data-view="chips">Chip Strategies</button>
-      <button data-view="league">Minileagues</button>
-      <button data-view="rate">Rate My Team</button>
-      <button data-view="compare">Compare</button>
-      <button data-view="scout">Scout</button>
-      <button data-view="model">How It Works</button>
+    <nav class="links" id="nav" aria-label="Main">
+      <button data-view="dashboard" class="on" title="Dashboard"><span class="l">Dashboard</span><span class="s">Home</span></button>
+      <button data-view="xpts" title="Expected Points"><span class="l">Expected Points</span><span class="s">xPts</span></button>
+      <button data-view="solver" title="Solver"><span class="l">Solver</span><span class="s">Solver</span></button>
+      <button data-view="copilot" title="Copilot"><span class="l">Copilot</span><span class="s">Copilot</span></button>
+      <button data-view="chips" title="Chip Strategies"><span class="l">Chip Strategies</span><span class="s">Chips</span></button>
+      <button data-view="league" title="Minileagues"><span class="l">Minileagues</span><span class="s">Leagues</span></button>
+      <button data-view="rate" title="Rate My Team"><span class="l">Rate My Team</span><span class="s">Rate</span></button>
+      <button data-view="compare" title="Compare"><span class="l">Compare</span><span class="s">Compare</span></button>
+      <button data-view="scout" title="Scout"><span class="l">Scout</span><span class="s">Scout</span></button>
+      <button data-view="model" title="How It Works"><span class="l">How It Works</span><span class="s">Model</span></button>
     </nav>
     <div class="nav-right">
-      <div class="team-chip">
-        <label for="teamId">Team</label>
-        <input id="teamId" type="number" inputmode="numeric" placeholder="Team ID">
-        <button class="btn primary sm" id="load">Load</button>
-      </div>
-      <button class="icon-btn" id="themeBtn" title="Switch light / dark" aria-label="Switch theme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+      <button class="team-pill" id="teamBtn" title="Your FPL team" aria-label="Change team">
+        <span class="avatar" id="teamAvatar"><svg aria-hidden="true"><use href="#sock"/></svg></span>
+        <span id="teamLabel">Add team</span>
       </button>
+      <button class="icon-btn" id="themeBtn" title="Switch light / dark" aria-label="Switch theme"><svg aria-hidden="true"><use href="#i-sun"/></svg></button>
     </div>
   </div>
 </header>
@@ -72,7 +107,59 @@
   <section id="view-scout" class="view"></section>
   <section id="view-model" class="view"></section>
 </main>
+
+<!-- phone: floating tab dock -->
+<nav class="tabbar" id="tabbar" aria-label="Tabs">
+  <button data-view="dashboard" class="on"><svg aria-hidden="true"><use href="#i-home"/></svg>Home</button>
+  <button data-view="xpts"><svg aria-hidden="true"><use href="#i-grid"/></svg>Points</button>
+  <button data-view="solver"><svg aria-hidden="true"><use href="#i-solver"/></svg>Solver</button>
+  <button data-view="copilot"><svg aria-hidden="true"><use href="#i-chat"/></svg>Copilot</button>
+  <button data-more="1"><svg aria-hidden="true"><use href="#i-more"/></svg>More</button>
+</nav>
+
+<!-- phone: everything else lives in a sheet -->
+<div class="more" id="more" aria-hidden="true">
+  <div class="more-scrim" data-close="1"></div>
+  <div class="more-panel" role="dialog" aria-label="More tools">
+    <div class="grabber"></div>
+    <h4>More tools</h4>
+    <div class="more-grid" id="moreGrid">
+      <button data-view="chips"><span class="ic"><svg><use href="#i-chip"/></svg></span>Chips</button>
+      <button data-view="league"><span class="ic"><svg><use href="#i-trophy"/></svg></span>Minileagues</button>
+      <button data-view="rate"><span class="ic"><svg><use href="#i-star"/></svg></span>Rate team</button>
+      <button data-view="compare"><span class="ic"><svg><use href="#i-compare"/></svg></span>Compare</button>
+      <button data-view="scout"><span class="ic"><svg><use href="#i-scout"/></svg></span>Scout</button>
+      <button data-view="model"><span class="ic"><svg><use href="#i-info"/></svg></span>How it works</button>
+    </div>
+    <div class="more-actions">
+      <button class="btn" id="moreTeam"><svg><use href="#i-team"/></svg><span>Change team</span></button>
+      <button class="btn" id="moreTheme"><svg><use href="#i-sun"/></svg><span>Light / dark</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- asked on every launch; skippable -->
+<div class="ob" id="onboard" hidden>
+  <form class="ob-card" id="obForm" autocomplete="off" novalidate>
+    <div class="ob-mark"><svg aria-hidden="true"><use href="#sock"/></svg></div>
+    <div id="obWelcome"></div>
+    <h2>Lucky Socks</h2>
+    <p class="tagline">Every FPL manager has a superstition. This one does the maths.</p>
+    <div class="ob-field">
+      <label for="obTeam">Your FPL Team ID</label>
+      <input id="obTeam" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 1234567" enterkeyhint="go">
+    </div>
+    <div class="ob-help">Open <b>Points</b> on the FPL site — it’s the number in the address bar:
+      <code>…/entry/<b>1234567</b>/event/5</code></div>
+    <div class="ob-err" id="obErr" role="alert"></div>
+    <div class="ob-actions">
+      <button type="submit" class="cta" id="obGo"><svg aria-hidden="true"><use href="#i-play"/></svg><span>Load my team</span></button>
+      <button type="button" class="btn ghost" id="obSkip">Skip for now — just browse</button>
+    </div>
+  </form>
+</div>
+
 <div id="sheet-root"></div>
-<script src="/static/app.js?v=5"></script>
+<script src="/static/app.js?v=11"></script>
 </body>
 </html>

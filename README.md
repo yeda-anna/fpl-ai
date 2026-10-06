@@ -1,6 +1,8 @@
-# FPL AI
+# Lucky Socks 🧦
 
-A local Fantasy Premier League planner: expected points for every player, a
+Every FPL manager has a superstition. This one does the maths.
+
+A Fantasy Premier League planner: expected points for every player, a
 multi-gameweek transfer solver, chip planning, team rating, mini-league
 analysis and a rules-based Copilot — all running on your own machine against
 live FPL data.
@@ -19,8 +21,22 @@ takes: `uvicorn main:app --app-dir backend --host 0.0.0.0 --port $PORT`.
 `Procfile` carries the same command for other hosts. `/healthz` answers
 instantly; the model builds in the background on startup.
 
-Enter your FPL Team ID in the top bar. It's the number in the address bar on
-your Points page: `fantasy.premierleague.com/entry/<ID>/event/5`.
+The app asks for your FPL Team ID every time it opens (it remembers the last
+one, so it's a single tap) and you can always skip and just browse. The ID is
+the number in the address bar on your Points page:
+`fantasy.premierleague.com/entry/<ID>/event/5`.
+
+### On your phone
+
+The layout becomes an app below 1024px wide: a floating tab dock (Home,
+Points, Solver, Copilot, More), with the remaining tools in a More sheet and
+details opening as bottom sheets. Use **Add to Home Screen** to launch it
+full-screen like a native app.
+
+### Offline mode
+
+`FPL_CACHE_ONLY=1 ./run.sh` serves only what's already in `.cache/` and never
+calls the FPL API — useful for development on networks that can't reach it.
 
 ## What's inside
 

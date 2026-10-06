@@ -1,0 +1,14 @@
+{
+  "name": "Lucky Socks — FPL planner",
+  "short_name": "Lucky Socks",
+  "description": "Expected points, a multi-week transfer solver, chips and mini-leagues for Fantasy Premier League.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08111F",
+  "theme_color": "#08111F",
+  "icons": [
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

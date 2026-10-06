@@ -74,7 +74,17 @@ def _stale_cache(key: str) -> Optional[Any]:
         return None
 
 
+# Offline mode: serve only what's already cached and never touch the network.
+# Handy for development and tests on machines that can't reach the FPL API.
+CACHE_ONLY = os.environ.get("FPL_CACHE_ONLY", "").strip().lower() in ("1", "true", "yes")
+
+
 def get(path: str, cache_key: str, ttl_key: str) -> Any:
+    if CACHE_ONLY:
+        stale = _stale_cache(cache_key)
+        if stale is not None:
+            return stale
+        raise RuntimeError("FPL_CACHE_ONLY is set and '%s' isn't cached" % cache_key)
     ttl = TTL.get(ttl_key, 600)
     cached = _read_cache(cache_key, ttl)
     if cached is not None:
