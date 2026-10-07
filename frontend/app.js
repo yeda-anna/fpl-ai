@@ -1,39 +1,27 @@
-/* Mug’s Game FC — frontend. Plain JS, no build step. */
+/* Mug’s Game FC — frontend. Plain JS, no build step. Animation lives in motion.js. */
 'use strict';
 
 const store = {
   get(k, d){ try{ const v = localStorage.getItem(k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
-  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
 
 const S = {
-  teamId: store.get('fplai_team', ''),
+  teamId: '', teamName: '',
   horizon: 5,
   overrides: store.get('fplai_minutes', {}),   // {playerId: minutes} - your own numbers
   entry: null, meta: null, loaded: {},
   fresh: true,         // the next read of your team bypasses the server's cache (every page load starts true)
-  roast: store.get('fplai_roast', true) !== false   // dark roast humour under suggestions (More → Theme)
+  ready: null,         // the first, fresh read of a saved team; team views wait for it
+  lastSeg: {}          // the sub-page you last used in each tab
 };
-const REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 const el  = id => document.getElementById(id);
 const POS = {1:'GKP',2:'DEF',3:'MID',4:'FWD'};
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = (v,d=2) => (v==null||isNaN(v)) ? '–' : Number(v).toFixed(d);
 const sign = (v,d=2) => (v>0?'+':'') + num(v,d);
-
-const TITLES = {
-  dashboard:['Dashboard','Your squad, projected forward, and this week’s standout picks.'],
-  xpts:['Expected Points','Every player across the coming gameweeks. Click any minutes figure to set your own — every tool then uses it.'],
-  solver:['Solver','Plans transfers, captaincy and line-ups across the whole horizon at once, and shows you the next-best routes too.'],
-  chips:['Chip Strategy','Each chip scored in every gameweek, then combined into the best overall plan.'],
-  copilot:['Copilot','Ask a question in plain English. Every answer is read straight off the model, so you can check the numbers behind it.'],
-  rate:['Rate My Team','Your squad scored out of 100, with the fixes that move the score most.'],
-  compare:['Compare Players','Two players side by side on projections, underlying numbers and fixtures.'],
-  league:['Mini-Leagues','What your rivals own, who they captain, and how likely each of you is to win.'],
-  scout:['Scout','Price moves, set-piece duties, defensive-contribution leaders and predicted line-ups.'],
-  model:['How It Works','The data, the rules and the maths behind every number here.']
-};
 
 async function api(path, opts){
   const r = await fetch(path, Object.assign({cache:'no-store'}, opts));   // never a browser-held copy
@@ -48,35 +36,47 @@ const ovParam = () => Object.entries(S.overrides).map(([k,v])=>k+':'+v).join(','
 const entryUrl = id => `/api/entry/${id}?horizon=${S.horizon}${ovQuery()}${S.fresh ? '&fresh=1' : ''}`;
 const ovQuery = () => { const o = ovParam(); return o ? '&overrides='+encodeURIComponent(o) : ''; };
 
-/* ---------------- roast engine ----------------
-   The pools live in roast.js (read its header for the house rules). A roast is a
-   separate, labelled aside under a suggestion — never inside the advice, a number
-   or an error — and Roast mode (More → Theme) switches every one of them off. */
+/* ---------------- house humour ----------------
+   British dry wit and Indian dark humour in the waiting and on the landing screen.
+   Aimed at the manager's own luck, never at anyone else, and never in errors,
+   numbers or anything a manager acts on. */
+const QUIPS = {
+  loading: [
+    'Sharma ji’s son finished this ages ago. Beta, take your time.',
+    'Hope is a free transfer. You’ll roll it over and never use it.',
+    'Loading like a Bengaluru commute: moving, but not going anywhere.',
+    'Chai is brewing. Your rank is not.',
+    'Unlike your relatives, the maths will not ask when you’re settling down.',
+    'Jugaad is not a transfer strategy. We checked.',
+    'Still faster than reading the 47 ‘Good Morning’ forwards in the family group.',
+    'Putting the kettle on. The numbers take a minute.',
+    'Somewhere a chess engine is warming up. So is this.'
+  ],
+  welcome: [
+    'Your captain will blank. Your relatives will still ask what happened.',
+    'Everyone says “tumse na ho payega”. The model says: let’s see the expected points.',
+    'Fantasy football: an EMI of hope, repaid in heartbreak, with interest.',
+    'This app does the maths. You bring the confidence.',
+    'Rank in the millions? Don’t worry, beta. It’s a stable position.'
+  ]
+};
 const lastQuip = {};
-const hashSeed = str => { let h = 0; for(let i=0;i<str.length;i++) h = (h*31 + str.charCodeAt(i)) | 0; return Math.abs(h); };
-function pickFrom(list, key, seed){
-  if(!Array.isArray(list) || !list.length) return '';
-  let i;
-  if(seed != null) i = hashSeed(String(seed)) % list.length;           // stable: the same plan keeps the same roast
-  else { i = Math.floor(Math.random()*list.length); if(list.length > 1 && i === lastQuip[key]) i = (i+1) % list.length; lastQuip[key] = i; }
+function quip(kind){
+  const list = QUIPS[kind] || [];
+  if(!list.length) return '';
+  let i = Math.floor(Math.random()*list.length);
+  if(list.length > 1 && i === lastQuip[kind]) i = (i+1) % list.length;   // never the same line twice running
+  lastQuip[kind] = i;
   return list[i];
 }
-const fillSlots = (t, ctx) => t.replace(/\{(\w+)\}/g, (m,k)=> ctx && ctx[k] != null ? ctx[k] : '');
-function quip(kind, ctx, seed){
-  if(!S.roast) return '';
-  const v = kind.split('.').reduce((o,k)=>o && o[k], ROAST);
-  const text = typeof v === 'string' ? v : pickFrom(v, kind, seed);
-  return text ? fillSlots(text, ctx) : '';
-}
-const roastHtml = (kind, ctx, seed, extra) => {
-  const t = quip(kind, ctx, seed);
-  return t ? `<div class="roast ${extra||''}" role="note"><span class="fl" aria-hidden="true"><svg><use href="#i-flame"/></svg></span><span class="tx"><span class="sr">Roast: </span>${esc(t)}</span></div>` : '';
-};
-const moodKind = vsAvg => vsAvg==null ? 'mood.none' : vsAvg >= 15 ? 'mood.great' : vsAvg >= 0 ? 'mood.above' : vsAvg > -15 ? 'mood.below' : 'mood.awful';
-const moodQuip = vsAvg => quip(moodKind(vsAvg));
 
+/* A neon ball looping along a path while the numbers come in (pure CSS animation). */
+const LOADER = `<svg class="loader" viewBox="0 0 120 40" aria-hidden="true">
+  <path class="trk" d="M10 30 C 30 2, 50 2, 60 20 S 90 38, 110 10"/>
+  <path class="run" d="M10 30 C 30 2, 50 2, 60 20 S 90 38, 110 10"/>
+  <path class="run run2" d="M10 30 C 30 2, 50 2, 60 20 S 90 38, 110 10"/></svg>`;
 const loading = t => { const q = quip('loading');
-  return `<div class="card"><div class="loading ${q?'has-quip':''}">${esc(t||'Working')}</div>${q?`<div class="quip">${esc(q)}</div>`:''}</div>`; };
+  return `<div class="card"><div class="loading">${LOADER}<span>${esc(t||'Working')}</span></div>${q?`<div class="quip">${esc(q)}</div>`:''}</div>`; };
 const errBox  = e => `<div class="err"><b>That didn’t work.</b> ${esc(e.message||e)}</div>`;
 const pos  = p => `<span class="pill pos${p}">${POS[p]}</span>`;
 const fdr  = f => `<span class="fdr fdr${f}">${f}</span>`;
@@ -86,114 +86,12 @@ const tile = (lbl, val, sub, cls='') => `<div class="tile"><div class="lbl">${lb
 function needTeam(){
   if(S.teamId) return null;
   return `<div class="card need-team">
-    <div class="mark big"><svg aria-hidden="true"><use href="#logo"/></svg></div>
-    <div style="flex:1;min-width:200px"><h3 style="margin-bottom:6px">This tool needs your team</h3>
-      <p class="sub" style="margin:0">We can read xG, not minds. Add your FPL Team ID to plan transfers, grade your squad and time your chips — everything else works without it.</p></div>
-    <button class="btn primary" onclick="openOnboard()">Add my team</button></div>`;
+    <div class="mark"><svg aria-hidden="true" viewBox="0 0 32 32"><use href="#logo"/></svg></div>
+    <div style="flex:1;min-width:200px"><h3 style="margin-bottom:6px">This one needs your team</h3>
+      <p class="sub" style="margin:0">We can read xG, not minds. Add your FPL Team ID and we’ll remember it on this device — projections, players and leagues work without it.</p></div>
+    <button class="btn primary" onclick="openLanding()">Add my team</button></div>`;
 }
-
-/* ---------------- navigation ---------------- */
-let current = 'dashboard';
-const TAB_VIEWS = ['dashboard','xpts','solver','copilot'];
-function go(view){
-  if(!VIEWS[view]) view = 'dashboard';
-  current = view;
-  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.view===view));
-  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',
-    b.dataset.view ? b.dataset.view===view : !TAB_VIEWS.includes(view)));
-  document.querySelectorAll('#moreGrid button').forEach(b=>b.classList.toggle('on', b.dataset.view===view));
-  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='view-'+view));
-  const h1 = el('view-title'); h1.textContent = TITLES[view][0];
-  h1.classList.remove('sweep'); void h1.offsetWidth; h1.classList.add('sweep');
-  placeTabInd();
-  el('view-sub').textContent   = TITLES[view][1];
-  closeMore();
-  if(location.hash.slice(1) !== view){ try{ history.replaceState(null, '', '#'+view); }catch(e){} }
-  render(view);
-  window.scrollTo({top:0, behavior:'smooth'});
-}
-el('nav').addEventListener('click', e=>{
-  const b = e.target.closest('button[data-view]'); if(b) go(b.dataset.view);
-});
-el('tabbar').addEventListener('click', e=>{
-  const b = e.target.closest('button'); if(!b) return;
-  if(b.dataset.more) openMore(); else go(b.dataset.view);
-});
-function openMore(){ el('more').classList.add('open'); el('more').setAttribute('aria-hidden','false'); }
-function closeMore(){ el('more').classList.remove('open'); el('more').setAttribute('aria-hidden','true'); }
-el('more').addEventListener('click', e=>{
-  if(e.target.dataset && e.target.dataset.close) return closeMore();
-  const b = e.target.closest('#moreGrid button'); if(b) go(b.dataset.view);
-});
-el('moreTeam').addEventListener('click', ()=>{ closeMore(); openOnboard(); });
-el('moreTheme').addEventListener('click', ()=>{ closeMore(); openThemePicker(); });
-/* A home-screen app has no reload button, so give it one. The server never lets a
-   browser keep the page, so this is always a clean load. */
-el('moreRefresh').addEventListener('click', ()=>{ closeMore(); location.reload(); });
-function invalidate(){ S.loaded = {}; S.entry = null; }
-el('horizon').addEventListener('change', ()=>{ S.horizon = +el('horizon').value; invalidate(); render(current); });
-
-/* ---------------- your team: asked on every launch, always skippable ---------------- */
-const initials = n => (n||'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
-function updateTeamPill(){
-  const named = S.teamId && S.teamName;
-  el('teamLabel').textContent = S.teamId ? (S.teamName || 'Team '+S.teamId) : 'Add team';
-  el('teamAvatar').innerHTML = named ? esc(initials(S.teamName)) : '<svg aria-hidden="true"><use href="#logo"/></svg>';
-  el('moreTeam').querySelector('span').textContent = S.teamId ? 'Change team' : 'Add team';
-}
-function openOnboard(){
-  const remembered = store.get('fplai_team', ''), rname = store.get('fplai_team_name', '');
-  el('obTeam').value = S.teamId || remembered || '';
-  el('obErr').textContent = '';
-  el('obQuip').textContent = quip('welcome');
-  el('obWelcome').innerHTML = (remembered && rname)
-    ? `<span class="ob-welcome"><span class="avatar">${esc(initials(rname))}</span>Welcome back, ${esc(rname)}</span>` : '';
-  el('obGo').querySelector('span').textContent = (remembered || S.teamId) ? 'Continue' : 'Load my team';
-  el('obSkip').textContent = S.teamId ? 'Keep my current team' : 'Skip for now — just having a nose';
-  el('onboard').hidden = false;
-  closeMore();
-  if(!el('obTeam').value){ setTimeout(()=>{ try{ el('obTeam').focus({preventScroll:true}); }catch(e){} }, 80); }
-}
-function closeOnboard(){ el('onboard').hidden = true; }
-el('teamBtn').addEventListener('click', openOnboard);
-el('obTeam').addEventListener('input', ()=>{ el('obErr').textContent = ''; });
-el('obForm').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const id = el('obTeam').value.replace(/\D/g, '');
-  if(!id){ el('obErr').textContent = 'Enter your Team ID — or skip and just browse.'; return; }
-  const btn = el('obGo'), label = btn.querySelector('span').textContent;
-  btn.disabled = true; btn.querySelector('span').textContent = 'Finding your team…';
-  try{
-    const ent = await api(entryUrl(id));
-    S.fresh = false;
-    S.teamId = id; S.teamName = (ent.entry && ent.entry.name) || ('Team '+id);
-    store.set('fplai_team', id); store.set('fplai_team_name', S.teamName);
-    closeOnboard(); updateTeamPill(); invalidate(); S.entry = ent; render(current);
-  }catch(err){
-    el('obErr').textContent = /no fpl team|not found|404/i.test(err.message)
-      ? 'We couldn’t find team '+id+'. Check the number and try again.'
-      : 'Couldn’t load that team right now ('+err.message+').';
-  }finally{ btn.disabled = false; btn.querySelector('span').textContent = label; }
-});
-el('obSkip').addEventListener('click', ()=>{
-  const hadTeam = !!S.teamId;
-  closeOnboard();
-  if(hadTeam) return;                 // "keep my current team"
-  S.teamId = ''; S.teamName = ''; updateTeamPill(); invalidate(); render(current);
-});
-document.addEventListener('keydown', e=>{
-  if(e.key !== 'Escape') return;
-  if(!el('onboard').hidden) el('obSkip').click();
-  else if(!el('themePop').hidden) closeThemePicker(true);
-  else closeMore();
-});
-
-function render(view){
-  const key = [view, S.horizon, S.teamId, ovParam()].join('|');
-  if(S.loaded[view] === key) return;
-  S.loaded[view] = key;
-  VIEWS[view](el('view-'+view));
-}
+const teamReady = () => S.ready || Promise.resolve(null);
 
 /* ---------------- shared drawing ---------------- */
 function spark(vals){
@@ -240,38 +138,35 @@ function pitch(xi, bench, captain, vice, opts){
     ${benchHtml}</div>`;
 }
 
-/* ---------------- Dashboard ---------------- */
-async function viewDashboard(t){
-  t.innerHTML = loading('Projecting the gameweek');
+/* ---------------- Home: your squad ---------------- */
+async function viewSquad(t){
+  const n = needTeam(); if(n){ t.innerHTML = n; return; }
+  t.innerHTML = loading('Projecting your gameweek');
   try{
-    const [picks, meta] = await Promise.all([api(`/api/picks?horizon=${S.horizon}`), S.meta ? S.meta : api('/api/meta')]);
-    S.meta = meta;
-    const lastGw = meta.events.find(e=>e.id===meta.current_gw) || {};
-    let head = '', vsAvgForHero = null;
-    if(S.teamId){
-      const e = await api(`/api/entry/${S.teamId}?horizon=${S.horizon}${ovQuery()}`);
-      S.entry = e;
-      const last = e.history.length ? e.history[e.history.length-1] : null;
-      const vsAvg = last && lastGw.average!=null ? last.points - lastGw.average : null;
-      vsAvgForHero = vsAvg;
-      head = `
+    await teamReady();
+    const [e, meta] = await Promise.all([S.entry ? S.entry : api(entryUrl(S.teamId)), S.meta ? S.meta : api('/api/meta')]);
+    S.entry = e; S.meta = meta; S.fresh = false;
+    const lastGw = meta.events.find(x=>x.id===meta.current_gw) || {};
+    const last = e.history.length ? e.history[e.history.length-1] : null;
+    const vsAvg = last && lastGw.average!=null ? last.points - lastGw.average : null;
+    const av = (e.chips_available||{})[e.next_gw] || [], CH = {wildcard:'WC',freehit:'FH',bboost:'BB','3xc':'TC'};
+    t.innerHTML = `
       <div class="grid g4 mb">
         ${tile('Overall rank', e.entry.overall_rank ? e.entry.overall_rank.toLocaleString() : '–', esc(e.entry.name||''))}
         ${tile('GW'+e.gw+' score', last ? last.points : '–',
                vsAvg==null ? 'Average not out yet' : `<span class="${vsAvg>=0?'up':'down'}">${sign(vsAvg,0)}</span> vs the ${lastGw.average}-point average`)}
         ${tile('Squad value', '£'+num(e.entry.value,1)+'m', '£'+num(e.bank,1)+'m in the bank')}
-        ${tile('Free transfers', e.free_transfers, (()=>{ const av=(e.chips_available||{})[e.next_gw]||[]; const N={wildcard:'WC',freehit:'FH',bboost:'BB','3xc':'TC'}; return av.length ? 'Chips now: '+av.map(c=>N[c]).join(' · ') : 'No chips until GW20'; })())}
+        ${tile('Free transfers', e.free_transfers, av.length ? 'Chips now: '+av.map(c=>CH[c]).join(' · ') : 'No chips this week')}
       </div>
-      ${S.roast ? `<div class="roast-hero" id="mood"><div class="in">
-        <span class="fl" aria-hidden="true"><svg><use href="#i-flame"/></svg></span>
-        <div class="tx"><span class="k">This week’s verdict</span><span id="moodTx">${esc(moodQuip(vsAvg))}</span></div>
-        <button class="btn sm" id="reroast" type="button">Roast me again</button></div></div>` : ''}
       <div class="grid g23 mb">
         <div class="card">
           <h3>Best XI for GW${e.next_gw} <span class="r">${e.formation} · ${num(e.xi_xpts)} xPts</span></h3>
           ${pitch(e.starting_xi, e.bench, e.captain, e.starting_xi.filter(p=>!e.captain||p.id!==e.captain.id).sort((a,b)=>b.xpts-a.xpts)[0])}
           <div class="legend">Captain <b>${e.captain?esc(e.captain.web_name):'–'}</b> adds another ${e.captain?num(e.captain.xpts):'0'}.
             Bench projects ${num(e.bench_xpts)}; G is the reserve keeper, 1–3 the order outfielders come on.</div>
+          <div class="controls" style="margin-top:14px">
+            <button class="btn primary" onclick="go('plan','transfers')">Plan my transfers</button>
+            <button class="btn" onclick="go('home','grade')">Grade my squad</button></div>
         </div>
         <div class="card">
           <h3>Your fifteen over ${S.horizon} gameweeks</h3>
@@ -286,45 +181,41 @@ async function viewDashboard(t){
           </tbody></table></div>
         </div>
       </div>`;
-    } else {
-      head = `<div class="card need-team mb">
-        <div class="mark big"><svg aria-hidden="true"><use href="#logo"/></svg></div>
-        <div style="flex:1;min-width:200px"><h3 style="margin-bottom:6px">Browsing without a team</h3>
-          <p class="sub" style="margin:0">Just having a nose? Fair enough. Add your FPL Team ID to see your squad on the pitch, run the solver and grade your team — everything below works without one.</p></div>
-        <button class="btn primary" onclick="openOnboard()">Add my team</button></div>`;
-    }
+    if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; Motion.burst(innerWidth/2, 180, 120); }
+  }catch(err){ t.innerHTML = errBox(err); }
+}
 
-    const pulse = `<div class="grid g4 mb">
-      ${tile('GW'+meta.current_gw+' average', lastGw.average ?? '–', 'Highest score: '+(lastGw.highest ?? '–'))}
-      ${tile('Most captained', esc(lastGw.most_captained||'–'), 'Most owned: '+esc(lastGw.most_selected||'–'))}
-      ${tile('Player of the week', esc(lastGw.top_player||'–'), lastGw.top_player_points!=null ? lastGw.top_player_points+' points' : '')}
-      ${tile('Most bought', esc(lastGw.most_transferred_in||'–'), lastGw.transfers_made ? (lastGw.transfers_made/1e6).toFixed(1)+'m transfers made' : '')}
-    </div>`;
-
+/* ---------------- Home: this week's picks (no team needed) ---------------- */
+async function viewPicks(t){
+  t.innerHTML = loading('Picking this week’s standouts');
+  try{
+    const [picks, meta] = await Promise.all([api(`/api/picks?horizon=${S.horizon}`), S.meta ? S.meta : api('/api/meta')]);
+    S.meta = meta;
+    const lastGw = meta.events.find(x=>x.id===meta.current_gw) || {};
     const list = (rows, right, sub) => `<div class="well"><table><tbody>${rows.map((p,i)=>`
       <tr onclick="openPlayer(${p.id})" style="cursor:pointer">
         <td style="width:20px" class="dim">${i+1}</td>
         <td><span class="nm">${esc(p.web_name)}</span>${flag(p)}<div class="u2">${esc(p.team_short)} · £${num(p.price,1)}m</div></td>
         <td>${pos(p.position)}</td>${right(p)}</tr>`).join('')}</tbody></table></div>${sub?`<div class="legend">${sub}</div>`:''}`;
-
-    t.innerHTML = head + pulse + `
+    t.innerHTML = `
+      <div class="grid g4 mb">
+        ${tile('GW'+meta.current_gw+' average', lastGw.average ?? '–', 'Highest score: '+(lastGw.highest ?? '–'))}
+        ${tile('Most captained', esc(lastGw.most_captained||'–'), 'Most owned: '+esc(lastGw.most_selected||'–'))}
+        ${tile('Player of the week', esc(lastGw.top_player||'–'), lastGw.top_player_points!=null ? lastGw.top_player_points+' points' : '')}
+        ${tile('Most bought', esc(lastGw.most_transferred_in||'–'), lastGw.transfers_made ? (lastGw.transfers_made/1e6).toFixed(1)+'m transfers made' : '')}
+      </div>
       <div class="grid g3 mb">
         <div class="card lift"><h3>Captain picks <span class="r">GW${picks.gw}</span></h3>
-          ${list(picks.captains.slice(0,7), p=>`<td class="num accent"><b>${num(p.xpts)}</b></td>`, 'Single-gameweek projection. Doubled if captained.')}
-          ${picks.captains.length ? roastHtml('captain', {c1:picks.captains[0].web_name, c2:(picks.captains[1]||picks.captains[0]).web_name}, 'cap'+picks.gw) : ''}</div>
+          ${list(picks.captains.slice(0,7), p=>`<td class="num accent"><b>${num(p.xpts)}</b></td>`, 'Single-gameweek projection. Doubled if captained.')}</div>
         <div class="card lift"><h3>Differentials <span class="r">under 15% owned</span></h3>
-          ${list(picks.differentials.slice(0,7), p=>`<td class="num dim">${num(p.selected_by_percent,1)}%</td><td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`, `Right column: projected points over ${S.horizon} gameweeks.`)}
-          ${roastHtml('differentials', {}, 'dif'+picks.gw)}</div>
+          ${list(picks.differentials.slice(0,7), p=>`<td class="num dim">${num(p.selected_by_percent,1)}%</td><td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`, `Right column: projected points over ${S.horizon} gameweeks.`)}</div>
         <div class="card lift"><h3>Best value <span class="r">points per £m</span></h3>
-          ${list(picks.best_value.slice(0,7), p=>`<td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`)}
-          ${roastHtml('value', {}, 'val'+picks.gw)}</div>
+          ${list(picks.best_value.slice(0,7), p=>`<td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`)}</div>
       </div>
       <div class="card">
         <h3>Dream team for GW${picks.gw} <span class="r">${picks.dream_team.formation} · £${num(picks.dream_team.cost,1)}m · ${num(picks.dream_team.total)} xPts</span></h3>
         ${pitch(picks.dream_team.xi, [], picks.dream_team.captain, null)}
-        ${roastHtml('dream', {}, 'dream'+picks.gw)}
       </div>`;
-    wireRoastHero(vsAvgForHero);
   }catch(e){ t.innerHTML = errBox(e); }
 }
 
@@ -349,7 +240,6 @@ async function viewXpts(t){
         ${nEdits?`<button class="btn sm" id="resetMins">Reset ${nEdits} minute edit${nEdits>1?'s':''}</button>`:''}
       </div>
     </div></div>
-    ${roastHtml('xpts', {}, 'xp', 'top')}
     <div id="xpTable">${loading('Projecting every player')}</div>`;
 
   try{
@@ -358,7 +248,7 @@ async function viewXpts(t){
       .forEach(tm=>el('fTeam').insertAdjacentHTML('beforeend', `<option value="${tm.id}">${esc(tm.short_name)}</option>`));
   }catch(e){}
 
-  if(el('resetMins')) el('resetMins').onclick = ()=>{ S.overrides = {}; store.set('fplai_minutes', {}); invalidate(); render('xpts'); };
+  if(el('resetMins')) el('resetMins').onclick = ()=>{ S.overrides = {}; store.set('fplai_minutes', {}); invalidate(); rerender(); };
   XP.offset = 0; XP.limit = 40;
   const run = async (append)=>{
     const q = new URLSearchParams({horizon:S.horizon, sort:el('fSort').value, limit:XP.limit, offset:XP.offset});
@@ -418,9 +308,9 @@ async function viewXpts(t){
     const commit = ()=>{
       const v = inp.value.trim();
       if(v === '') delete S.overrides[pid]; else S.overrides[pid] = Math.max(0, Math.min(90, +v));
-      store.set('fplai_minutes', S.overrides); invalidate(); render('xpts');
+      store.set('fplai_minutes', S.overrides); invalidate(); rerender();
     };
-    inp.addEventListener('keydown', k=>{ if(k.key==='Enter') commit(); if(k.key==='Escape') render('xpts'); });
+    inp.addEventListener('keydown', k=>{ if(k.key==='Enter') commit(); if(k.key==='Escape'){ delete S.loaded[cur.tab+'/'+cur.seg]; rerender(); } });
     inp.addEventListener('blur', commit);
   });
 
@@ -487,6 +377,7 @@ window.openPlayer = async function(id){
 const SV = { key:null, r:null, path:0, gw:0 };
 async function viewSolver(t){
   const n = needTeam(); if(n){ t.innerHTML = n; return; }
+  await teamReady();
   const hOpts = [1,3,5,6,8,10].map(h=>`<option value="${h}" ${h===S.horizon?'selected':''}>${h} GW</option>`).join('');
   t.innerHTML = `<div class="ws">
     <div class="ws-cmd">
@@ -501,7 +392,7 @@ async function viewSolver(t){
           <div class="sub">${Object.keys(S.overrides).length ? 'Using your '+Object.keys(S.overrides).length+' minute edit(s) from Expected Points.' : 'Edit any player’s minutes in Expected Points and the solver will use them.'}</div>
         </div></details>
       </div>
-      <button class="cta" id="runSolve"><svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4.5v15l12.5-7.5z"/></svg>Suggest transfers</button>
+      <button class="cta" id="runSolve"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg>Suggest transfers</button>
     </div>
     <div class="ws-left" id="svLeft"><div class="skel" style="height:86px;margin-bottom:16px"></div><div class="skel" style="height:640px;border-radius:24px"></div></div>
     <div class="ws-res" id="svRight"><div class="skel" style="height:70px;margin:22px 0 18px"></div><div class="skel" style="height:96px;margin-bottom:12px"></div><div class="skel" style="height:300px"></div></div>
@@ -509,7 +400,7 @@ async function viewSolver(t){
 
   let e;
   try{
-    e = S.entry || await api(`/api/entry/${S.teamId}?horizon=${S.horizon}${ovQuery()}`); S.entry = e;
+    e = S.entry || await api(entryUrl(S.teamId)); S.entry = e; S.fresh = false;
     for(let i=0;i<S.horizon;i++){
       const g = e.next_gw+i, o = `<option value="${g}">GW${g}</option>`, av = (e.chips_available||{})[g] || [];
       if(av.includes('wildcard')) el('sWC').insertAdjacentHTML('beforeend', o);
@@ -519,7 +410,7 @@ async function viewSolver(t){
 
   const markAdv = ()=> el('adv').dataset.active = (el('sWC').value||el('sFH').value||el('sFT').value) ? '1' : '0';
   ['sWC','sFH','sFT'].forEach(id=>el(id).addEventListener('change', markAdv));
-  el('sH').addEventListener('change', ()=>{ S.horizon = +el('sH').value; el('horizon').value = S.horizon; invalidate(); render('solver'); });
+  el('sH').addEventListener('change', ()=>{ S.horizon = +el('sH').value; el('horizon').value = S.horizon; invalidate(); rerender(); });
 
   const run = async ()=>{
     const body = {team_id:+S.teamId, horizon:S.horizon, max_hits:+el('sHits').value, paths:+el('sPaths').value};
@@ -538,17 +429,14 @@ async function viewSolver(t){
       SV.r = await post('/api/solve', body); SV.key = key; SV.path = 0; SV.gw = 0;
       draw();
       const best = SV.r.paths[0];
-      if(best && best.gain_vs_nothing > 0.5){ const b = el('runSolve').getBoundingClientRect(); confetti(b.left + b.width/2, b.top - 6, 55); }   // burst from the button's top edge, clear of its label
+      if(best && best.gain_vs_nothing > 0.5){ const b = el('runSolve').getBoundingClientRect(); Motion.burst(b.left + b.width/2, b.top - 6, 55); }   // burst from the button's top edge, clear of its label
     }catch(err){ el('svRight').innerHTML = errBox(err); el('svLeft').innerHTML = ''; }
     el('runSolve').disabled = false;
-    el('runSolve').innerHTML = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4.5v15l12.5-7.5z"/></svg>Suggest transfers';
+    el('runSolve').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg>Suggest transfers';
   };
 
   const CHIPS = {Wildcard:'WC', 'Free Hit':'FH'};
-  const planKind = p => {
-    const moves = p.gameweeks.reduce((n,g)=>n + g.transfers_in.length, 0);
-    return !moves ? 'nothing' : p.total_hits ? 'hits' : p.gameweeks.some(g=>g.chip) ? 'chip' : moves >= 6 ? 'many' : 'sensible';
-  };
+
   const drawLeft = ()=>{
     const r = SV.r, p = r.paths[SV.path], g = p.gameweeks[SV.gw], best = r.paths[0].total_xpts;
     const header = `<div class="pitch-top">
@@ -578,7 +466,6 @@ async function viewSolver(t){
         <div><div class="stat-k">vs no transfers</div><div class="stat-v">${sign(p.gain_vs_nothing,1)}</div></div>
         <div><div class="stat-k">Template rating</div><div class="stat-v">${p.template_rating}<small>/100</small></div></div>
       </div>
-      ${roastHtml('plan.'+planKind(p), {}, 'plan'+SV.path+'|'+SV.key)}
       <div class="gw-strip">${p.gameweeks.map((g,i)=>`<button class="gw-c ${i===SV.gw?'on':''}" data-i="${i}">
         <div class="g">GW${g.gw}</div><div class="v">${num(g.xpts,1)}</div>
         <div class="h ${g.chip?'chip':''}">${g.chip?(CHIPS[g.chip]||g.chip):g.hits?'−'+g.hit_cost:''}</div></button>`).join('')}</div>
@@ -606,6 +493,7 @@ async function viewSolver(t){
 const CHIP = {WC:'Wildcard', FH:'Free Hit', BB:'Bench Boost', TC:'Triple Captain'};
 async function viewChips(t){
   const n = needTeam(); if(n){ t.innerHTML = n; return; }
+  await teamReady();
   t.innerHTML = loading('Scoring every chip in every gameweek — about half a minute, so long enough to brew');
   try{
     const body = {team_id:+S.teamId, horizon:S.horizon}; const ov = ovParam(); if(ov) body.overrides = ov;
@@ -613,7 +501,6 @@ async function viewChips(t){
     const top = r.best_plans[0];
     t.innerHTML = `
       ${top?`<div class="grid g4 mb">${top.picks.map(c=>tile(CHIP[c.chip], 'GW'+c.gw, `<span class="up">${sign(c.gain,1)} xPts</span>`)).join('')}</div>`:''}
-      ${roastHtml('chip.'+(top && top.picks[0] ? ({WC:'wildcard',FH:'freehit',BB:'bboost',TC:'3xc'})[top.picks[0].chip] || 'none' : 'none'), {}, null, 'top')}
       <div class="card mb"><h3>Best chip plans <span class="r">next ${S.horizon} gameweeks</span></h3>
         ${r.best_plans.slice(0,5).map((p,i)=>`<div class="plan">
           <div class="hd"><div class="gw">Plan ${i+1}</div><div class="sub"><b class="up">${sign(p.total_gain,1)} xPts</b> over playing nothing</div></div>
@@ -658,7 +545,6 @@ async function viewCopilot(t){
       const needsTeam = !r.has_team && ['hit','transfer','rate','chip','bench'].includes(r.intent);
       el('ans').innerHTML = `<div class="grid g23">
         <div><div class="bubble">${esc(r.answer)}</div>
-          ${roastHtml('copilot.'+(ROAST.copilot[r.intent] ? r.intent : 'overview'), {}, q)}
           ${r.points.length?`<div class="card" style="margin-top:14px"><h3>Why</h3>${r.points.map(p=>`<div class="note">${esc(p)}</div>`).join('')}</div>`:''}
           ${needsTeam?'<div class="note" style="margin-top:12px">Load your Team ID to get this answer for your own squad.</div>':''}</div>
         <div>${r.table?`<div class="card"><h3>${esc(r.table.title)}</h3><div class="well"><table>
@@ -675,6 +561,7 @@ async function viewCopilot(t){
 /* ---------------- Rate my team ---------------- */
 async function viewRate(t){
   const n = needTeam(); if(n){ t.innerHTML = n; return; }
+  await teamReady();
   t.innerHTML = loading('Grading your squad');
   try{
     const r = await api(`/api/rate/${S.teamId}?horizon=${S.horizon}${ovQuery()}`);
@@ -688,7 +575,6 @@ async function viewRate(t){
             <div class="grade">${esc(r.grade)}</div></div>
           <div class="cu" style="font-size:30px;font-weight:700;letter-spacing:-.03em;margin-top:8px">${num(r.overall,0)}<span class="dim" style="font-size:16px"> / 100</span></div>
           <div class="sub">Rank ${r.entry.overall_rank?r.entry.overall_rank.toLocaleString():'–'}</div>
-          ${roastHtml('grade.'+gradeBand(r.grade), {}, 'grade'+r.grade+r.overall)}
         </div>
         <div class="card"><h3>How the score is built</h3>
           ${Object.entries(r.scores).map(([k,v])=>`<div style="margin-bottom:12px">
@@ -705,7 +591,7 @@ async function viewRate(t){
         </div>
       </div>
       <div class="grid g2">
-        <div class="card"><h3>Fix these first</h3>${r.notes.map(x=>`<div class="note">${esc(x)}</div>${roastHtml('note.'+noteKind(x))}`).join('')}</div>
+        <div class="card"><h3>Fix these first</h3>${r.notes.map(x=>`<div class="note">${esc(x)}</div>`).join('')}</div>
         <div class="card"><h3>Moves that raise the score</h3>
           <div class="well"><table><thead><tr><th>Out</th><th>In</th><th class="num">Gain</th></tr></thead><tbody>
           ${r.top_upgrades.map(u=>`<tr>
@@ -713,18 +599,11 @@ async function viewRate(t){
             <td><span class="up nm">${esc(u.in.web_name)}</span><div class="u2">${esc(u.in.team_short)} · £${num(u.in.price,1)}m · ${num(u.in.xpts_total,1)}</div></td>
             <td class="num up"><b>${sign(u.gain,1)}</b></td></tr>`).join('') || '<tr><td colspan="3" class="sub">No clear upgrade within budget.</td></tr>'}
           </tbody></table></div>
-          ${r.top_upgrades[0] ? roastHtml('upgrades', {out:r.top_upgrades[0].out.web_name, in:r.top_upgrades[0].in.web_name}, 'up'+r.top_upgrades[0].out.id) : ''}
           <div class="legend">Extra xPts over ${S.horizon} gameweeks, affordable with your current bank.</div></div>
       </div>`;
-    if(/^A/.test(r.grade)){ const c = t.querySelector('.grade-ring'); if(c){ const b = c.getBoundingClientRect(); confetti(b.left + b.width/2, b.top + b.height/2, 110); } }
+    if(/^A/.test(r.grade)){ const c = t.querySelector('.grade-ring'); if(c){ const b = c.getBoundingClientRect(); Motion.burst(b.left + b.width/2, b.top + b.height/2, 110); } }
   }catch(e){ t.innerHTML = errBox(e); }
 }
-const gradeBand = g => /^A/.test(g) ? 'top' : /^B/.test(g) ? 'good' : /^C/.test(g) ? 'mid' : 'low';
-const noteKind = text =>
-  /flagged player/.test(text) ? 'flagged' : /Projecting under/.test(text) ? 'dead' : /best squad your/.test(text) ? 'gap' :
-  /bench projects/.test(text) ? 'bench' : /at £9\.0m or above/.test(text) ? 'premium' : /widely held/.test(text) ? 'diffs' :
-  /template squad/.test(text) ? 'templates' : /in the bank/.test(text) ? 'bank' : 'clean';
-
 /* ---------------- Compare ---------------- */
 async function viewCompare(t){
   t.innerHTML = `<div class="card mb"><div class="controls">
@@ -751,8 +630,7 @@ async function viewCompare(t){
           <div style="text-align:right"><div style="font-size:22px;font-weight:700">${esc(r.a.web_name)}</div><div class="sub">${esc(r.a.team_short)} · ${r.a.pos_name} · £${num(r.a.price,1)}m</div></div>
           <div class="bubble" style="text-align:center;font-size:14px">${esc(r.verdict)}</div>
           <div><div style="font-size:22px;font-weight:700">${esc(r.b.web_name)}</div><div class="sub">${esc(r.b.team_short)} · ${r.b.pos_name} · £${num(r.b.price,1)}m</div></div>
-        </div>${r.reasons.map(x=>`<div class="note" style="margin-top:12px">${esc(x)}</div>`).join('')}
-        ${(()=>{ const aw = r.a.xpts_total >= r.b.xpts_total; return roastHtml('compare', {a:r.a.web_name, b:r.b.web_name, w:(aw?r.a:r.b).web_name, l:(aw?r.b:r.a).web_name}, 'cmp'+r.a.id+'-'+r.b.id); })()}</div>
+        </div>${r.reasons.map(x=>`<div class="note" style="margin-top:12px">${esc(x)}</div>`).join('')}</div>
         <div class="grid g2">
           <div class="card"><h3>Head to head</h3><div class="well"><table><tbody>
             ${row('xpts_next','xPts, next GW')}${row('xpts_total','xPts, '+S.horizon+' GW',v=>num(v,1))}
@@ -797,7 +675,6 @@ async function viewLeague(t){
           ${tile('Most owned', esc(o0?o0.player.web_name:'—'), o0?o0.pct+'% of rivals':'')}
           ${tile('Top effective ownership', esc(e0?e0.player.web_name:'—'), e0?e0.effective_ownership+'% incl. captaincy':'')}
         </div>
-        ${top ? roastHtml('league', {name:top.name, mo:o0?o0.player.web_name:'one player'}, 'lg'+id, 'top') : ''}
         <div class="card mb"><h3>Chance to win <span class="r">${r.sims.toLocaleString()} simulations over ${S.horizon} GW</span></h3>
           <div class="well"><table><thead><tr><th>#</th><th>Manager</th><th class="num">Points</th><th class="num">Projected</th><th style="width:30%">Win</th><th class="num">Top 3</th></tr></thead><tbody>
           ${r.managers.map(m=>`<tr><td class="dim">${m.rank}</td>
@@ -824,79 +701,68 @@ async function viewLeague(t){
   if(el('lgId').value) go();
 }
 
-/* ---------------- Scout ---------------- */
-let scoutTab = 'prices';
-async function viewScout(t){
-  t.innerHTML = `<div class="rowtabs" id="scTabs">
-      ${[['prices','Price changes'],['setpieces','Set pieces'],['defcon','Defensive contribution'],['lineups','Predicted line-ups']]
-        .map(([k,l])=>`<button data-k="${k}" class="${k===scoutTab?'on':''}">${l}</button>`).join('')}
-    </div><div id="scOut">${loading('Scouting')}</div>`;
-  let data = null, lineups = null;
-  const draw = async ()=>{
-    const o = el('scOut');
-    try{
-      if(scoutTab === 'lineups'){
-        if(!lineups){ o.innerHTML = loading('Predicting every line-up'); lineups = await api('/api/lineups?horizon=1'); }
-        o.innerHTML = `<div class="grid g3">${lineups.teams.map(tm=>`
-          <div class="card lift"><h3>${esc(tm.name)} <span class="r">${esc(tm.team)}</span></h3>
-            ${tm.xi.map(x=>`<div class="kv"><span>${pos(x.player.position)} <span style="color:var(--ink)">${esc(x.player.web_name)}</span>${x.doubt?' <span class="tag y" style="font-size:10px;padding:1px 6px">doubt</span>':''}</span>
-              <span class="${x.p_start>=80?'up':x.p_start>=55?'':'warn'}">${x.p_start}%</span></div>`).join('')}
-            ${tm.rotation_risks.length?`<div class="legend"><b>Rotation risk:</b> ${tm.rotation_risks.map(r=>esc(r.player.web_name)+' '+r.p_start+'%').join(', ')}</div>`:''}
-            ${tm.doubts.length?`<div class="legend"><b>Flagged:</b> ${tm.doubts.map(d=>esc(d.player.web_name)).join(', ')}</div>`:''}
-          </div>`).join('')}</div>`;
-        o.insertAdjacentHTML('afterbegin', roastHtml('scout.lineups', {}, null, 'top'));
-        return;
-      }
-      if(!data){ o.innerHTML = loading('Scouting'); data = await api(`/api/scout?horizon=${S.horizon}`); }
-      if(scoutTab === 'prices'){
-        const P = data.prices, R = (S.meta&&S.meta.rules)||{};
-        const next = (R.price_change_deadlines||[])[0];
-        const tbl = (list, dir) => `<div class="well"><table><thead><tr><th>Player</th><th style="width:34%">Progress</th><th>Odds tonight</th><th class="num">Net transfers</th></tr></thead><tbody>
-          ${list.map(x=>`<tr><td><span class="nm">${esc(x.player.web_name)}</span><div class="u2">${esc(x.player.team_short)} · £${num(x.player.price,1)}m</div></td>
-            <td><div style="display:flex;align-items:center;gap:8px"><div class="meter" style="flex:1;margin:0"><i style="width:${Math.min(100,Math.abs(x.projected))}%;${dir<0?'background:linear-gradient(90deg,#C33E51,#E58A97)':''}"></i></div>
-              <span style="font-family:var(--mono);font-size:12px;min-width:46px;text-align:right">${num(x.projected,0)}%</span></div></td>
-            <td><span class="tag ${dir>0?'g':'r'}">${esc(x.likelihood_label)}</span></td>
-            <td class="num ${x.net_transfers>=0?'up':'down'}">${x.net_transfers>=0?'+':''}${x.net_transfers.toLocaleString()}</td></tr>`).join('')
-            || '<tr><td colspan="4" class="sub">Nobody close to a change tonight.</td></tr>'}</tbody></table></div>`;
-        o.innerHTML = `
-          ${next?`<div class="grid g4 mb">${tile('Next price update', new Date(next).toLocaleString([], {weekday:'short',hour:'2-digit',minute:'2-digit'}), 'From FPL’s published schedule')}
-            ${tile('Likely risers', P.risers.length, 'at least “possible”')}${tile('Likely fallers', P.fallers.length, 'at least “possible”')}
-            ${tile('Biggest mover', esc(P.most_transferred[0]?P.most_transferred[0].player.web_name:'—'), P.most_transferred[0]?(P.most_transferred[0].net>=0?'+':'')+P.most_transferred[0].net.toLocaleString()+' net':'')}</div>`:''}
-          <div class="grid g2 mb">
-            <div class="card"><h3>Likely to rise</h3>${tbl(P.risers.slice(0,12), 1)}</div>
-            <div class="card"><h3>Likely to fall</h3>${tbl(P.fallers.slice(0,12), -1)}</div></div>
-          <div class="card"><h3>Biggest movers this gameweek</h3><div class="well"><table><thead><tr><th>Player</th><th class="num">In</th><th class="num">Out</th><th class="num">Net</th></tr></thead><tbody>
-            ${P.most_transferred.map(x=>`<tr><td><span class="nm">${esc(x.player.web_name)}</span><div class="u2">${esc(x.player.team_short)}</div></td>
-              <td class="num">${x.in.toLocaleString()}</td><td class="num">${x.out.toLocaleString()}</td>
-              <td class="num ${x.net>=0?'up':'down'}"><b>${x.net>=0?'+':''}${x.net.toLocaleString()}</b></td></tr>`).join('')}</tbody></table></div>
-            <div class="legend">Progress is FPL’s own price counter: at +100% a player rises £0.1m at the next update, at −100% he falls. Odds are FPL’s projection for tonight.</div></div>`;
-      } else if(scoutTab === 'setpieces'){
-        const who = l => l.length ? l.map((x,i)=>`<span class="${i===0?'nm':'dim'}">${i+1}. ${esc(x.web_name)}</span>`).join('<br>') : '<span class="dim">—</span>';
-        o.innerHTML = `<div class="card"><div class="well" style="max-height:none"><table><thead><tr><th>Club</th><th>Penalties</th><th>Direct free kicks</th><th>Corners &amp; indirect</th></tr></thead><tbody>
-          ${data.set_pieces.teams.map(tm=>`<tr><td><b>${esc(tm.team)}</b><div class="u2">${esc(tm.name)}</div></td>
-            <td>${who(tm.penalties)}</td><td>${who(tm.freekicks)}</td><td>${who(tm.corners)}</td></tr>`).join('')}</tbody></table></div>
-          <div class="legend">Order of preference as listed by FPL. The first name takes it when he’s on the pitch.</div></div>`;
-      } else {
-        o.innerHTML = `<div class="card"><h3>Most likely to earn defensive-contribution points <span class="r">next gameweek</span></h3>
-          <div class="well" style="max-height:none"><table><thead><tr><th>Player</th><th></th><th class="num">Per 90</th><th class="num">Needs</th><th style="width:26%">Chance to hit</th><th class="num">xPts</th><th class="num">Season total</th></tr></thead><tbody>
-          ${data.defcon.players.map(x=>`<tr><td><span class="nm">${esc(x.player.web_name)}</span><div class="u2">${esc(x.player.team_short)} · £${num(x.player.price,1)}m</div></td>
-            <td>${pos(x.player.position)}</td><td class="num">${num(x.dc_per_90,1)}</td><td class="num dim">${x.threshold}</td>
-            <td><div style="display:flex;align-items:center;gap:8px"><div class="meter" style="flex:1;margin:0"><i style="width:${x.hit_probability}%"></i></div>
-              <b style="font-family:var(--mono);font-size:12px;min-width:44px;text-align:right">${num(x.hit_probability,0)}%</b></div></td>
-            <td class="num accent">${num(x.xpts_from_dc)}</td><td class="num">${x.dc_total}</td></tr>`).join('')}</tbody></table></div>
-          <div class="legend">Defenders score 2 for 10 clearances, blocks, interceptions and tackles in a match; midfielders and forwards need 12, with recoveries also counting.</div></div>`;
-      }
-      if(!o.querySelector('.err')) o.insertAdjacentHTML('afterbegin', roastHtml('scout.'+scoutTab, {}, null, 'top'));
-    }catch(e){ o.innerHTML = errBox(e); }
-  };
-  el('scTabs').addEventListener('click', e=>{
-    const b = e.target.closest('button'); if(!b) return;
-    scoutTab = b.dataset.k;
-    document.querySelectorAll('#scTabs button').forEach(x=>x.classList.toggle('on', x===b));
-    draw();
-  });
-  draw();
+/* ---------------- Players: prices, line-ups, set pieces, DEFCON ----------------
+   One request feeds three of these pages, so it's shared and keyed by horizon. */
+const SC = { key:null, data:null, lineups:null };
+async function scoutData(){
+  if(SC.key !== S.horizon || !SC.data){ SC.data = await api(`/api/scout?horizon=${S.horizon}`); SC.key = S.horizon; }
+  return SC.data;
 }
+const scoutView = kind => async function(t){
+  t.innerHTML = loading(kind === 'lineups' ? 'Predicting every line-up' : 'Scouting');
+  try{
+    if(kind === 'lineups'){
+      const lineups = SC.lineups = SC.lineups || await api('/api/lineups?horizon=1');
+      t.innerHTML = `<div class="grid g3">${lineups.teams.map(tm=>`
+        <div class="card lift"><h3>${esc(tm.name)} <span class="r">${esc(tm.team)}</span></h3>
+          ${tm.xi.map(x=>`<div class="kv"><span>${pos(x.player.position)} <span style="color:var(--ink)">${esc(x.player.web_name)}</span>${x.doubt?' <span class="tag y" style="font-size:10px;padding:1px 6px">doubt</span>':''}</span>
+            <span class="${x.p_start>=80?'up':x.p_start>=55?'':'warn'}">${x.p_start}%</span></div>`).join('')}
+          ${tm.rotation_risks.length?`<div class="legend"><b>Rotation risk:</b> ${tm.rotation_risks.map(r=>esc(r.player.web_name)+' '+r.p_start+'%').join(', ')}</div>`:''}
+          ${tm.doubts.length?`<div class="legend"><b>Flagged:</b> ${tm.doubts.map(d=>esc(d.player.web_name)).join(', ')}</div>`:''}
+        </div>`).join('')}</div>`;
+      return;
+    }
+    const data = await scoutData();
+    if(kind === 'prices'){
+      const P = data.prices, R = (S.meta&&S.meta.rules)||{};
+      const next = (R.price_change_deadlines||[])[0];
+      const tbl = (list, dir) => `<div class="well"><table><thead><tr><th>Player</th><th style="width:34%">Progress</th><th>Odds tonight</th><th class="num">Net transfers</th></tr></thead><tbody>
+        ${list.map(x=>`<tr><td><span class="nm">${esc(x.player.web_name)}</span><div class="u2">${esc(x.player.team_short)} · £${num(x.player.price,1)}m</div></td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="meter" style="flex:1;margin:0"><i style="width:${Math.min(100,Math.abs(x.projected))}%;${dir<0?'background:linear-gradient(90deg,#FF3DCB,#FF8FB3)':''}"></i></div>
+            <span style="font-family:var(--mono);font-size:12px;min-width:46px;text-align:right">${num(x.projected,0)}%</span></div></td>
+          <td><span class="tag ${dir>0?'g':'r'}">${esc(x.likelihood_label)}</span></td>
+          <td class="num ${x.net_transfers>=0?'up':'down'}">${x.net_transfers>=0?'+':''}${x.net_transfers.toLocaleString()}</td></tr>`).join('')
+          || '<tr><td colspan="4" class="sub">Nobody close to a change tonight.</td></tr>'}</tbody></table></div>`;
+      t.innerHTML = `
+        ${next?`<div class="grid g4 mb">${tile('Next price update', new Date(next).toLocaleString([], {weekday:'short',hour:'2-digit',minute:'2-digit'}), 'From FPL’s published schedule')}
+          ${tile('Likely risers', P.risers.length, 'at least “possible”')}${tile('Likely fallers', P.fallers.length, 'at least “possible”')}
+          ${tile('Biggest mover', esc(P.most_transferred[0]?P.most_transferred[0].player.web_name:'—'), P.most_transferred[0]?(P.most_transferred[0].net>=0?'+':'')+P.most_transferred[0].net.toLocaleString()+' net':'')}</div>`:''}
+        <div class="grid g2 mb">
+          <div class="card"><h3>Likely to rise</h3>${tbl(P.risers.slice(0,12), 1)}</div>
+          <div class="card"><h3>Likely to fall</h3>${tbl(P.fallers.slice(0,12), -1)}</div></div>
+        <div class="card"><h3>Biggest movers this gameweek</h3><div class="well"><table><thead><tr><th>Player</th><th class="num">In</th><th class="num">Out</th><th class="num">Net</th></tr></thead><tbody>
+          ${P.most_transferred.map(x=>`<tr><td><span class="nm">${esc(x.player.web_name)}</span><div class="u2">${esc(x.player.team_short)}</div></td>
+            <td class="num">${x.in.toLocaleString()}</td><td class="num">${x.out.toLocaleString()}</td>
+            <td class="num ${x.net>=0?'up':'down'}"><b>${x.net>=0?'+':''}${x.net.toLocaleString()}</b></td></tr>`).join('')}</tbody></table></div>
+          <div class="legend">Progress is FPL’s own price counter: at +100% a player rises £0.1m at the next update, at −100% he falls. Odds are FPL’s projection for tonight.</div></div>`;
+    } else if(kind === 'setpieces'){
+      const who = l => l.length ? l.map((x,i)=>`<span class="${i===0?'nm':'dim'}">${i+1}. ${esc(x.web_name)}</span>`).join('<br>') : '<span class="dim">—</span>';
+      t.innerHTML = `<div class="card"><div class="well" style="max-height:none"><table><thead><tr><th>Club</th><th>Penalties</th><th>Direct free kicks</th><th>Corners &amp; indirect</th></tr></thead><tbody>
+        ${data.set_pieces.teams.map(tm=>`<tr><td><b>${esc(tm.team)}</b><div class="u2">${esc(tm.name)}</div></td>
+          <td>${who(tm.penalties)}</td><td>${who(tm.freekicks)}</td><td>${who(tm.corners)}</td></tr>`).join('')}</tbody></table></div>
+        <div class="legend">Order of preference as listed by FPL. The first name takes it when he’s on the pitch.</div></div>`;
+    } else {
+      t.innerHTML = `<div class="card"><h3>Most likely to earn defensive-contribution points <span class="r">next gameweek</span></h3>
+        <div class="well" style="max-height:none"><table><thead><tr><th>Player</th><th></th><th class="num">Per 90</th><th class="num">Needs</th><th style="width:26%">Chance to hit</th><th class="num">xPts</th><th class="num">Season total</th></tr></thead><tbody>
+        ${data.defcon.players.map(x=>`<tr><td><span class="nm">${esc(x.player.web_name)}</span><div class="u2">${esc(x.player.team_short)} · £${num(x.player.price,1)}m</div></td>
+          <td>${pos(x.player.position)}</td><td class="num">${num(x.dc_per_90,1)}</td><td class="num dim">${x.threshold}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="meter" style="flex:1;margin:0"><i style="width:${x.hit_probability}%"></i></div>
+            <b style="font-family:var(--mono);font-size:12px;min-width:44px;text-align:right">${num(x.hit_probability,0)}%</b></div></td>
+          <td class="num accent">${num(x.xpts_from_dc)}</td><td class="num">${x.dc_total}</td></tr>`).join('')}</tbody></table></div>
+        <div class="legend">Defenders score 2 for 10 clearances, blocks, interceptions and tackles in a match; midfielders and forwards need 12, with recoveries also counting.</div></div>`;
+    }
+  }catch(e){ t.innerHTML = errBox(e); }
+};
 
 /* ---------------- How it works ---------------- */
 async function viewModel(t){
@@ -950,207 +816,237 @@ async function viewModel(t){
   }catch(e){ t.innerHTML = errBox(e); }
 }
 
-/* ---------------- boot ---------------- */
-const VIEWS = {dashboard:viewDashboard, xpts:viewXpts, solver:viewSolver, chips:viewChips, copilot:viewCopilot,
-               rate:viewRate, compare:viewCompare, league:viewLeague, scout:viewScout, model:viewModel};
-/* ---------------- themes ----------------
-   Each theme is a set of tokens in styles.css. `sw` is its 60:30:10 split
-   (background, content, highlight) drawn as the swatch. */
-const THEMES = [
-  {id:'openmic',  name:'Open Mic',     note:'Stage-lit violet. Lime and hot pink.', sw:['#140B26','#B79CFF','#D4FC79'], color:'#140B26'},
-  {id:'roast',    name:'Dark Roast',   note:'Espresso, saffron and ember.',         sw:['#1D120C','#FFB454','#FF7A45'], color:'#1D120C'},
-  {id:'forest',   name:'Forest',       note:'Deep green. The original house colours.', sw:['#1B4332','#96E6A1','#D4FC79'], color:'#1B4332'},
-  {id:'midnight', name:'Midnight',     note:'Floodlit navy for late deadlines.',   sw:['#0E1726','#8FD3F4','#D4FC79'], color:'#0E1726'},
-  {id:'graphite', name:'Graphite',     note:'Matte charcoal. Just the numbers.', sw:['#17191C','#C7CCD2','#D4FC79'], color:'#17191C'},
-  {id:'chalk',    name:'Chalk',        note:'Light, for sunny Saturdays.',         sw:['#F2FBEC','#96E6A1','#1B4332'], color:'#F2FBEC'},
-  {id:'auto',     name:'Match system', note:'Open Mic at night, Chalk by day.',    sw:null},
+/* ---------------- tabs ----------------
+   Five tabs, no "More". Each tab holds one or more sub-pages, picked from the
+   switcher under the title. Every tab and sub-page has its own address
+   (#plan/chips), and the old single-view addresses still land in the right place. */
+const ICONS = {
+  home:'M3.5 10.5 12 3.8l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-6h-5.6v6H5A1.5 1.5 0 0 1 3.5 19z',
+  plan:'M5.5 15.8a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 1 0 0-4.4zM18.5 3.8a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 1 0 0-4.4zM7.6 17.2c5.5-1 3.2-9.6 8.8-10.4',
+  players:'M8.5 4 4 6.2 2.5 10.5l3 1.2V20h13v-8.3l3-1.2L20 6.2 15.5 4a3.6 3.6 0 0 1-7 0z',
+  leagues:'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4',
+  ask:'M20 12.2c0 4-3.6 7-8 7-1.2 0-2.3-.2-3.3-.6L4 20l1.3-3.6A6.7 6.7 0 0 1 4 12.2c0-4 3.6-7.2 8-7.2s8 3.2 8 7.2zM8.5 12h.01M12 12h.01M15.5 12h.01',
+  refresh:'M20 12a8 8 0 1 1-2.6-5.9M20 4v4.6h-4.6',
+  forget:'M5 7h14M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 1.8h6a2 2 0 0 0 2-1.8L18 7M9 7V4.5h6V7'
+};
+const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
+
+const TABS = [
+  {id:'home', label:'Home', icon:'home', title:'Home', segs:[
+    {id:'squad', label:'My squad', view:viewSquad, sub:'Your squad projected forward, your best eleven and your free transfers.'},
+    {id:'grade', label:'Grade',    view:viewRate,  sub:'Your squad scored out of 100, with the fixes that move the score most.'},
+    {id:'picks', label:'Picks',    view:viewPicks, sub:'This week’s captains, differentials, best value and the dream team.'}]},
+  {id:'plan', label:'Plan', icon:'plan', title:'Plan', segs:[
+    {id:'transfers', label:'Transfers', view:viewSolver, sub:'Transfers, captaincy and line-ups across the whole horizon at once — plus the next-best routes.'},
+    {id:'chips',     label:'Chips',     view:viewChips,  sub:'Each chip scored in every gameweek, then combined into the best overall plan.'}]},
+  {id:'players', label:'Players', icon:'players', title:'Players', segs:[
+    {id:'projections', label:'Projections', view:viewXpts, sub:'Every player across the coming gameweeks. Tap a minutes figure to set your own — every tool then uses it.'},
+    {id:'compare',     label:'Compare',     view:viewCompare, sub:'Two players side by side on projections, underlying numbers and fixtures.'},
+    {id:'prices',      label:'Prices',      view:scoutView('prices'), sub:'Who’s about to rise or fall in price tonight, and who everyone is buying.'},
+    {id:'lineups',     label:'Line-ups',    view:scoutView('lineups'), sub:'Predicted starting elevens, with rotation risks and doubts.'},
+    {id:'setpieces',   label:'Set pieces',  view:scoutView('setpieces'), sub:'Who takes the penalties, free kicks and corners at every club.'},
+    {id:'defcon',      label:'DEFCON',      view:scoutView('defcon'), sub:'Who is most likely to earn defensive-contribution points next gameweek.'}]},
+  {id:'leagues', label:'Leagues', icon:'leagues', title:'Mini-leagues', segs:[
+    {id:'league', label:'Mini-league', view:viewLeague, sub:'What your rivals own, who they captain, and how likely each of you is to win.'}]},
+  {id:'ask', label:'Ask', icon:'ask', title:'Ask', segs:[
+    {id:'copilot', label:'Copilot', view:viewCopilot, sub:'Ask in plain English. Every answer is read straight off the model, so you can check the numbers behind it.'}]}
 ];
-const LEGACY_THEME = {dark:'forest', light:'chalk'};
-const lightQuery = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
-const themePref = () => { const t = store.get('fplai_theme', 'openmic'); return LEGACY_THEME[t] || (THEMES.some(x=>x.id===t) ? t : 'openmic'); };
-const resolveTheme = pref => pref === 'auto' ? (lightQuery && lightQuery.matches ? 'chalk' : 'openmic') : pref;
-function applyTheme(pref){
-  const id = resolveTheme(pref), th = THEMES.find(x=>x.id===id) || THEMES[0];
-  document.documentElement.dataset.theme = th.id;
-  const m = document.querySelector('meta[name=theme-color]'); if(m) m.content = th.color;
-  document.querySelectorAll('#themeList button').forEach(b=>b.setAttribute('aria-checked', String(b.dataset.themeId === pref)));
-}
-function setTheme(pref){
-  const root = document.documentElement;
-  if(!REDUCED){ root.classList.add('theming'); clearTimeout(setTheme.t); setTheme.t = setTimeout(()=>root.classList.remove('theming'), 600); }   // cross-fade the colours
-  store.set('fplai_theme', pref); applyTheme(pref);
-}
-if(lightQuery) (lightQuery.addEventListener ? lightQuery.addEventListener('change', ()=>{ if(themePref()==='auto') applyTheme('auto'); })
-                                           : lightQuery.addListener(()=>{ if(themePref()==='auto') applyTheme('auto'); }));
+const LEGACY = {dashboard:'home/squad', rate:'home/grade', solver:'plan/transfers', chips:'plan/chips', xpts:'players/projections',
+                compare:'players/compare', scout:'players/prices', league:'leagues/league', copilot:'ask/copilot'};
+const tabOf = id => TABS.find(t=>t.id===id) || TABS[0];
+let cur = {tab:'', seg:''};
 
-function swatch(t){
-  if(!t.sw) return `<span class="tp-sw tp-auto" aria-hidden="true"><i style="background:#140B26"></i><i style="background:#F2FBEC"></i></span>`;
-  const [bg, content, hi] = t.sw;   // 60 : 30 : 10 as a ring
-  return `<span class="tp-sw" aria-hidden="true" style="background:conic-gradient(${bg} 0 216deg, ${content} 216deg 324deg, ${hi} 324deg 360deg)"></span>`;
+function buildChrome(){
+  el('nav').innerHTML = TABS.map(t=>`<button data-tab="${t.id}" title="${t.label}">${icon(t.icon)}<span>${t.label}</span></button>`).join('');
+  el('dock').innerHTML = '<span class="ind" aria-hidden="true"></span>' + TABS.map(t=>`<button data-tab="${t.id}">${icon(t.icon)}${t.label}</button>`).join('');
+  el('views').innerHTML = TABS.map(t=>t.segs.map(s=>`<section class="view" id="v-${t.id}-${s.id}"></section>`).join('')).join('');
 }
-el('themeList').innerHTML = THEMES.map(t=>`
-  <button type="button" role="menuitemradio" data-theme-id="${t.id}" aria-checked="false">
-    ${swatch(t)}<span class="tp-t"><b>${t.name}</b><small>${t.note}</small></span>
-    <svg class="tp-ok" aria-hidden="true"><use href="#i-check"/></svg>
-  </button>`).join('');
-el('themeList').setAttribute('role', 'menu');
-el('themeList').addEventListener('click', e=>{ const b = e.target.closest('button[data-theme-id]'); if(b) setTheme(b.dataset.themeId); });
+function go(tabId, segId){
+  const t = tabOf(tabId);
+  const want = segId || S.lastSeg[t.id] || (t.id === 'home' && !S.teamId ? 'picks' : t.segs[0].id);
+  const seg = t.segs.find(s=>s.id===want) || t.segs[0];
+  const tabChanged = cur.tab !== t.id;
+  if(!tabChanged && cur.seg === seg.id && S.loaded[t.id+'/'+seg.id]) return;
+  cur = {tab:t.id, seg:seg.id}; S.lastSeg[t.id] = seg.id;
 
-function openThemePicker(){
-  const pop = el('themePop');
-  pop.hidden = false; el('themeBtn').setAttribute('aria-expanded','true');
-  requestAnimationFrame(()=>pop.classList.add('open'));
-  const cur = pop.querySelector('button[aria-checked="true"]') || pop.querySelector('button');
-  if(cur) cur.focus({preventScroll:true});
+  document.querySelectorAll('#nav button, #dock button').forEach(b=>{
+    const on = b.dataset.tab === t.id; b.classList.toggle('on', on);
+    if(on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  el('view-title').textContent = t.title;
+  el('view-sub').textContent = seg.sub;
+  const segs = el('segs');
+  if(t.segs.length > 1){
+    if(segs.dataset.tab !== t.id){
+      segs.dataset.tab = t.id;
+      segs.innerHTML = '<span class="seg-ind" aria-hidden="true"></span>' + t.segs.map(s=>`<button type="button" role="tab" data-seg="${s.id}">${s.label}</button>`).join('');
+    }
+    segs.querySelectorAll('button').forEach(b=>{ const on = b.dataset.seg === seg.id; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    segs.hidden = false;
+  } else { segs.hidden = true; segs.dataset.tab = ''; segs.innerHTML = ''; }
+  const view = el(`v-${t.id}-${seg.id}`);
+  document.querySelectorAll('#views .view').forEach(v=>v.classList.toggle('on', v === view));
+  const hash = t.id + '/' + seg.id;
+  if(location.hash.slice(1) !== hash){ try{ history.replaceState(null, '', '#'+hash); }catch(e){} }
+  render(t.id, seg.id);
+  Motion.navigated({tabChanged, dock:el('dock'), nav:el('nav'), segs, view});
+  if(tabChanged) window.scrollTo({top:0, behavior: Motion.reduced ? 'auto' : 'smooth'});
 }
-function closeThemePicker(refocus){
-  const pop = el('themePop'); if(pop.hidden) return;
-  pop.classList.remove('open'); pop.hidden = true; el('themeBtn').setAttribute('aria-expanded','false');
-  if(refocus) el('themeBtn').focus({preventScroll:true});
+function render(tab, seg){
+  const key = [S.horizon, S.teamId, ovParam()].join('|'), id = tab+'/'+seg;
+  if(S.loaded[id] === key) return;
+  S.loaded[id] = key;
+  const s = tabOf(tab).segs.find(x=>x.id===seg);
+  s.view(el(`v-${tab}-${seg}`));
 }
-el('themeBtn').addEventListener('click', e=>{ e.stopPropagation(); el('themePop').hidden ? openThemePicker() : closeThemePicker(); });
-document.addEventListener('pointerdown', e=>{
-  if(!el('themePop').hidden && !e.target.closest('#themePop, #themeBtn, #moreTheme')) closeThemePicker();
+const rerender = () => render(cur.tab, cur.seg);
+function invalidate(){ S.loaded = {}; S.entry = null; }
+function routeFromHash(){
+  let h = location.hash.slice(1);
+  if(h === 'model'){ h = ''; openMenu(); }
+  h = LEGACY[h] || h;
+  const [t, s] = h.split('/');
+  go(TABS.some(x=>x.id===t) ? t : 'home', s);
+}
+
+el('nav').addEventListener('click', e=>{ const b = e.target.closest('button[data-tab]'); if(b) go(b.dataset.tab); });
+el('dock').addEventListener('click', e=>{ const b = e.target.closest('button[data-tab]'); if(b) go(b.dataset.tab); });
+el('segs').addEventListener('click', e=>{ const b = e.target.closest('button[data-seg]'); if(b) go(cur.tab, b.dataset.seg); });
+el('horizon').addEventListener('change', ()=>{ S.horizon = +el('horizon').value; invalidate(); rerender(); });
+window.addEventListener('hashchange', ()=>{ const h = location.hash.slice(1); if(h !== cur.tab+'/'+cur.seg) routeFromHash(); });
+
+/* ---------------- your team: asked once, remembered on this device ---------------- */
+const initials = n => (n||'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
+function updateTeamPill(){
+  const named = S.teamId && S.teamName;
+  el('teamLabel').textContent = S.teamId ? (S.teamName || 'Team '+S.teamId) : 'Add team';
+  el('teamAvatar').innerHTML = named ? esc(initials(S.teamName)) : '<svg aria-hidden="true" viewBox="0 0 32 32"><use href="#logo"/></svg>';
+  el('teamBtn').setAttribute('aria-label', S.teamId ? 'Change team' : 'Add your team');
+}
+function openLanding(){
+  const L = el('landing');
+  el('landId').value = S.teamId || '';
+  el('landErr').textContent = '';
+  el('landQuip').textContent = quip('welcome');
+  el('landSkip').textContent = S.teamId ? 'Cancel' : 'Just browsing';
+  el('landGo').querySelector('span').textContent = S.teamId ? 'Switch team' : 'Let’s go';
+  L.hidden = false; document.body.classList.add('landing-open');
+  Motion.landingIn(L);
+  if(window.matchMedia && matchMedia('(hover:hover)').matches) setTimeout(()=>{ try{ el('landId').focus({preventScroll:true}); }catch(e){} }, 250);
+}
+function closeLanding(){
+  if(el('landing').hidden) return;
+  Motion.landingOut(el('landing'), ()=>{ el('landing').hidden = true; document.body.classList.remove('landing-open'); });
+}
+function forgetTeam(){
+  store.del('fplai_team'); store.del('fplai_team_name');
+  S.teamId = ''; S.teamName = ''; S.ready = null; S.lastSeg = {};
+  updateTeamPill(); invalidate();
+}
+/* The first read of a saved team after a page load: fresh from FPL. Team views wait for it. */
+function loadSavedTeam(){
+  const id = S.teamId;
+  return api(entryUrl(id)).then(ent=>{
+    S.fresh = false; S.entry = ent;
+    if(ent.entry && ent.entry.name && ent.entry.name !== S.teamName){ S.teamName = ent.entry.name; store.set('fplai_team_name', S.teamName); updateTeamPill(); }
+    return ent;
+  }).catch(err=>{
+    if(/no fpl team|not found|404/i.test(err.message)){
+      forgetTeam(); openLanding();
+      el('landErr').textContent = 'We couldn’t find team '+id+' any more. Check the number and try again.';
+      go('home', 'picks');
+    }
+    return null;
+  });
+}
+el('landForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const id = el('landId').value.replace(/\D/g, '');
+  if(!id){ el('landErr').textContent = 'Enter your Team ID — or tap “Just browsing”.'; Motion.shake(el('landId')); return; }
+  const btn = el('landGo'), label = btn.querySelector('span').textContent;
+  btn.disabled = true; btn.querySelector('span').textContent = 'Finding your team…';
+  try{
+    S.fresh = true;
+    const ent = await api(entryUrl(id));
+    const isNew = id !== S.teamId;
+    S.teamId = id; S.teamName = (ent.entry && ent.entry.name) || ('Team '+id); S.fresh = false; S.ready = null;
+    store.set('fplai_team', id); store.set('fplai_team_name', S.teamName);
+    updateTeamPill(); invalidate(); S.entry = ent;
+    closeLanding();
+    if(isNew) S.lastSeg = {};
+    cur = {tab:'', seg:''}; go('home', 'squad');
+    toast('Saved on this device. Next time it’s straight to your team.');
+  }catch(err){
+    el('landErr').textContent = /no fpl team|not found|404/i.test(err.message)
+      ? 'We couldn’t find team '+id+'. Check the number and try again.'
+      : 'Couldn’t load that team right now ('+err.message+').';
+    Motion.shake(el('landId'));
+  }finally{ btn.disabled = false; btn.querySelector('span').textContent = label; }
 });
-applyTheme(themePref());
-let brandTaps = [];
-document.querySelector('.brand').addEventListener('click', ()=>{
-  go('dashboard');
-  const now = Date.now(); brandTaps = brandTaps.filter(t=>now - t < 1500); brandTaps.push(now);
-  if(brandTaps.length >= 5){ brandTaps = []; toast(S.roast ? pickFrom(ROAST.tap, 'tap') : 'Nothing to see here.'); confetti(innerWidth/2, 80, 130); }
-});
+el('landId').addEventListener('input', ()=>{ el('landErr').textContent = ''; });
+el('landSkip').addEventListener('click', ()=>{ closeLanding(); if(!S.teamId && cur.tab === 'home') go('home', 'picks'); });
+el('teamBtn').addEventListener('click', openLanding);
 
-
-/* ---------------- stage: glow, motion and the little surprises ---------------- */
-/* Confetti: a one-shot burst on a canvas, coloured from the current theme. */
-const fxCanvas = el('fx'), fxCtx = fxCanvas.getContext ? fxCanvas.getContext('2d') : null;
-let fxBits = [], fxRaf = 0, fxDpr = 1;
-function confetti(x, y, n){
-  if(REDUCED || !fxCtx) return;
-  fxDpr = Math.min(2, window.devicePixelRatio || 1);
-  fxCanvas.width = innerWidth * fxDpr; fxCanvas.height = innerHeight * fxDpr;
-  const css = getComputedStyle(document.documentElement);
-  const cols = ['--accent','--accent-2','--warn','--up','--ink'].map(v=>css.getPropertyValue(v).trim()).filter(Boolean);
-  for(let i=0;i<n;i++){
-    const a = Math.random()*Math.PI*2, v = 5 + Math.random()*9;
-    fxBits.push({x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v - 6, g:.28 + Math.random()*.12, w:5 + Math.random()*6, h:3 + Math.random()*5,
-      r:Math.random()*6.28, vr:(Math.random()-.5)*.4, c:cols[i % cols.length], life:1});
-  }
-  if(!fxRaf) fxRaf = requestAnimationFrame(fxStep);
+/* ---------------- the menu: team, refresh, and how it works ---------------- */
+function openMenu(){
+  const root = el('sheet-root');
+  root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Menu">
+    <button class="btn sm x" id="closeSheet">Close ✕</button>
+    <h2 class="menu-h">Mug’s Game FC</h2>
+    <p class="menu-sub">${S.teamId ? 'Team <b>'+esc(S.teamName || S.teamId)+'</b> is saved on this device.' : 'No team saved on this device.'}</p>
+    <div class="menu-actions">
+      <button class="btn" id="mTeam">${icon('players')}<span>${S.teamId ? 'Change team' : 'Add team'}</span></button>
+      <button class="btn" id="mRefresh">${icon('refresh')}<span>Refresh app</span></button>
+      <button class="btn" id="mForget" ${S.teamId ? '' : 'disabled'}>${icon('forget')}<span>Forget team</span></button>
+    </div>
+    <div id="menuModel"></div></div></div>`;
+  const close = ()=>{ root.innerHTML = ''; document.removeEventListener('keydown', onKey); };
+  const onKey = e=>{ if(e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  el('scrim').addEventListener('click', e=>{ if(e.target.id === 'scrim') close(); });
+  el('closeSheet').onclick = close;
+  el('mTeam').onclick = ()=>{ close(); openLanding(); };
+  el('mRefresh').onclick = ()=>location.reload();       // the page is never stored, so this is always a clean load
+  el('mForget').onclick = ()=>{ close(); forgetTeam(); cur = {tab:'', seg:''}; go('home', 'picks'); openLanding(); };
+  viewModel(el('menuModel'));
 }
-function fxStep(){
-  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
-  fxBits = fxBits.filter(b=>b.life > 0 && b.y < innerHeight + 40);
-  for(const b of fxBits){
-    b.vx *= .99; b.vy += b.g; b.x += b.vx; b.y += b.vy; b.r += b.vr; b.life -= .012;
-    fxCtx.save(); fxCtx.globalAlpha = Math.max(0, Math.min(1, b.life*1.6));
-    fxCtx.translate(b.x*fxDpr, b.y*fxDpr); fxCtx.rotate(b.r); fxCtx.fillStyle = b.c;
-    fxCtx.fillRect(-b.w/2*fxDpr, -b.h/2*fxDpr, b.w*fxDpr, b.h*fxDpr); fxCtx.restore();
-  }
-  if(fxBits.length) fxRaf = requestAnimationFrame(fxStep);
-  else { fxRaf = 0; fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height); }
-}
+el('menuBtn').addEventListener('click', openMenu);
 
-/* Toast: one short line that floats up, then leaves. */
+/* ---------------- little things ---------------- */
 let toastTimer = 0;
 function toast(text){
   el('toastTx').textContent = text; el('toast').classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el('toast').classList.remove('show'), 2800);
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el('toast').classList.remove('show'), 3000);
 }
+let brandTaps = [];
+document.querySelector('.brand').addEventListener('click', ()=>{
+  go('home');
+  const now = Date.now(); brandTaps = brandTaps.filter(t=>now - t < 1500); brandTaps.push(now);
+  if(brandTaps.length >= 5){ brandTaps = []; toast('GOOOAL. (That was the logo. Your team still needs work.)'); Motion.burst(innerWidth/2, 80, 140); }
+});
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !el('landing').hidden && S.teamId) closeLanding(); });
 
-/* Roast mode: one switch, under Theme. Off removes every roast, quip and verdict. */
-function syncRoastUi(){ el('roastSwitch').setAttribute('aria-checked', String(S.roast)); }
-function setRoast(on){
-  S.roast = on; store.set('fplai_roast', on); syncRoastUi();
-  toast(pickFrom(ROAST.toggle[on ? 'on' : 'off'], 'toggle'));
-  if(!el('onboard').hidden) el('obQuip').textContent = quip('welcome');
-  invalidate(); render(current);
-}
-el('roastSwitch').addEventListener('click', ()=>setRoast(!S.roast));
-syncRoastUi();
-
-/* The week's verdict banner: roast me again, and a burst when you've had a big week. */
-function wireRoastHero(vsAvg){
-  const b = el('reroast'); if(!b) return;
-  b.onclick = ()=>{
-    const tx = el('moodTx'); tx.textContent = moodQuip(vsAvg);
-    tx.style.animation = 'none'; void tx.offsetWidth; tx.style.animation = '';
-    if(vsAvg != null && vsAvg >= 15){ const r = b.getBoundingClientRect(); confetti(r.left + r.width/2, r.top, 70); }
-  };
-  if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; const r = el('mood').getBoundingClientRect(); confetti(innerWidth/2, r.top + 40, 120); }
-}
-
-/* Numbers count up to their value the first time they appear. */
-const CU_SEL = '.tile .val, .stat-v, .path .pv, .gw-score, .gw-c .v, .cu';
-function countUp(node){
-  if(REDUCED || node.dataset.cu) return;
-  const tn = Array.prototype.find.call(node.childNodes, n=>n.nodeType === 3 && /\d/.test(n.nodeValue));
-  if(!tn || !/^\D{0,2}-?[\d,]*\.?\d+\D{0,3}$/.test(tn.nodeValue.trim())) return;      // a plain figure, not a name with a digit in it
-  const m = tn.nodeValue.match(/^(\D*?)(-?[\d,]*\.?\d+)([\s\S]*)$/); if(!m) return;
-  const target = parseFloat(m[2].replace(/,/g, '')); if(!isFinite(target)) return;
-  const dec = (m[2].split('.')[1] || '').length, comma = m[2].indexOf(',') >= 0, final = tn.nodeValue;
-  const fmt = v => { let t = v.toFixed(dec); if(comma){ const [a,b] = t.split('.'); t = a.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (b ? '.'+b : ''); } return m[1] + t + m[3]; };
-  node.dataset.cu = '1';
-  const t0 = performance.now(), dur = 700;
-  tn.nodeValue = fmt(0);
-  const step = now => { const k = Math.min(1, (now - t0)/dur); tn.nodeValue = k < 1 ? fmt(target * (1 - Math.pow(1 - k, 3))) : final; if(k < 1) requestAnimationFrame(step); };
-  requestAnimationFrame(step);
-}
-
-/* Cards, tiles and plans rise in one after another; counters start. New nodes only,
-   so a table that grows or a pitch that re-draws doesn't replay the whole page. */
-const IN_SEL = '.tile, .card, .path, .plan, .gw-c, .stats-row > div, .need-team';
-const fxSeen = new WeakSet();
-let fxIdx = 0, fxQueued = false;
-function fxScan(root){
-  if(!fxQueued){ fxQueued = true; requestAnimationFrame(()=>{ fxIdx = 0; fxQueued = false; }); }
-  const hit = (sel) => (root.matches && root.matches(sel) ? [root] : []).concat(Array.prototype.slice.call(root.querySelectorAll(sel)));
-  hit(IN_SEL).forEach(n=>{
-    if(fxSeen.has(n)) return; fxSeen.add(n);
-    n.style.setProperty('--i', Math.min(fxIdx++, 11)); n.classList.add('fx-in');
-  });
-  hit(CU_SEL).forEach(countUp);
-}
-new MutationObserver(muts=>{ muts.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType === 1) fxScan(n); })); })
-  .observe(document.querySelector('.page'), {childList:true, subtree:true});
-
-/* A light that follows the pointer along the edge of whichever card you're over. */
-if(window.matchMedia && matchMedia('(hover:hover)').matches){
-  let raf = 0, last = null;
-  document.addEventListener('pointermove', e=>{
-    last = e; if(raf) return;
-    raf = requestAnimationFrame(()=>{
-      raf = 0; const c = last.target.closest ? last.target.closest('.card, .tile') : null; if(!c) return;
-      const r = c.getBoundingClientRect();
-      c.style.setProperty('--mx', (last.clientX - r.left) + 'px'); c.style.setProperty('--my', (last.clientY - r.top) + 'px');
-    });
-  }, {passive:true});
-}
-
-/* The phone dock's glowing capsule slides to the active tab. */
-function placeTabInd(){
-  const bar = el('tabbar'); if(!bar || getComputedStyle(bar).display === 'none') return;
-  const on = bar.querySelector('button.on'); if(!on) return;
-  bar.style.setProperty('--tx', on.offsetLeft + 'px'); bar.style.setProperty('--tw', on.offsetWidth + 'px'); bar.classList.add('has-ind');
-}
-window.addEventListener('resize', placeTabInd);
-if(document.fonts && document.fonts.ready) document.fonts.ready.then(placeTabInd);
-placeTabInd();
-
+/* ---------------- boot ---------------- */
+buildChrome();
+Motion.start();
+Motion.observe(el('views'));
 (async function boot(){
   S.horizon = +el('horizon').value;
-  S.teamId = ''; S.teamName = '';     // nothing loads until you confirm or skip
+  const saved = String(store.get('fplai_team', '') || '');
+  if(saved){
+    S.teamId = saved; S.teamName = store.get('fplai_team_name', '');
+    S.ready = loadSavedTeam();              // straight to your team; no question asked
+  }
   updateTeamPill();
-  openOnboard();
+  routeFromHash();
+  if(!saved) openLanding();                 // first visit on this device: who are you?
   try{
-    S.meta = await api('/api/meta');
-    const ev = S.meta.events.find(e=>e.id===S.meta.next_gw);
+    S.meta = S.meta || await api('/api/meta');
+    const ev = S.meta.events.find(x=>x.id===S.meta.next_gw);
     const dl = ev ? new Date(ev.deadline) : null;
     el('rail-foot').textContent = `GW${S.meta.next_gw} deadline · ${dl?dl.toLocaleString([], {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}):'—'}`;
   }catch(e){ el('rail-foot').textContent = 'Model offline'; }
-  go(location.hash.slice(1));
 })();
-window.addEventListener('hashchange', ()=>{ const h = location.hash.slice(1); if(VIEWS[h] && h!==current) go(h); });
 
 /* Fresh on every open. The server stamps each page with a build id; when the
    app returns to the foreground (switching tabs, reopening the home-screen app,
@@ -1164,7 +1060,7 @@ async function softRefresh(){
   if(S.teamId){
     try{ await api(entryUrl(S.teamId)); S.fresh = false; }catch(e){ /* offline: show what we have */ }
   }
-  invalidate(); render(current);
+  invalidate(); rerender();
 }
 (function freshness(){
   const meta = document.querySelector('meta[name="app-build"]');

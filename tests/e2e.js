@@ -1,12 +1,14 @@
 // End-to-end checks for Mug's Game FC on a phone (390x844, touch) and a desktop
 // (1440x900) viewport. Start the app first, then:  npm --prefix tests test
 //   BASE_URL=http://127.0.0.1:9000/ npm --prefix tests test   (another server)
+//   TEAM_ID=1234567 npm --prefix tests test                    (a real team on live)
 // Screenshots are written to tests/screenshots/ (git-ignored).
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 const OUT = process.argv[2] || path.join(__dirname, 'screenshots');
 const BASE = (process.env.BASE_URL || 'http://127.0.0.1:8787/').replace(/\/?$/, '/');
+const TEAM = process.env.TEAM_ID || '1';
 fs.mkdirSync(OUT, { recursive: true });
 const results = [];
 const ok = (name, cond, extra='') => { results.push(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? '  — ' + extra : ''}`); return cond; };
@@ -20,7 +22,7 @@ async function noOverflow(page, vw = 390){
     if (window.innerWidth > vw + 1) out.push('layout viewport widened to ' + window.innerWidth);
     const scroller = el => { for (let a = el.parentElement; a && a !== document.body; a = a.parentElement){
       if (/(auto|scroll|hidden)/.test(getComputedStyle(a).overflowX)) return true; } return false; };
-    const roots = [document.querySelector('.view.on'), document.querySelector('.nav-bar'), document.querySelector('.page-head'), document.getElementById('tabbar')];
+    const roots = [document.querySelector('#views .view.on'), document.querySelector('.nav-bar'), document.querySelector('.page-head'), document.getElementById('dock'), document.getElementById('segs')];
     for (const root of roots) { if (!root) continue;
       for (const e of root.querySelectorAll('*')) { const r = e.getBoundingClientRect();
         if (r.width && r.right > vw + 1 && !scroller(e)) { out.push((e.className && typeof e.className === 'string' ? '.' + e.className.split(' ')[0] : e.tagName) + ' right=' + Math.round(r.right)); if (out.length > 3) return out; } } }
@@ -28,9 +30,10 @@ async function noOverflow(page, vw = 390){
   }, vw);
   return lastOverflow.length === 0;
 }
-async function errBoxes(page, view){
-  return page.$$eval(`#view-${view} .err`, els => els.map(e => e.textContent.trim()).slice(0, 2));
-}
+const errIn = (page, sel) => page.$$eval(`${sel} .err`, els => els.map(e => e.textContent.trim()).slice(0, 2));
+// wait until a view has drawn something real (no loader, some text)
+const settled = (page, sel, timeout) => page.waitForFunction(s => { const v = document.querySelector(s);
+  return v && !v.querySelector('.loading') && !v.querySelector('.skel') && v.innerText.trim().length > 40; }, sel, { timeout }).then(() => true, () => false);
 
 async function phone(browser){
   const ctx = await browser.newContext({ viewport:{width:390,height:844}, deviceScaleFactor:2, isMobile:true, hasTouch:true,
@@ -42,57 +45,61 @@ async function phone(browser){
   const badResponses = [];
   page.on('response', r => { if (r.status() >= 400 && !r.url().includes('/api/entry/999999999')) badResponses.push(r.status() + ' ' + r.url()); });
   const entryReads = [];
-  page.on('request', r => { if (/\/api\/entry\/1\?/.test(r.url())) entryReads.push(r.url()); });
+  page.on('request', r => { if (r.url().includes(`/api/entry/${TEAM}?`)) entryReads.push(r.url()); });
 
+  // ---- first visit: the landing screen asks for the Team ID ----
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  ok('phone: team screen shows on launch', await page.isVisible('#onboard'));
-  ok('phone: a first visit opens in Open Mic', await page.$eval('html', e => e.dataset.theme === 'openmic'));
-  ok('phone: tab dock visible, desktop links hidden', await page.isVisible('#tabbar') && !(await page.isVisible('#nav')));
-  ok('phone: welcome screen carries a line of house humour', (await page.textContent('#obQuip')).trim().length > 20, await page.textContent('#obQuip'));
-  await page.screenshot({ path: `${OUT}/m-01-onboard.png` });
-
-  // a team that doesn't exist
-  await page.fill('#obTeam', '999999999'); await page.click('#obGo');
-  await page.waitForFunction(() => document.querySelector('#obErr').textContent.length > 0, null, { timeout: 15000 });
-  ok('phone: unknown team shows a clear error', /couldn’t find team/i.test(await page.textContent('#obErr')), await page.textContent('#obErr'));
-
-  // a real team
-  await page.fill('#obTeam', '1'); await page.click('#obGo');
-  await page.waitForSelector('#onboard', { state: 'hidden', timeout: 30000 });
-  await page.waitForSelector('#view-dashboard .pitch-card', { timeout: 30000 });
-  ok('phone: team loads, pitch renders', true);
-  ok('phone: team pill shows team name', !/add team/i.test(await page.textContent('#teamLabel')), await page.textContent('#teamLabel'));
-  ok('phone: first read of your team after a page load asks FPL afresh (fresh=1), later reads use the cache',
-     entryReads.length >= 2 && /[?&]fresh=1/.test(entryReads[0]) && !/fresh=1/.test(entryReads[entryReads.length - 1]), entryReads.join('  '));
+  ok('phone: first visit opens the landing screen', await page.isVisible('#landing'));
+  ok('phone: motion libraries load from /static/vendor', await page.evaluate(() => !!(window.gsap && window.DrawSVGPlugin && window.MotionPathPlugin && window.anime && typeof Motion !== 'undefined')));
+  ok('phone: landing carries a line of house humour', (await page.textContent('#landQuip')).trim().length > 20);
+  ok('phone: landing has the neon pitch scene', (await page.$$('#scene .ln')).length >= 5 && !!(await page.$('#sceneBall')));
+  ok('phone: five tabs in the dock, no "More"', (await page.$$('#dock button[data-tab]')).length === 5 && !(await page.$('[data-more]')));
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `${OUT}/m-01-landing.png` });
+  await page.click('#landGo');
+  ok('phone: an empty ID explains what to do', /team id/i.test(await page.textContent('#landErr')));
+  await page.fill('#landId', '999999999'); await page.click('#landGo');
+  await page.waitForFunction(() => /couldn’t find/i.test(document.querySelector('#landErr').textContent), null, { timeout: 15000 }).catch(() => {});
+  ok('phone: an unknown team shows a clear error', /couldn’t find team 999999999/i.test(await page.textContent('#landErr')), await page.textContent('#landErr'));
+  await page.fill('#landId', TEAM); await page.click('#landGo');
+  await page.waitForSelector('#landing', { state: 'hidden', timeout: 30000 });
+  await page.waitForSelector('#v-home-squad .pitch-card', { timeout: 30000 });
+  ok('phone: the team loads straight into Home → My squad', (await page.evaluate(() => location.hash)) === '#home/squad');
+  ok('phone: the Team ID is saved in the browser', await page.evaluate(t => JSON.parse(localStorage.getItem('fplai_team')) === t, TEAM));
+  ok('phone: the team pill shows the team name', !/add team/i.test(await page.textContent('#teamLabel')), await page.textContent('#teamLabel'));
+  ok('phone: the first read of the team asks FPL afresh (fresh=1)', entryReads.length >= 1 && /[?&]fresh=1/.test(entryReads[0]), entryReads[0] || 'none');
+  await page.waitForTimeout(1300);
   {
-    const sub = await page.textContent('#view-dashboard .tile:nth-child(2) .sub');
-    const mood = await page.$('#mood');
-    ok('phone: dashboard mood line shows when the gameweek average is known', /not out yet/.test(sub) || (!!mood && (await mood.textContent()).trim().length > 20), sub);
-  }
-  await page.waitForTimeout(1300);   // let the counters land
-  {
-    const want = await page.evaluate(() => fetch('/api/entry/1?horizon=5').then(r => r.json()).then(j => j.entry.overall_rank ? j.entry.overall_rank.toLocaleString() : '–'));
-    const got = (await page.textContent('#view-dashboard .tile .val')).trim();
+    const want = await page.evaluate(t => fetch(`/api/entry/${t}?horizon=5`).then(r => r.json()).then(j => j.entry.overall_rank ? j.entry.overall_rank.toLocaleString() : '–'), TEAM);
+    const got = (await page.textContent('#v-home-squad .tile .val')).trim();
     ok('phone: counters count up to the true value', got === want, `${got} vs ${want}`);
   }
-  ok('phone: dashboard shows the week’s verdict banner', !!(await page.$('#view-dashboard .roast-hero #moodTx')) && (await page.textContent('#moodTx')).trim().length > 20);
-  {
-    const before = await page.textContent('#moodTx'); await page.click('#reroast'); await page.waitForTimeout(150);
-    ok('phone: “Roast me again” gives a different line', (await page.textContent('#moodTx')) !== before);
-  }
-  ok('phone: a roast sits under the captain picks', (await page.$$('#view-dashboard .card.lift .roast')).length >= 1);
-  ok('phone: roasts are labelled for screen readers', await page.$eval('#view-dashboard .roast .sr', e => /roast/i.test(e.textContent)));
-  ok('phone: loading states carry a quip', await page.evaluate(() => /class="quip">[^<]{15,}/.test(loading('x')) && quip('loading').length > 15));
-  ok('phone: dashboard fits width', await noOverflow(page), lastOverflow.join(', '));
-  await page.screenshot({ path: `${OUT}/m-02-dashboard.png`, fullPage: false });
-  await page.screenshot({ path: `${OUT}/m-02b-dashboard-full.png`, fullPage: true });
+  ok('phone: home fits width', await noOverflow(page), lastOverflow.join(', '));
+  await page.screenshot({ path: `${OUT}/m-02-home.png` });
 
-  // Expected Points + minutes edit
-  await page.click('#tabbar button[data-view="xpts"]');
+  // ---- every tab and every sub-page renders, with no error and nothing wider than the phone ----
+  const tabs = await page.$$eval('#dock button[data-tab]', bs => bs.map(b => b.dataset.tab));
+  for (const t of tabs) {
+    await page.click(`#dock button[data-tab="${t}"]`); await page.waitForTimeout(250);
+    ok(`phone: ${t} tab is highlighted`, await page.$eval(`#dock button[data-tab="${t}"]`, b => b.classList.contains('on')));
+    const segs = await page.$$eval('#segs:not([hidden]) button[data-seg]', bs => bs.map(b => b.dataset.seg));
+    for (const s of (segs.length ? segs : [null])) {
+      if (s) await page.click(`#segs button[data-seg="${s}"]`);
+      const seg = s || (await page.evaluate(() => location.hash.split('/')[1]));
+      const sel = `#v-${t}-${seg}`;
+      if (t === 'plan' && seg === 'transfers') await page.waitForSelector('#svLeft .path', { timeout: 90000 }).catch(() => {});
+      const done = (t === 'leagues' || t === 'ask') ? true : await settled(page, sel, 120000);
+      const errs = await errIn(page, sel);
+      ok(`phone: ${t}/${seg} renders without an error`, done && errs.length === 0, errs.join(' | ') || (done ? '' : 'timed out'));
+      ok(`phone: ${t}/${seg} fits width`, await noOverflow(page), lastOverflow.join(', '));
+      ok(`phone: address is #${t}/${seg}`, (await page.evaluate(() => location.hash)) === `#${t}/${seg}`);
+      await page.screenshot({ path: `${OUT}/m-03-${t}-${seg}.png` });
+    }
+  }
+
+  // ---- the tools still do their jobs ----
+  await page.click('#dock button[data-tab="players"]'); await page.click('#segs button[data-seg="projections"]');
   await page.waitForSelector('#xpBody tr', { timeout: 30000 });
-  ok('phone: xPts table renders', (await page.$$('#xpBody tr')).length >= 20);
-  ok('phone: xPts page has no sideways page scroll', await noOverflow(page), lastOverflow.join(', '));
-  ok('phone: xPts carries a roast', (await page.$$('#view-xpts .roast')).length >= 1);
   const who = (await page.textContent('#xpBody tr td:first-child a')).trim();
   const before = await page.textContent('#xpBody tr td:last-child');
   await page.click('#xpBody tr .mins'); await page.fill('#xpBody tr .mins input', '45'); await page.keyboard.press('Enter');
@@ -100,145 +107,49 @@ async function phone(browser){
   await page.fill('#fSearch', who); await page.press('#fSearch', 'Enter');
   await page.waitForSelector('#xpBody .mins.set', { timeout: 20000 });
   const after = await page.textContent('#xpBody tr td:last-child');
-  ok('phone: minutes edit applies', parseFloat(after) < parseFloat(before), `${who}: ${before.trim()} → ${after.trim()} xPts at 45′`);
-  await page.fill('#fSearch', ''); await page.press('#fSearch', 'Enter');
-  await page.screenshot({ path: `${OUT}/m-03-xpts.png` });
+  ok('phone: a minutes edit applies', parseFloat(after) < parseFloat(before), `${who}: ${before.trim()} → ${after.trim()} xPts at 45′`);
   await page.click('#resetMins'); await page.waitForSelector('#xpBody tr', { timeout: 20000 });
-  ok('phone: minutes edit resets', !(await page.$('#resetMins')));
+  ok('phone: a minutes edit resets', !(await page.$('#resetMins')));
 
-  // Solver
-  await page.click('#tabbar button[data-view="solver"]');
+  await page.click('#dock button[data-tab="plan"]'); await page.click('#segs button[data-seg="transfers"]');
   await page.waitForSelector('#svLeft .path', { timeout: 90000 });
-  ok('phone: solver returns plans', (await page.$$('#svLeft .path')).length >= 1, (await page.$$('#svLeft .path')).length + ' paths');
-  const cmdY = await page.$eval('.ws-cmd', e => e.getBoundingClientRect().top);
-  const pitchY = await page.$eval('#svLeft', e => e.getBoundingClientRect().top);
-  ok('phone: solver controls sit above the pitch', cmdY < pitchY);
-  ok('phone: the plan carries a roast, separate from the advice', (await page.$$('#svRight .roast')).length === 1 && !(await page.$('#svRight .timeline .roast')));
-  ok('phone: solver fits width', await noOverflow(page), lastOverflow.join(', '));
-  await page.screenshot({ path: `${OUT}/m-04-solver.png` });
-  await page.$eval('#svLeft', e => e.scrollIntoView());
-  await page.screenshot({ path: `${OUT}/m-04b-solver-pitch.png` });
+  ok('phone: the solver returns plans', (await page.$$('#svLeft .path')).length >= 1);
   await page.click('#gwNext'); await page.waitForTimeout(250);
-  ok('phone: pitch steps to next gameweek', /GW\d+/.test(await page.textContent('.gw-nav span')) && (await page.textContent('.gw-c.on .g')) !== null);
-  if ((await page.$$('#svLeft .path')).length > 1) { await page.click('#svLeft .path[data-k="1"]'); await page.waitForTimeout(200);
-    ok('phone: switching plan works', await page.$eval('#svLeft .path[data-k="1"]', e => e.classList.contains('on'))); }
-  await page.$eval('#svRight', e => e.scrollIntoView());
-  await page.screenshot({ path: `${OUT}/m-04c-solver-timeline.png` });
+  ok('phone: the pitch steps to the next gameweek', /GW\d+/.test(await page.textContent('.gw-nav span')));
 
-  // Copilot
-  await page.click('#tabbar button[data-view="copilot"]');
-  await page.click('#view-copilot .chipset button');
+  await page.click('#dock button[data-tab="ask"]');
+  await page.click('#v-ask-copilot .chipset button');
   await page.waitForSelector('#ans .bubble', { timeout: 60000 });
-  ok('phone: copilot answers', (await page.textContent('#ans .bubble')).length > 20);
-  ok('phone: the answer carries a roast, outside the answer bubble', (await page.$$('#ans .roast')).length === 1 && !(await page.$('#ans .bubble .roast')));
-  ok('phone: copilot fits width', await noOverflow(page), lastOverflow.join(', '));
-  await page.screenshot({ path: `${OUT}/m-05-copilot.png` });
+  ok('phone: the Copilot answers', (await page.textContent('#ans .bubble')).length > 20);
 
-  // More sheet + each tool in it
-  await page.click('#tabbar button[data-more]'); await page.waitForTimeout(450);
-  ok('phone: More sheet opens', await page.$eval('#more', e => e.classList.contains('open')));
-  await page.screenshot({ path: `${OUT}/m-06-more.png` });
-  const moreViews = [
-    ['rate',    '#view-rate .grade', 60000],
-    ['compare', '#cOut .bubble',      40000],
-    ['scout',   '#scOut table',       40000],
-    ['model',   '#view-model table',  30000],
-    ['chips',   '#view-chips .plan, #view-chips .card h3', 120000],
-  ];
-  for (const [v, sel, to] of moreViews) {
-    if (!(await page.$eval('#more', e => e.classList.contains('open')))) { await page.click('#tabbar button[data-more]'); await page.waitForTimeout(450); }
-    await page.click(`#moreGrid button[data-view="${v}"]`);
-    try { await page.waitForSelector(sel, { timeout: to }); ok(`phone: ${v} renders`, true); }
-    catch (e) { ok(`phone: ${v} renders`, false, (await errBoxes(page, v)).join(' | ') || 'timed out'); }
-    ok(`phone: ${v} has no error box`, (await errBoxes(page, v)).length === 0, (await errBoxes(page, v)).join(' | '));
-    ok(`phone: ${v} fits width`, await noOverflow(page), lastOverflow.join(', '));
-    if (['rate', 'compare', 'scout', 'chips'].includes(v)) ok(`phone: ${v} carries a roast`, (await page.$$(`#view-${v} .roast`)).length > 0);
-    if (v === 'rate') ok('phone: rate shows a grade ring that fills to the score', !!(await page.$('#view-rate .grade-ring .arc')) && (await page.$$('#view-rate .note + .roast')).length >= 1);
-    ok(`phone: More tab highlighted for ${v}`, await page.$eval('#tabbar button[data-more]', e => e.classList.contains('on')));
-    await page.screenshot({ path: `${OUT}/m-07-${v}.png` });
-  }
-  // scout sub-tabs
-  for (const k of ['setpieces', 'defcon', 'lineups']) {
-    await page.click('#more', { trial: true }).catch(()=>{});
-    await page.click('#tabbar button[data-more]'); await page.waitForTimeout(400);
-    await page.click('#moreGrid button[data-view="scout"]');
-    await page.click(`#scTabs button[data-k="${k}"]`);
-    await page.waitForFunction(() => !document.querySelector('#scOut .loading'), null, { timeout: 30000 });
-    ok(`phone: scout ${k}`, (await errBoxes(page, 'scout')).length === 0 && (await noOverflow(page)), lastOverflow.join(', '));
-  }
-  // mini-league
-  await page.click('#tabbar button[data-more]'); await page.waitForTimeout(400);
-  await page.click('#moreGrid button[data-view="league"]');
+  await page.click('#dock button[data-tab="leagues"]');
   await page.fill('#lgId', '314'); await page.selectOption('#lgN', '6'); await page.click('#lgGo');
-  try { await page.waitForSelector('#lgOut table', { timeout: 60000 }); ok('phone: minileague analysis', true); }
-  catch (e) { ok('phone: minileague analysis', false, (await errBoxes(page, 'league')).join(' | ') || 'timed out'); }
-  ok('phone: minileague fits width', await noOverflow(page), lastOverflow.join(', '));
-  await page.screenshot({ path: `${OUT}/m-08-league.png` });
+  ok('phone: a mini-league is analysed', await page.waitForSelector('#lgOut table', { timeout: 60000 }).then(() => true, () => false), (await errIn(page, '#v-leagues-league')).join(' | '));
+  ok('phone: leagues fit width', await noOverflow(page), lastOverflow.join(', '));
 
-  // player sheet from the dashboard
-  await page.click('#tabbar button[data-view="dashboard"]');
-  await page.waitForSelector('#view-dashboard .pl-tok', { timeout: 20000 });
-  await page.click('#view-dashboard .pl-tok');
-  await page.waitForSelector('.sheet .tile', { timeout: 20000 });
-  ok('phone: player sheet opens as bottom sheet', true);
-  await page.screenshot({ path: `${OUT}/m-09-player-sheet.png` });
+  await page.click('#dock button[data-tab="home"]'); await page.click('#segs button[data-seg="squad"]');
+  await page.waitForSelector('#v-home-squad .pl-tok', { timeout: 20000 });
+  await page.click('#v-home-squad .pl-tok');
+  ok('phone: the player sheet opens', await page.waitForSelector('.sheet .tile', { timeout: 20000 }).then(() => true, () => false));
   await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 
-  // theme picker: opens from More, lists every theme, each one applies
-  await page.click('#tabbar button[data-more]'); await page.waitForTimeout(400);
-  await page.click('#moreTheme'); await page.waitForTimeout(350);
-  ok('phone: theme picker opens from More', await page.isVisible('#themePop'));
-  ok('phone: theme picker lists 6 themes + system', (await page.$$('#themeList button')).length === 7);
-  ok('phone: theme picker fits width', await noOverflow(page), lastOverflow.join(', '));
-  ok('phone: Roast mode switch is on by default', (await page.getAttribute('#roastSwitch', 'aria-checked')) === 'true');
-  await page.click('#roastSwitch'); await page.waitForTimeout(400);
-  ok('phone: Roast mode off removes every roast, quip and verdict',
-     (await page.getAttribute('#roastSwitch', 'aria-checked')) === 'false' && (await page.$$('#view-dashboard .roast, #view-dashboard .roast-hero, #view-dashboard .quip')).length === 0);
-  ok('phone: Roast mode off is remembered', await page.evaluate(() => localStorage.getItem('fplai_roast') === 'false'));
-  await page.click('#roastSwitch');
-  try { await page.waitForSelector('#view-dashboard .roast-hero', { timeout: 60000 }); ok('phone: Roast mode back on brings the roasts back', true); }
-  catch (e) { ok('phone: Roast mode back on brings the roasts back', false, 'timed out'); }
-  await page.screenshot({ path: `${OUT}/m-10a-theme-picker.png` });
-  const COLORS = { openmic: '#140B26', roast: '#1D120C', forest: '#1B4332', midnight: '#0E1726', graphite: '#17191C', chalk: '#F2FBEC' };
-  for (const id of ['roast', 'openmic', 'midnight', 'graphite', 'forest', 'chalk']) {
-    await page.click(`#themeList button[data-theme-id="${id}"]`); await page.waitForTimeout(250);
-    const st = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme,
-      color: document.querySelector('meta[name=theme-color]').content,
-      base: getComputedStyle(document.body).backgroundColor }));
-    ok(`phone: ${id} theme applies (+ browser bar colour)`, st.theme === id && st.color === COLORS[id], JSON.stringify(st));
-  }
-  await page.mouse.click(30, 160); await page.waitForTimeout(300);
-  ok('phone: tapping outside closes the picker', !(await page.isVisible('#themePop')));
-  ok('phone: chalk (light) theme is on', await page.$eval('html', e => e.dataset.theme === 'chalk'));
-  await page.screenshot({ path: `${OUT}/m-10-dashboard-light.png` });
-  await page.click('#tabbar button[data-view="solver"]');
-  await page.waitForSelector('#svLeft .path', { timeout: 90000 });
-  await page.screenshot({ path: `${OUT}/m-11-solver-light.png` });
-
-  // relaunch: asked again, remembered, skippable
-  await page.reload({ waitUntil: 'networkidle' });
-  ok('phone: asked again on relaunch', await page.isVisible('#onboard'));
-  ok('phone: theme choice survives a relaunch', await page.$eval('html', e => e.dataset.theme === 'chalk'));
-  ok('phone: remembers the team (welcome back + prefilled)', (await page.inputValue('#obTeam')) === '1' && /welcome back/i.test(await page.textContent('#obWelcome')));
-  await page.screenshot({ path: `${OUT}/m-12-onboard-return.png` });
-  await page.click('#obSkip');
-  await page.waitForSelector('#onboard', { state: 'hidden' });
-  ok('phone: skip leaves you browsing without a team', /add team/i.test(await page.textContent('#teamLabel')));
-  await page.click('#tabbar button[data-view="solver"]');
-  await page.waitForSelector('#view-solver .need-team', { timeout: 10000 });
-  ok('phone: team-only tool offers to add a team', true);
-  await page.screenshot({ path: `${OUT}/m-13-need-team.png` });
-  await page.click('#view-solver .need-team .btn');
-  ok('phone: "Add my team" reopens the team screen', await page.isVisible('#onboard'));
-  await page.click('#obSkip');
+  // ---- menu: how it works, refresh, forget ----
+  await page.click('#menuBtn');
+  ok('phone: the menu opens with How it works', await page.waitForSelector('.sheet #menuModel table', { timeout: 20000 }).then(() => true, () => false));
+  ok('phone: the menu fits width', await noOverflow(page), lastOverflow.join(', '));
+  await page.screenshot({ path: `${OUT}/m-04-menu.png` });
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }), page.click('#mRefresh')]);
+  ok('phone: Refresh app reloads, and the saved team skips the landing screen', !(await page.isVisible('#landing')) && !/add team/i.test(await page.textContent('#teamLabel')));
+  ok('phone: old addresses still work (#solver → #plan/transfers)', await page.goto(BASE + '#solver', { waitUntil: 'networkidle' }).then(() => page.evaluate(() => location.hash)) === '#plan/transfers');
+  await page.click('#menuBtn'); await page.waitForSelector('#mForget');
+  await page.click('#mForget'); await page.waitForTimeout(600);
+  ok('phone: Forget team clears the device and asks again', await page.isVisible('#landing') && await page.evaluate(() => localStorage.getItem('fplai_team') === null));
+  await page.click('#landSkip'); await page.waitForTimeout(600);
+  ok('phone: Just browsing lands on Picks', (await page.evaluate(() => location.hash)) === '#home/picks');
+  await page.click('#segs button[data-seg="grade"]');
+  ok('phone: a team-only page offers to add a team', await page.waitForSelector('#v-home-grade .need-team', { timeout: 10000 }).then(() => true, () => false));
 
   const realErrors = consoleErrors.filter(m => !/Failed to load resource/.test(m));
-  // Refresh app: a home-screen app has no reload button, so More has one. It must really reload.
-  await page.click('#tabbar button[data-more]'); await page.waitForTimeout(400);
-  ok('phone: More sheet has a Refresh app button', await page.isVisible('#moreRefresh'));
-  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }), page.click('#moreRefresh')]);
-  ok('phone: Refresh app reloads to a clean launch', await page.isVisible('#onboard'));
-
   ok('phone: no console errors', realErrors.length === 0, realErrors.slice(0, 4).join(' || '));
   ok('phone: no failed requests (besides the deliberate unknown team)', badResponses.length === 0, badResponses.slice(0, 4).join(' || '));
   await ctx.close();
@@ -251,54 +162,48 @@ async function desktop(browser){
   page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
   page.on('pageerror', e => consoleErrors.push('pageerror: ' + e.message));
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  ok('desktop: team screen shows on launch', await page.isVisible('#onboard'));
-  await page.screenshot({ path: `${OUT}/d-01-onboard.png` });
-  await page.fill('#obTeam', '1'); await page.click('#obGo');
-  await page.waitForSelector('#view-dashboard .pitch-card', { timeout: 30000 });
-  ok('desktop: links visible, tab dock hidden', await page.isVisible('#nav') && !(await page.isVisible('#tabbar')));
+  ok('desktop: first visit opens the landing screen', await page.isVisible('#landing'));
+  await page.waitForTimeout(1800);
+  await page.screenshot({ path: `${OUT}/d-01-landing.png` });
+  await page.fill('#landId', TEAM); await page.click('#landGo');
+  await page.waitForSelector('#v-home-squad .pitch-card', { timeout: 30000 });
+  ok('desktop: tab links visible, dock hidden', await page.isVisible('#nav') && !(await page.isVisible('#dock')));
   {
     const build = await page.$eval('meta[name="app-build"]', m => m.content).catch(() => '');
     const live = await page.evaluate(() => fetch('/version', { cache: 'no-store' }).then(r => r.json()).then(j => j.build).catch(() => ''));
     ok('desktop: page carries a build id matching /version', !!build && build === live, `${build} vs ${live}`);
     const refs = await page.$$eval('link[rel=stylesheet][href^="/static/"], script[src^="/static/"]', els => els.map(e => e.getAttribute('href') || e.getAttribute('src')));
-    ok('desktop: CSS and JS are content-fingerprinted', refs.length >= 2 && refs.every(u => /\?v=[0-9a-f]{12}$/.test(u)), refs.join(', '));
+    ok('desktop: CSS and JS, vendor libraries included, are content-fingerprinted', refs.length >= 7 && refs.every(u => /\?v=[0-9a-f]{12}$/.test(u)), refs.join(', '));
     const head = await page.evaluate(() => fetch('/', { cache: 'no-store' }).then(r => r.headers.get('cache-control')));
     ok('desktop: page is never stored by the browser (no-store)', /no-store/.test(head || ''), head);
     const apiHead = await page.evaluate(() => fetch('/api/meta').then(r => r.headers.get('cache-control')));
     ok('desktop: API answers are never stored by the browser (no-store)', /no-store/.test(apiHead || ''), apiHead);
   }
-  await page.screenshot({ path: `${OUT}/d-02-dashboard.png` });
-  for (const v of ['xpts', 'solver', 'chips', 'copilot', 'rate', 'compare', 'league', 'scout', 'model']) {
-    await page.click(`#nav button[data-view="${v}"]`);
-    await page.waitForFunction(view => {
-      const s = document.querySelector('#view-' + view);
-      return s && !s.querySelector('.loading') && !s.querySelector('.skel') && s.innerText.trim().length > 40;
-    }, v, { timeout: 120000 }).catch(() => {});
-    ok(`desktop: ${v} renders without error`, (await errBoxes(page, v)).length === 0, (await errBoxes(page, v)).join(' | '));
-    if (v === 'solver') await page.screenshot({ path: `${OUT}/d-03-solver.png` });
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: `${OUT}/d-02-home.png` });
+  for (const t of ['plan', 'players', 'leagues', 'ask', 'home']) {
+    await page.click(`#nav button[data-tab="${t}"]`);
+    const sel = await page.evaluate(() => '#v-' + location.hash.slice(1).replace('/', '-'));
+    if (t === 'plan') await page.waitForSelector('#svLeft .path', { timeout: 90000 }).catch(() => {});
+    const done = (t === 'leagues' || t === 'ask') ? true : await settled(page, sel, 120000);
+    ok(`desktop: ${t} renders without an error`, done && (await errIn(page, sel)).length === 0, (await errIn(page, sel)).join(' | '));
+    await page.screenshot({ path: `${OUT}/d-03-${t}.png` });
   }
-  // theme picker on desktop: a popover under the top bar
-  await page.click('#nav button[data-view="dashboard"]'); await page.waitForTimeout(600);
-  await page.click('#themeBtn'); await page.waitForTimeout(300);
-  const box = await page.$eval('#themePop', e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom }; });
-  ok('desktop: theme popover opens inside the window', box.l >= 0 && box.r <= 1440 && box.t >= 60 && box.b <= 900, JSON.stringify(box));
-  ok('desktop: theme button reports expanded', (await page.getAttribute('#themeBtn', 'aria-expanded')) === 'true');
-  await page.screenshot({ path: `${OUT}/d-04a-theme-picker.png` });
-  for (const id of ['roast', 'openmic', 'midnight', 'graphite', 'chalk']) {
-    await page.click(`#themeList button[data-theme-id="${id}"]`); await page.waitForTimeout(250);
-    await page.keyboard.press('Escape'); await page.waitForTimeout(250);
-    await page.screenshot({ path: `${OUT}/d-04-dashboard-${id}.png` });
-    if (id !== 'chalk') { await page.click('#themeBtn'); await page.waitForTimeout(250); }
-  }
-  ok('desktop: Escape closes the picker', !(await page.isVisible('#themePop')));
-  // an old saved "light" / "dark" choice still works
-  await page.evaluate(() => localStorage.setItem('fplai_theme', JSON.stringify('light')));
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  ok('desktop: old "light" setting maps to chalk', await page.$eval('html', e => e.dataset.theme === 'chalk'));
-  await page.evaluate(() => localStorage.setItem('fplai_theme', JSON.stringify('dark')));
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  ok('desktop: old "dark" setting maps to forest', await page.$eval('html', e => e.dataset.theme === 'forest'));
+  await page.reload({ waitUntil: 'networkidle' });
+  ok('desktop: a returning visitor goes straight to their team', !(await page.isVisible('#landing')));
   ok('desktop: no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 4).join(' || '));
+  await ctx.close();
+}
+
+async function reducedMotion(browser){
+  const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
+  const page = await ctx.newPage();
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.fill('#landId', TEAM); await page.click('#landGo');
+  await page.waitForSelector('#v-home-squad .tile', { timeout: 30000 });
+  const st = await page.evaluate(() => ({ minOpacity: Math.min(...[...document.querySelectorAll('#v-home-squad .tile, #v-home-squad .card')].map(e => +getComputedStyle(e).opacity)),
+    rank: document.querySelector('#v-home-squad .tile .val').textContent.trim() }));
+  ok('reduced motion: everything is visible at once, nothing counts up', st.minOpacity === 1 && !/^0$/.test(st.rank), JSON.stringify(st));
   await ctx.close();
 }
 
@@ -306,6 +211,7 @@ async function desktop(browser){
   const browser = await chromium.launch();
   try { await phone(browser); } catch (e) { ok('phone run completed', false, e.message.split('\n')[0]); }
   try { await desktop(browser); } catch (e) { ok('desktop run completed', false, e.message.split('\n')[0]); }
+  try { await reducedMotion(browser); } catch (e) { ok('reduced-motion run completed', false, e.message.split('\n')[0]); }
   await browser.close();
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;

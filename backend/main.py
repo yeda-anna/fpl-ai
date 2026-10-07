@@ -514,7 +514,8 @@ def health():
 # Nothing to bump by hand.
 NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
             "Pragma": "no-cache", "Expires": "0"}
-_ASSET_REF = re.compile(r'(/static/([\w.-]+\.(?:css|js)))(?:\?v=[\w.-]*)?(?=["\'])')
+# Files may sit in a sub-folder (/static/vendor/gsap.min.js); names only ever come from index.html.
+_ASSET_REF = re.compile(r'(/static/([\w.-]+(?:/[\w.-]+)*\.(?:css|js)))(?:\?v=[\w.-]*)?(?=["\'])')
 _page = {"key": None, "html": "", "build": ""}
 _page_lock = threading.Lock()
 

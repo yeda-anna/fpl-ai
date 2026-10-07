@@ -2,8 +2,8 @@
 
 ## End-to-end (Playwright)
 
-`tests/e2e.js` drives a headless Chromium through the whole app at two sizes:
-phone 390×844 and desktop 1440×900. 108 checks.
+`tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass. 88 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -12,7 +12,7 @@ FPL_CACHE_ONLY=1 ./run.sh
 # terminal 2
 npm --prefix tests ci        # first time: installs Playwright + Chromium
 npm --prefix tests test      # exits non-zero on any failure
-BASE_URL=https://fpl-ai-production-966c.up.railway.app/ npm --prefix tests test   # against live
+BASE_URL=https://fpl-ai-production-966c.up.railway.app/ TEAM_ID=1234567 npm --prefix tests test   # against live
 ```
 
 Screenshots land in `tests/screenshots/` (git-ignored); pass a directory as
@@ -20,38 +20,27 @@ the first argument to `node tests/e2e.js` to put them elsewhere.
 
 What it covers:
 
-- Welcome screen asks for a Team ID on every launch, remembers the last one
-  ("welcome back", prefilled), shows a clear error for an unknown team, and
-  **Skip** leaves you browsing; team-only tools offer to add a team.
-- Phone shell: tab dock shown and desktop links hidden (and the reverse on
-  desktop); the More sheet opens, navigates and highlights the More tab.
-- Every view renders without an error box: Dashboard, Expected Points, Solver,
-  Chip Strategies, Copilot, Rate My Team, Compare, Minileagues, Scout (all
-  tabs), How It Works.
-- **Overflow scan**: no element on the phone wider than 390px, on every view.
-- Expected Points: table renders; a minutes edit lowers xPts and resets.
-- Solver: returns plans, controls sit above the pitch, the pitch steps through
-  gameweeks, switching plans works.
-- Copilot answers; minileague analysis completes; the player bottom sheet opens.
-- Theme picker: opens from More and from the top bar, lists six themes plus
-  Match system, each theme applies and sets the browser-bar colour, closes on an
-  outside tap and on Escape, survives a relaunch; a first visit opens in Open
-  Mic; old `light`/`dark` settings map to Chalk/Forest. Screenshots of the
-  dashboard in every theme.
-- Freshness: the page carries a build id equal to `/version`, CSS/JS URLs are
-  content-hashed, `/` and `/api/*` are `no-store`, the first read of your team
-  after a page load sends `fresh=1` and later reads don't, and **More → Refresh
-  app** reloads to a clean launch.
-- House humour: the welcome screen and every loading state carry a quip; the
-  dashboard shows the week's verdict banner and "Roast me again" changes it; a
-  roast sits under the captain picks, the Expected Points table, each solver
-  plan, chip plan, Copilot answer, Rate My Team grade and fix, comparison,
-  league and Scout tab — always outside the advice and labelled for screen
-  readers.
-- Roast mode: the switch in the theme picker is on by default, turning it off
-  removes every roast, quip and verdict and is remembered, and turning it on
-  brings them back.
-- Motion: counters land on the true value; Rate My Team draws a grade ring.
+- **Landing:** a first visit opens it; GSAP, both plugins, anime.js and
+  `Motion` load from `/static/vendor`; it has the neon pitch scene and a quip;
+  an empty ID and an unknown team each get a clear message; a real ID goes
+  straight to Home → My squad, is saved in `localStorage`, names the team pill,
+  and the first read asks FPL afresh (`fresh=1`).
+- **Five tabs** in the dock and no "More". Every tab and every sub-page renders
+  without an error box, fits a 390px phone (**overflow scan**) and has its own
+  address (`#tab/sub`).
+- The tools still work: a minutes edit lowers xPts and resets, the solver returns
+  plans and steps through gameweeks, the Copilot answers, a mini-league is
+  analysed, the player sheet opens.
+- The menu opens with How it works; **Refresh app** reloads and the saved team
+  skips the landing screen; old addresses (`#solver`) land in the right place;
+  **Forget team** clears the device and asks again; **Just browsing** lands on
+  Picks and team-only pages offer to add a team.
+- Desktop: tab links shown and dock hidden; the page carries a build id equal to
+  `/version`; every CSS/JS file, vendor libraries included, is content-hashed;
+  `/` and `/api/*` are `no-store`; each tab renders; a returning visitor skips
+  the landing screen.
+- Counters land on the true value; with reduced motion everything is visible
+  at once and nothing counts up.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
 
@@ -69,12 +58,12 @@ adds nothing.
 ## Look and motion (by eye)
 
 The suite can't judge whether it looks right. After a UI change, run it, then
-open the screenshots in `tests/screenshots/` — the dashboard in every theme on
-phone and desktop. Also check by hand with the OS "reduce motion" setting on:
+open the screenshots in `tests/screenshots/` — the landing screen and every tab
+on phone and desktop. Also check by hand with the OS "reduce motion" setting on:
 everything should simply be there, no entrances, glows or sweeps.
 
 ```bash
-python3 scripts/check_contrast.py      # WCAG AA for every theme; exits 1 on a miss
+python3 scripts/check_contrast.py      # WCAG AA for the palette; exits 1 on a miss
 ```
 
 ## Quick checks
