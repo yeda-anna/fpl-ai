@@ -131,11 +131,13 @@ def solve(rows: List[Dict[str, Any]],
     start_bank = int(round(bank * 10))
     have_squad = len(owned) == SQUAD_SIZE
 
-    # Big-M for the roll-over switch below: with kept = 0 the constraint must not bind,
-    # and ft[t-1] - made is never below 1 - SQUAD_SIZE while ft[t] - 1 is at most
-    # MAX_FREE_TRANSFERS - 1.
+    # Big-M for the roll-over switch below: with kept = 0 the constraint must not bind.
+    # In a normal week hits >= made - ft and hits <= max_hits, so ft[t-1] - made is never
+    # below -max_hits, while ft[t] - 1 is at most MAX_FREE_TRANSFERS - 1. That M is exact
+    # and much smaller than one from SQUAD_SIZE (6 rather than 18 at two hits), which
+    # keeps the LP relaxation tight.
     kept: Dict[int, Any] = {}
-    overspend_m = (MAX_FREE_TRANSFERS - 1) + (SQUAD_SIZE - 1)
+    overspend_m = (MAX_FREE_TRANSFERS - 1) + max_hits
 
     for t in T:
         gw = gws[t]
