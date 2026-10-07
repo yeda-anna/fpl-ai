@@ -78,8 +78,10 @@ sheet, welcome screen, SVG sprite and the logo). `app.js` routes by hash
 (`#dashboard`, `#xpts`, `#solver`, `#chips`, `#copilot`, `#rate`, `#compare`,
 `#league`, `#scout`, `#model`) to ten view functions, each of which fetches
 its data and renders HTML strings. State that survives a reload lives in
-`localStorage` under `fplai_*` keys (team, team name, theme, minute overrides,
-last league). See `DESIGN.md` for the visual system.
+`localStorage` under `fplai_*` keys (team, team name, theme, roast mode, minute
+overrides, last league). `roast.js` (loaded first) holds the roast pools; `app.js`
+owns the engine that picks, fills and escapes them. See `DESIGN.md` for the visual
+system and the stage layer.
 
 ## Freshness (cache policy)
 

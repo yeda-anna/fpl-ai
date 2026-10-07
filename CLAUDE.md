@@ -27,8 +27,9 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 88 checks, phone 390×844 + desktop 1440×900
+npm --prefix tests test        # 108 checks, phone 390×844 + desktop 1440×900
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
+python3 scripts/check_contrast.py                 # WCAG AA for all six themes
 node --check frontend/app.js   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
@@ -50,7 +51,8 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
 | `frontend/index.html` | Shell: top bar, tab dock, More sheet, welcome screen, icon sprite, logo |
 | `frontend/styles.css` | Design system: tokens, glass, components, breakpoints, logo animation |
-| `frontend/app.js` | All ten views, navigation, team prompt, minute edits |
+| `frontend/app.js` | All ten views, navigation, team prompt, minute edits, the roast engine and the stage effects (confetti, count-up, glow) |
+| `frontend/roast.js` | The roast pools (loading, welcome, verdicts, captain, plan, grade, chip, Copilot…) — plain data, loaded before `app.js` |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `scripts/calibrate.py` | Projection sanity check |
 | `docs/` | Architecture, model, solver, API, design, data, testing, deployment |
@@ -75,36 +77,52 @@ suite at **0 failures** — see `docs/TESTING.md`.
 **Frontend**
 - No build step, no framework, no CDN dependencies. Plain JS in `app.js`.
 - Cache-busting is automatic: the server rewrites `/static/*.css|js` links in
-  `index.html` to `?v=<content hash>`, serves the page `no-cache`, and `app.js`
-  reloads when `/version` reports a newer build. Never hand-write `?v=` numbers,
+  `index.html` to `?v=<content hash>`, serves the page and every `/api/` answer
+  `no-store`, and `app.js` reloads when `/version` reports a newer build. Never hand-write `?v=` numbers,
   and keep new CSS/JS referenced as `/static/<file>` so they're fingerprinted too.
 - Colours come from tokens only (`docs/DESIGN.md`). Every theme follows
-  **60:30:10** — base background, tinted glass content, lime `#D4FC79`/sky
-  `#8FD3F4` highlights. Text on a highlight uses `--on-accent`, never white.
-- Four themes: `forest` (default), `midnight`, `graphite`, `chalk`, plus `auto`.
-  A new theme touches three places: its token block in `styles.css`, `THEMES`
-  in `app.js`, and the colour map in the pre-paint script in `index.html`.
-  Every text token must pass AA in every theme.
+  **60:30:10** — base background, tinted glass content, and a primary plus a
+  secondary highlight (lime `#D4FC79` with sky, hot pink or ember; saffron in
+  Dark Roast). Text on a highlight uses `--on-accent`, never white.
+- Six themes: `openmic` (default), `roast` (Dark Roast), `forest`, `midnight`,
+  `graphite`, `chalk`, plus `auto`. A new theme touches four places: its token
+  block in `styles.css` (including the stage tokens), `THEMES` in `app.js`, the
+  colour map in the pre-paint script in `index.html`, and the `COLORS` map and
+  theme count in `tests/e2e.js`. Every text token must pass AA in every theme —
+  run `python3 scripts/check_contrast.py`.
 - Glass is crisp frosted: `--glass-fill`, a hairline border, the top `--rim`
-  highlight and two-layer shadows. No coloured glows inside cards.
+  highlight and two-layer shadows. Glow is welcome on edges, things you can
+  press and highlights (pointer-lit card edge, breathing primary button, captain
+  ring, the verdict border) — never as a coloured wash behind running text.
 - Live `backdrop-filter` only on floating chrome: `.nav-bar, .tabbar, .more-panel,
-  .sheet, .ob-card, .adv-body`. In-page cards stay flat translucent glass.
+  .sheet, .ob-card, .adv-body, .theme-pop, .toast`. In-page cards stay flat
+  translucent glass.
 - Single-column grids use `minmax(0,1fr)`, never bare `1fr` (it blows out on phones).
 - Phone layout must not widen the viewport: the e2e suite scans every element
   against 390px. Long strings need `overflow-wrap:anywhere`.
 - Keep request races in mind: a view that can fire overlapping requests must
   ignore stale responses (see the `XP.seq` pattern in `viewXpts`).
-- Respect `prefers-reduced-motion` (a global rule already stops animations).
+- Respect `prefers-reduced-motion` (a global rule turns every animation off, so
+  new motion needs no special case — but use `animation-fill-mode: backwards`
+  for entrances so hover transforms keep working, and give JS-driven motion
+  (`REDUCED`) a static path).
 
 **Brand and content**
 - Name: **Mug's Game FC**. Tagline: "Fantasy football is a mug's game. Might as
   well do the maths." Logo: a club mug with a football dunked in it, animated.
-- Tone: light British humour and Indian dark humour in taglines, empty states,
-  loading lines and the dashboard mood line ("just having a nose", "putting the
-  kettle on", "Sharma ji’s son finished this ages ago"). Lines live in `QUIPS`
-  in `app.js`; aim them at the manager's own luck and rank, never at a religion,
-  caste, region, community or real person. **Never** in errors, numbers or
-  anything a manager acts on.
+- Tone: light British humour, Indian dark humour and deadpan roast comedy in
+  taglines, empty states, loading lines, the welcome screen and the dashboard
+  verdict ("just having a nose", "putting the kettle on", "Sharma ji’s son
+  finished this ages ago"). Every line is original and lives in `frontend/roast.js`;
+  never attribute a line to a real comedian or reuse anyone's material. Aim them
+  at the manager's own luck, rank and choices — never at a religion, caste,
+  region, community, body, family tragedy or real person.
+- **Roasts sit under suggestions, never inside them.** A roast is a separate
+  labelled aside (`roastHtml()`, `.roast`, "Roast:" for screen readers) beneath a
+  suggestion. The advice, the numbers and every error stay plain, exact and
+  joke-free, and a roast never restates a number. **Roast mode** (More → Theme)
+  switches every roast, quip and verdict off; a new suggestion gets a roast and
+  must respect that switch.
 - Shirts are plain silhouettes in club colours. No crests, sponsors, real kit
   designs or other sites' logos, mascots or UI copy.
 - Don't commit raw FPL API responses (`.cache/` is git-ignored); fetch them live.

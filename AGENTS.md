@@ -12,7 +12,7 @@ The full instructions live in [`CLAUDE.md`](CLAUDE.md). The essentials:
 - **Python 3.9-compatible** backend code. Game rules come from `backend/rules.py`,
   never hardcoded.
 - **Frontend:** no build step. Cache-busting is automatic (content-hashed `?v=` added by the server); don't add version numbers by hand.
-- **Brand:** original artwork only; light British humour and Indian dark humour (`QUIPS` in `app.js`), never in errors or numbers, never at anyone's expense but the manager's own.
+- **Brand:** original artwork only; light British humour, Indian dark humour and deadpan roasts (`frontend/roast.js`). A roast is a separate aside under a suggestion — never inside the advice, a number or an error — and Roast mode must switch it off. Never at anyone's expense but the manager's own.
 - **Deploy:** pushing `main` deploys to Railway; check `/healthz` afterwards.
 
 Specialist roles are described in `.claude/agents/`, procedures in

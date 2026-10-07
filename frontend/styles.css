@@ -4,7 +4,8 @@
    Panels are evenly lit frosted glass with a fine light rim along the top
    edge and a soft shadow underneath. Phones get an app shell: top bar,
    floating tab dock and a More sheet. Everything reads from the tokens
-   below, so every theme and component stays in step.
+   below, so every theme and component stays in step. The "stage" section at
+   the end adds the glow, the stage lights, the motion and the roast line.
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -13,7 +14,8 @@
      30%  content     tinted glass over it         (cards, tables, pitch)
      10%  highlight   lime #D4FC79 · sky #8FD3F4    (CTAs, active state, key numbers)
    Highlights are pale, so anything sitting ON one uses --on-accent.
-     forest    deep green  (default)      midnight  floodlit navy
+     openmic   stage-lit violet (default) roast     espresso and saffron
+     forest    deep green                 midnight  floodlit navy
      graphite  matte charcoal             chalk     light, pale lime
    "dark" and "light" are kept as aliases for forest and chalk.
    --------------------------------------------------------------------- */
@@ -60,6 +62,115 @@
   --pitch-a:#2A6B4E; --pitch-b:#2F7656; --pitch-line:rgba(244,255,246,.3);
   --grain-op:.035;
   --theme-color:#1B4332;
+  /* stage: the second glow, the stage lights, bars, rings and the roast line */
+  --glow-2: rgba(143,211,244,.42);
+  --beam:#84FAB0; --beam-2:#8FD3F4; --beam-op:.05;
+  --meter-a:#84FAB0; --meter-b:#D4FC79;
+  --grad-grade: linear-gradient(150deg,#D4FC79,#84FAB0 55%,#8FD3F4);
+  --ring-a:#D4FC79; --ring-b:#8FD3F4;
+  --roast-wash: rgba(212,252,121,.10); --roast-line: rgba(212,252,121,.34);
+  color-scheme: dark;
+}
+/* ---- Open Mic: a stage-lit violet room. Lime stays the "do this" colour, hot pink is the glow ---- */
+[data-theme="openmic"]{
+  /* 60 — ink-violet */
+  --base:#140B26;
+  --base-hi:#22123F; --base-lo:#0A0516;
+  --orb-a:#FF4FA3; --orb-b:#7C5CFF; --orb-c:#D4FC79; --orb-d:#22D3EE;
+  --orb-op:.22;
+  /* 30 — lilac glass */
+  --glass:   rgba(226,214,255,.055);
+  --glass-2: rgba(226,214,255,.085);
+  --glass-3: rgba(226,214,255,.125);
+  --glass-fill: linear-gradient(180deg,rgba(236,226,255,.09) 0%,rgba(226,214,255,.045) 100%);
+  --glass-line:   rgba(226,214,255,.13);
+  --glass-line-2: rgba(226,214,255,.25);
+  --rim: rgba(244,238,255,.5);
+  --glass-hi: inset 0 1px 0 rgba(244,238,255,.10);
+  --solid:  #1D1038;
+  --row:    rgba(226,214,255,.045);
+  --row-hi: rgba(226,214,255,.10);
+  --well:   rgba(8,3,20,.34);
+  --ink:#FBF8FF; --ink-2:#DCCFF4; --ink-3:#BCADDD;
+  /* 10 — lime and hot pink */
+  --accent:#D4FC79; --accent-hi:#E3FD9E; --accent-ink:#D4FC79;
+  --accent-2:#FF6FB5;
+  --accent-wash: rgba(212,252,121,.13);
+  --on-accent:#1A0F33;
+  --grad-cta:  linear-gradient(135deg,#D4FC79 0%,#7DF2C4 100%);
+  --grad-info: linear-gradient(135deg,#FF9AD0 0%,#B79CFF 100%);
+  --glow: rgba(255,79,163,.5);
+  --glow-2: rgba(212,252,121,.42);
+  --up:#7DF2C4;  --up-wash:rgba(125,242,196,.14);
+  --down:#FF9DB8; --down-wash:rgba(255,157,184,.14);
+  --warn:#FFCF70; --warn-wash:rgba(255,207,112,.14);
+  --sh-1: 0 1px 2px rgba(6,0,18,.30), 0 12px 32px -16px rgba(6,0,18,.70);
+  --sh-2: 0 2px 4px rgba(6,0,18,.30), 0 22px 48px -18px rgba(6,0,18,.80);
+  --sh-3: 0 30px 80px -24px rgba(6,0,18,.88);
+  --sh-accent: 0 12px 30px -10px rgba(212,252,121,.40), 0 18px 46px -18px rgba(255,79,163,.55);
+  --scrim: rgba(8,3,20,.64);
+  --chrome: rgba(24,12,45,.74);
+  --chrome-strong: rgba(27,14,52,.92);
+  --chrome-solid: #1B0E34;
+  --pitch-a:#1E6B50; --pitch-b:#247858; --pitch-line:rgba(251,248,255,.3);
+  --grain-op:.04;
+  --theme-color:#140B26;
+  --beam:#FF4FA3; --beam-2:#7C5CFF; --beam-op:.13;
+  --meter-a:#7DF2C4; --meter-b:#D4FC79;
+  --grad-grade: linear-gradient(150deg,#D4FC79,#7DF2C4 50%,#FF9AD0);
+  --ring-a:#D4FC79; --ring-b:#FF6FB5;
+  --roast-wash: rgba(255,111,181,.11); --roast-line: rgba(255,111,181,.42);
+  color-scheme: dark;
+}
+/* ---- Dark Roast: espresso brown, saffron and ember ---- */
+[data-theme="roast"]{
+  /* 60 — espresso */
+  --base:#1D120C;
+  --base-hi:#2E1D13; --base-lo:#110905;
+  --orb-a:#FF8A3D; --orb-b:#FFB454; --orb-c:#FFDDAA; --orb-d:#E4572E;
+  --orb-op:.20;
+  /* 30 — cream-tinted glass */
+  --glass:   rgba(255,228,196,.055);
+  --glass-2: rgba(255,228,196,.085);
+  --glass-3: rgba(255,228,196,.125);
+  --glass-fill: linear-gradient(180deg,rgba(255,236,212,.09) 0%,rgba(255,228,196,.045) 100%);
+  --glass-line:   rgba(255,228,196,.13);
+  --glass-line-2: rgba(255,228,196,.25);
+  --rim: rgba(255,242,224,.5);
+  --glass-hi: inset 0 1px 0 rgba(255,242,224,.10);
+  --solid:  #2A1A11;
+  --row:    rgba(255,228,196,.045);
+  --row-hi: rgba(255,228,196,.10);
+  --well:   rgba(14,6,2,.34);
+  --ink:#FFF8EE; --ink-2:#EFD9C0; --ink-3:#CDB395;
+  /* 10 — saffron and ember */
+  --accent:#FFB454; --accent-hi:#FFC57A; --accent-ink:#FFB454;
+  --accent-2:#FF7A45;
+  --accent-wash: rgba(255,180,84,.14);
+  --on-accent:#1D120C;
+  --grad-cta:  linear-gradient(135deg,#FFC46B 0%,#FF8A4C 100%);
+  --grad-info: linear-gradient(135deg,#FFE3B8 0%,#FFB27A 100%);
+  --glow: rgba(255,138,60,.52);
+  --glow-2: rgba(255,196,107,.42);
+  --up:#9BE8A6;  --up-wash:rgba(155,232,166,.14);
+  --down:#FF9E96; --down-wash:rgba(255,158,150,.14);
+  --warn:#FFE08A; --warn-wash:rgba(255,224,138,.14);
+  --sh-1: 0 1px 2px rgba(10,3,0,.30), 0 12px 32px -16px rgba(10,3,0,.70);
+  --sh-2: 0 2px 4px rgba(10,3,0,.30), 0 22px 48px -18px rgba(10,3,0,.80);
+  --sh-3: 0 30px 80px -24px rgba(10,3,0,.88);
+  --sh-accent: 0 12px 30px -10px rgba(255,138,60,.55);
+  --scrim: rgba(14,6,2,.64);
+  --chrome: rgba(40,24,15,.74);
+  --chrome-strong: rgba(43,26,16,.92);
+  --chrome-solid: #2A1A11;
+  --pitch-a:#2A6B4E; --pitch-b:#2F7656; --pitch-line:rgba(255,248,238,.3);
+  --grain-op:.04;
+  --theme-color:#1D120C;
+  --beam:#FF8A3D; --beam-2:#FFD08A; --beam-op:.11;
+  --meter-a:#FFB454; --meter-b:#FFE08A;
+  --grad-grade: linear-gradient(150deg,#FFE08A,#FFB454 55%,#FF7A45);
+  --ring-a:#FFE08A; --ring-b:#FF7A45;
+  --roast-wash: rgba(255,138,60,.11); --roast-line: rgba(255,138,60,.42);
   color-scheme: dark;
 }
 [data-theme="midnight"]{
@@ -101,6 +212,9 @@
   --pitch-a:#1F5C46; --pitch-b:#24684F; --pitch-line:rgba(242,247,255,.28);
   --grain-op:.035;
   --theme-color:#0E1726;
+  --beam:#8FD3F4; --beam-2:#84FAB0; --beam-op:.08;
+  --meter-a:#84FAB0; --meter-b:#D4FC79;
+  --roast-wash: rgba(143,211,244,.10); --roast-line: rgba(143,211,244,.38);
   color-scheme: dark;
 }
 [data-theme="graphite"]{
@@ -142,6 +256,8 @@
   --pitch-a:#2A6B4E; --pitch-b:#2F7656; --pitch-line:rgba(255,255,255,.28);
   --grain-op:.03;
   --theme-color:#17191C;
+  --glow-2: rgba(212,252,121,.30);
+  --beam-op:.03;
   color-scheme: dark;
 }
 [data-theme="chalk"], [data-theme="light"]{
@@ -187,6 +303,10 @@
   --pitch-a:#2E7D57; --pitch-b:#348961; --pitch-line:rgba(255,255,255,.38);
   --grain-op:.025;
   --theme-color:#F2FBEC;
+  --glow-2: rgba(120,190,80,.35);
+  --beam-op:0;
+  --meter-a:#84FAB0; --meter-b:#D4FC79;
+  --roast-wash: rgba(45,106,79,.07); --roast-line: rgba(45,106,79,.30);
   color-scheme: light;
 }
 :root{
@@ -233,11 +353,11 @@ button{font:inherit}
 /* Live blur only on the floating chrome. In-page cards sit over the already-blurred
    colour field, so a translucent fill reads as frosted glass without paying for a
    blur per card — far lighter on phone GPUs, and Safari can't nest blurs anyway. */
-.nav-bar,.tabbar,.more-panel,.sheet,.ob-card,.adv-body,.theme-pop{
+.nav-bar,.tabbar,.more-panel,.sheet,.ob-card,.adv-body,.theme-pop,.toast{
   -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
 }
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .nav-bar,.tabbar,.more-panel,.sheet,.ob-card,.adv-body,.theme-pop{background:var(--chrome-solid)}
+  .nav-bar,.tabbar,.more-panel,.sheet,.ob-card,.adv-body,.theme-pop,.toast{background:var(--chrome-solid)}
 }
 
 /* ============================ top bar ============================ */
@@ -255,7 +375,7 @@ button{font:inherit}
 .mark svg{width:31px;height:31px}
 .brand b{font-size:18px;font-weight:800;letter-spacing:-.035em;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .fc{font-style:normal;font-size:10.5px;font-weight:850;letter-spacing:.06em;padding:2px 6px;border-radius:6px;color:var(--on-accent);
-  background:var(--grad-cta);box-shadow:0 2px 8px -2px rgba(212,252,121,.7);vertical-align:3px}
+  background:var(--grad-cta);box-shadow:0 2px 10px -2px var(--glow-2);vertical-align:3px}
 .links{display:flex;gap:2px;flex:1;min-width:0;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
 .links > :first-child{margin-left:auto}.links > :last-child{margin-right:auto}
 .links .s{display:none}
@@ -267,7 +387,7 @@ button{font:inherit}
 .links button:hover{color:var(--ink);background:var(--glass-2)}
 .links button.on{color:var(--ink);background:var(--glass-3);box-shadow:var(--glass-hi)}
 .links button.on:after{content:'';position:absolute;left:30%;right:30%;bottom:-13px;height:3px;border-radius:3px;
-  background:var(--accent);box-shadow:0 0 14px var(--accent)}
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 0 14px var(--glow-2), 0 0 28px var(--glow)}
 .nav-right{display:flex;align-items:center;gap:10px;flex:none}
 .team-pill{display:flex;align-items:center;gap:9px;max-width:230px;height:42px;padding:0 14px 0 5px;border-radius:99px;cursor:pointer;
   background:var(--glass-2);border:1px solid var(--glass-line);box-shadow:var(--glass-hi);color:var(--ink);font-weight:650;font-size:14px;
@@ -338,7 +458,10 @@ button{font:inherit}
 .page{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:30px 24px 80px;overflow-x:clip}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
 .page-head h1{font-size:32px;font-weight:800;letter-spacing:-.035em;
-  background:linear-gradient(120deg,var(--ink) 30%,var(--accent-ink));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  background:linear-gradient(110deg,var(--ink) 0%,var(--ink) 38%,var(--accent-ink) 50%,var(--ink) 62%,var(--ink) 100%);background-size:260% 100%;background-position:100% 0;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px var(--glow-2))}
+.page-head h1.sweep{animation:glint 1.3s var(--ease)}
+@keyframes glint{from{background-position:0 0}to{background-position:100% 0}}
 .page-head p{margin:6px 0 0;color:var(--ink-2);font-size:14.5px;max-width:70ch}
 .view{display:none}
 .view.on{display:block;animation:enter .45s var(--ease)}
@@ -377,7 +500,7 @@ label.fld{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:
 .cta:before{content:'';position:absolute;top:0;bottom:0;left:-60%;width:40%;transform:skewX(-20deg);
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transition:left .7s var(--ease)}
 .cta:hover:before{left:120%}
-.cta:hover{transform:translateY(-2px);box-shadow:0 1px 0 rgba(255,255,255,.3) inset, 0 18px 40px -12px rgba(212,252,121,.85)}
+.cta:hover{transform:translateY(-2px);animation:none;box-shadow:0 1px 0 rgba(255,255,255,.3) inset, 0 18px 44px -10px var(--glow)}
 .cta:disabled{opacity:.75;cursor:progress;transform:none}
 .cta svg{width:18px;height:18px}
 
@@ -562,12 +685,13 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 .kv span:first-child{color:var(--ink-2)}
 .kv span:last-child{font-family:var(--mono);font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;text-align:right}
 .meter{height:7px;border-radius:99px;background:var(--glass-3);overflow:hidden;margin-top:7px}
-.meter>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#84FAB0,#D4FC79);box-shadow:0 0 12px rgba(212,252,121,.55)}
+.meter>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--meter-a),var(--meter-b));box-shadow:0 0 12px var(--glow-2)}
 .spark{display:flex;gap:2px;align-items:flex-end;height:26px}
-.spark i{flex:1;min-width:3px;border-radius:2px 2px 0 0;min-height:3px;background:linear-gradient(180deg,#84FAB0,rgba(132,250,176,.22))}
+.spark i{flex:1;min-width:3px;border-radius:2px 2px 0 0;min-height:3px;background:var(--meter-a);
+  background:linear-gradient(180deg,var(--meter-a),color-mix(in srgb,var(--meter-a) 22%,transparent))}
 .grade{font-size:76px;font-weight:900;letter-spacing:-.06em;line-height:1;
-  background:linear-gradient(150deg,#D4FC79,#84FAB0 55%,#8FD3F4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 8px 24px rgba(212,252,121,.45))}
+  background:var(--grad-grade);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 8px 24px var(--glow-2))}
 .mins{display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-3);cursor:pointer;padding:3px 7px;border-radius:7px;transition:.15s}
 .mins:hover{background:var(--accent-wash);color:var(--accent-ink)}
 .mins.set{background:var(--accent-wash);color:var(--accent-ink);font-weight:750}
@@ -610,7 +734,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 .ob-card{position:relative;width:min(460px,100%);padding:34px 30px 26px;border-radius:30px;text-align:center;
   background:var(--chrome-strong);border:1px solid var(--glass-line);box-shadow:var(--glass-hi), var(--sh-3);animation:rise .45s var(--ease)}
 .ob-mark{width:78px;height:78px;margin:0 auto 18px;border-radius:24px;display:grid;place-items:center;
-  background:var(--grad-cta);box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 18px 40px -10px rgba(212,252,121,.8);
+  background:var(--grad-cta);box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 18px 44px -10px var(--glow);
   animation:bob 4s ease-in-out infinite}
 .ob-mark svg{width:64px;height:64px}
 @keyframes bob{50%{transform:translateY(-5px) rotate(-3deg)}}
@@ -629,12 +753,14 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 
 /* loading */
 .loading{padding:46px;text-align:center;color:var(--ink-3);font-size:14px}
-.loading:after{content:'';display:inline-block;width:15px;height:15px;margin-left:10px;vertical-align:-3px;border-radius:50%;
-  border:2px solid var(--glass-line-2);border-top-color:var(--accent);animation:spin .7s linear infinite}
+.loading:after{content:'';display:inline-block;width:17px;height:17px;margin-left:11px;vertical-align:-4px;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 0 22%,var(--accent-2) 60%,var(--accent) 100%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));
+  filter:drop-shadow(0 0 5px var(--glow));animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading.has-quip{padding-bottom:14px}
-.quip{padding:0 24px 36px;text-align:center;font-size:13px;line-height:1.55;font-style:italic;color:var(--ink-3);overflow-wrap:anywhere}
-.mood{margin:-6px 4px 18px;font-size:13px;line-height:1.55;font-style:italic;color:var(--ink-3);overflow-wrap:anywhere}
+.quip{padding:0 24px 36px;text-align:center;font-size:13px;line-height:1.55;font-style:italic;color:var(--ink-3);overflow-wrap:anywhere;animation:roast-in .7s .12s var(--ease) backwards}
 .skel{border-radius:16px;background:linear-gradient(90deg,var(--glass) 0%,var(--glass-3) 50%,var(--glass) 100%);
   background-size:200% 100%;animation:shimmer 1.4s linear infinite}
 @keyframes shimmer{to{background-position:-200% 0}}
@@ -693,7 +819,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
   .more-grid button:active{transform:scale(.96)}
   .more-grid button.on{border-color:var(--accent);background:var(--accent-wash);color:var(--accent-ink)}
   .more-grid .ic{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;color:var(--on-accent);
-    background:var(--grad-cta);box-shadow:0 8px 18px -8px rgba(212,252,121,.8)}
+    background:var(--grad-cta);box-shadow:0 8px 20px -8px var(--glow)}
   .more-grid .ic svg{width:22px;height:22px}
   .more-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
   .more-actions .btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:16px}
@@ -812,6 +938,171 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
   .brand b{display:none}
 }
 
+/* =====================================================================
+   Stage: glow, stage lights, motion and the roast line.
+   Everything here reads the tokens above, so every theme gets its own
+   colours. Glows live on edges, interactive things and highlights — never as
+   a coloured wash behind running text. prefers-reduced-motion stops it all.
+   ===================================================================== */
+
+/* ---- stage lights: two soft beams sweeping down from the top of the room ---- */
+.beam{position:absolute;top:-8vh;width:min(80vmax,1000px);height:135vh;pointer-events:none;opacity:var(--beam-op);mix-blend-mode:screen;
+  transform-origin:50% 0;will-change:transform;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,transparent 80%);mask-image:linear-gradient(180deg,#000 0%,transparent 80%)}
+.b1{left:-12%;background:conic-gradient(from 158deg at 50% 0,transparent 0deg,var(--beam) 22deg,transparent 44deg,transparent 360deg);animation:sway1 14s ease-in-out infinite alternate}
+.b2{right:-12%;background:conic-gradient(from 158deg at 50% 0,transparent 0deg,var(--beam-2) 22deg,transparent 44deg,transparent 360deg);animation:sway2 19s ease-in-out infinite alternate}
+@keyframes sway1{from{transform:rotate(-15deg)}to{transform:rotate(12deg)}}
+@keyframes sway2{from{transform:rotate(13deg)}to{transform:rotate(-11deg)}}
+
+/* ---- glow that follows the pointer: a lit edge on cards and tiles (hover devices only) ---- */
+.card,.tile{--mx:50%;--my:0%}
+.card:after,.tile:after{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;opacity:0;transition:opacity .35s;
+  background:radial-gradient(240px circle at var(--mx) var(--my),var(--glow),transparent 70%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+@media(hover:hover){
+  .card:hover:after,.tile:hover:after{opacity:1}
+  .card.lift:hover,.tile:hover{box-shadow:var(--glass-hi), var(--sh-2), 0 0 44px -18px var(--glow)}
+}
+
+/* ---- things that breathe ---- */
+@keyframes breathe{
+  0%,100%{box-shadow:0 1px 0 rgba(255,255,255,.3) inset, var(--sh-accent)}
+  50%{box-shadow:0 1px 0 rgba(255,255,255,.3) inset, 0 16px 48px -8px var(--glow), 0 0 30px -8px var(--glow-2)}
+}
+.cta:not(:disabled),.path.on{animation:breathe 3.8s ease-in-out infinite}
+@keyframes mark-glow{0%,100%{box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 0 0 0 transparent, var(--sh-accent)}50%{box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 0 22px -2px var(--glow), var(--sh-accent)}}
+.mark{animation:mark-glow 4.2s ease-in-out infinite}
+.stat-v,.path .pv{text-shadow:0 0 24px var(--glow-2)}
+.path.on .pv{text-shadow:none}
+.pitch-card{box-shadow:var(--sh-3), 0 0 0 1px var(--glass-line-2), 0 24px 70px -30px var(--glow)}
+@keyframes cap-pulse{0%,100%{box-shadow:0 3px 8px rgba(0,0,0,.35), 0 0 0 0 var(--glow)}60%{box-shadow:0 3px 8px rgba(0,0,0,.35), 0 0 0 8px transparent}}
+.badge.c{animation:cap-pulse 2.4s ease-out infinite}
+.tabbar button.on svg{filter:drop-shadow(0 0 8px var(--glow-2))}
+.links button.on{box-shadow:var(--glass-hi), 0 0 24px -10px var(--glow)}
+
+/* ---- entrances: cards, tiles and plans rise in one after another ---- */
+.fx-in{animation:rise-in .6s var(--ease) backwards;animation-delay:calc(var(--i,0) * 55ms)}
+@keyframes rise-in{from{opacity:0;transform:translateY(14px) scale(.985)}}
+@keyframes roast-in{from{opacity:0;transform:translateX(-8px)}}
+@keyframes grow-x{from{transform:scaleX(0)}}
+@keyframes grow-y{from{transform:scaleY(0)}}
+.meter>i{transform-origin:left center;animation:grow-x 1s var(--ease) .15s backwards}
+.spark i{transform-origin:bottom;animation:grow-y .7s var(--ease) backwards}
+.spark i:nth-child(2){animation-delay:45ms}
+.spark i:nth-child(3){animation-delay:90ms}
+.spark i:nth-child(4){animation-delay:135ms}
+.spark i:nth-child(5){animation-delay:180ms}
+.spark i:nth-child(6){animation-delay:225ms}
+.spark i:nth-child(7){animation-delay:270ms}
+.spark i:nth-child(8){animation-delay:315ms}
+.spark i:nth-child(9){animation-delay:360ms}
+.spark i:nth-child(10){animation-delay:405ms}
+/* players walk on: row by row, left to right */
+@keyframes pop-in{from{opacity:0;transform:translateY(14px) scale(.7)}}
+.pl-tok{animation:pop-in .5s var(--ease) backwards;animation-delay:calc(var(--r,0) * 100ms + var(--c,0) * 55ms)}
+.turf-plane .line-row:nth-child(1){--r:0}.turf-plane .line-row:nth-child(2){--r:1}
+.turf-plane .line-row:nth-child(3){--r:2}.turf-plane .line-row:nth-child(4){--r:3}
+.line-row .pl-tok:nth-child(1),.bench > div:nth-child(1) .pl-tok{--c:0}
+.line-row .pl-tok:nth-child(2),.bench > div:nth-child(2) .pl-tok{--c:1}
+.line-row .pl-tok:nth-child(3),.bench > div:nth-child(3) .pl-tok{--c:2}
+.line-row .pl-tok:nth-child(4),.bench > div:nth-child(4) .pl-tok{--c:3}
+.line-row .pl-tok:nth-child(5),.bench > div:nth-child(5) .pl-tok{--c:4}
+.bench{--r:4}
+
+/* ---- the roast line: a separate, clearly-labelled aside under a suggestion ---- */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.fl{flex:none;width:24px;height:24px;border-radius:9px;display:grid;place-items:center;color:var(--on-accent);
+  background:var(--grad-cta);box-shadow:0 0 18px -2px var(--glow)}
+.fl svg{width:15px;height:15px;transform-origin:50% 90%;animation:flicker 1.9s ease-in-out infinite}
+@keyframes flicker{0%,100%{transform:scale(1) rotate(-2deg)}30%{transform:scale(1.14,.92) rotate(3deg)}62%{transform:scale(.92,1.12) rotate(-3deg)}}
+.roast{display:flex;gap:11px;align-items:flex-start;margin-top:12px;padding:10px 14px 10px 11px;border-radius:14px;
+  background:linear-gradient(90deg,var(--roast-wash),transparent 88%);border:1px solid var(--roast-line);border-left-width:3px;
+  font-size:13px;line-height:1.55;font-style:italic;text-align:left;color:var(--ink-2);overflow-wrap:anywhere;animation:roast-in .6s var(--ease) backwards}
+.roast .tx{min-width:0;padding-top:2px}
+.roast.top{margin:0 0 14px}
+.note + .roast{margin:-2px 0 12px}
+.well + .roast{margin-top:10px}
+
+/* Rate My Team: the grade sits in a ring that fills to your score */
+.grade-ring{position:relative;width:152px;height:152px;margin:6px auto 4px;display:grid;place-items:center}
+.grade-ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);overflow:visible;filter:drop-shadow(0 0 12px var(--glow))}
+.grade-ring .trk{fill:none;stroke:var(--glass-3);stroke-width:7}
+.grade-ring .arc{fill:none;stroke:url(#ringGrad);stroke-width:7;stroke-linecap:round;stroke-dasharray:var(--p) 100;animation:ring-fill 1.5s var(--ease) .15s backwards}
+@keyframes ring-fill{from{stroke-dasharray:0 100}}
+.grade-ring .grade{position:relative;font-size:58px}
+
+/* the verdict banner on the dashboard: a rotating lit border around the week's roast */
+@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes ang{to{--ang:360deg}}
+.roast-hero{position:relative;margin:0 0 16px;border-radius:var(--r-lg);padding:1.5px;
+  background:conic-gradient(from var(--ang),var(--accent),var(--accent-2) 28%,transparent 52%,var(--accent-2) 78%,var(--accent));
+  animation:ang 7s linear infinite;box-shadow:0 18px 60px -28px var(--glow)}
+.roast-hero .in{position:relative;display:flex;align-items:center;gap:14px;padding:15px 16px 15px 15px;border-radius:calc(var(--r-lg) - 1.5px);
+  background:var(--chrome-solid);overflow:hidden}
+.roast-hero .in:before{content:'';position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,var(--roast-wash),transparent 70%)}
+.roast-hero .fl{width:40px;height:40px;border-radius:14px}
+.roast-hero .fl svg{width:24px;height:24px}
+.roast-hero .tx{position:relative;flex:1;min-width:0;font-size:15.5px;line-height:1.5;font-weight:650;font-style:italic;color:var(--ink);overflow-wrap:anywhere}
+.roast-hero .k{display:block;margin-bottom:3px;font-size:10.5px;font-weight:800;font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink)}
+.roast-hero .tx #moodTx{display:block;animation:roast-in .5s var(--ease) backwards}
+.roast-hero .btn{position:relative;flex:none}
+
+/* ---- welcome card: a lit border that circles the card ---- */
+.ob-card:after{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;
+  background:conic-gradient(from var(--ang),transparent 0 55%,var(--accent-2) 75%,var(--accent) 90%,transparent);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);animation:ang 6s linear infinite}
+.ob-quip{animation:roast-in .7s .1s var(--ease) backwards}
+
+/* ---- toast, roast switch, confetti ---- */
+.toast{position:fixed;left:50%;top:calc(var(--safe-t) + 78px);z-index:140;display:flex;gap:11px;align-items:center;
+  max-width:min(92vw,460px);padding:11px 18px 11px 11px;border-radius:18px;font-size:13.5px;font-weight:650;line-height:1.4;
+  background:var(--chrome-strong);border:1px solid var(--glass-line-2);box-shadow:var(--glass-hi), var(--sh-3), 0 0 40px -10px var(--glow);
+  opacity:0;visibility:hidden;transform:translate(-50%,-16px);pointer-events:none;overflow-wrap:anywhere;
+  transition:opacity .3s,transform .45s var(--ease),visibility 0s .45s}
+.toast.show{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .3s,transform .45s var(--ease),visibility 0s}
+.tp-roast{display:flex;align-items:center;gap:12px;margin:8px 2px 0;padding:10px 12px;border-radius:14px;background:var(--glass-2);border:1px solid var(--glass-line)}
+.tp-roast .fl{width:30px;height:30px;border-radius:11px}
+.tp-roast .fl svg{width:18px;height:18px}
+.tp-roast .t{flex:1;min-width:0;display:flex;flex-direction:column}
+.tp-roast b{font-size:14px;font-weight:700}
+.tp-roast small{font-size:12px;color:var(--ink-2)}
+.switch{position:relative;flex:none;width:48px;height:28px;border-radius:99px;border:1px solid var(--glass-line-2);background:var(--glass-3);cursor:pointer;padding:0;
+  transition:background .25s,box-shadow .25s,border-color .25s}
+.switch i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--ink-2);transition:transform .4s cubic-bezier(.3,1.5,.4,1),background .25s}
+.switch[aria-checked="true"]{background:var(--grad-cta);border-color:transparent;box-shadow:0 0 20px -2px var(--glow)}
+.switch[aria-checked="true"] i{transform:translateX(20px);background:var(--on-accent)}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:130;pointer-events:none}
+
+/* ---- theme changes cross-fade instead of snapping ---- */
+html.theming *,html.theming *:before,html.theming *:after{
+  transition:background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease,fill .45s ease,stroke .45s ease!important}
+
+/* ---- phone dock: a glowing capsule slides to the active tab ---- */
+@media(max-width:1023px){
+  .tabbar:after{content:'';position:absolute;top:7px;bottom:7px;left:0;width:var(--tw,0);transform:translateX(var(--tx,0));border-radius:17px;pointer-events:none;
+    background:var(--accent-wash);box-shadow:inset 0 0 0 1px var(--glass-line-2), 0 0 26px -6px var(--glow-2);opacity:0;
+    transition:transform .5s cubic-bezier(.3,1.35,.4,1),width .3s var(--ease),opacity .2s}
+  .tabbar.has-ind:after{opacity:1}
+  .tabbar button{position:relative;z-index:1}
+  .tabbar.has-ind button.on{background:transparent}
+  .roast-hero .in{flex-wrap:wrap}
+  .roast-hero .btn{width:100%}
+  .toast{top:calc(var(--safe-t) + 66px)}
+}
+@media(max-width:1180px){
+  .ws-cmd{margin-bottom:16px}
+}
+@media(max-width:760px){
+  .grade-ring{width:132px;height:132px}.grade-ring .grade{font-size:50px}
+  .roast-hero .tx{font-size:14.5px}
+  .roast{font-size:12.5px}
+}
+
 @media(prefers-reduced-motion:reduce){
-  *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  /* No entrances, glows, sweeps or tilts. Content simply appears. Only the loading ring keeps turning, slowly. */
+  *,*:before,*:after{animation:none!important;transition-duration:.01ms!important}
+  .loading:after{animation:spin 1.8s linear infinite!important}
 }

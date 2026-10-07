@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes:
-phone 390×844 and desktop 1440×900. 88 checks.
+phone 390×844 and desktop 1440×900. 108 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -33,16 +33,25 @@ What it covers:
 - Solver: returns plans, controls sit above the pitch, the pitch steps through
   gameweeks, switching plans works.
 - Copilot answers; minileague analysis completes; the player bottom sheet opens.
-- Theme picker: opens from More and from the top bar, lists four themes plus
+- Theme picker: opens from More and from the top bar, lists six themes plus
   Match system, each theme applies and sets the browser-bar colour, closes on an
-  outside tap and on Escape, survives a relaunch; old `light`/`dark` settings
-  map to Chalk/Forest. Screenshots of the dashboard in every theme.
+  outside tap and on Escape, survives a relaunch; a first visit opens in Open
+  Mic; old `light`/`dark` settings map to Chalk/Forest. Screenshots of the
+  dashboard in every theme.
 - Freshness: the page carries a build id equal to `/version`, CSS/JS URLs are
   content-hashed, `/` and `/api/*` are `no-store`, the first read of your team
   after a page load sends `fresh=1` and later reads don't, and **More → Refresh
   app** reloads to a clean launch.
-- House humour: the welcome screen, every loading state and the dashboard mood
-  line carry a quip.
+- House humour: the welcome screen and every loading state carry a quip; the
+  dashboard shows the week's verdict banner and "Roast me again" changes it; a
+  roast sits under the captain picks, the Expected Points table, each solver
+  plan, chip plan, Copilot answer, Rate My Team grade and fix, comparison,
+  league and Scout tab — always outside the advice and labelled for screen
+  readers.
+- Roast mode: the switch in the theme picker is on by default, turning it off
+  removes every roast, quip and verdict and is remembered, and turning it on
+  brings them back.
+- Motion: counters land on the true value; Rate My Team draws a grade ring.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
 
@@ -56,6 +65,17 @@ Replays synthetic histories through the same code the app uses: a transfer a
 week, skipped weeks banking one, hits, the five-transfer cap, and — the case
 that was wrong — a Wildcard or Free Hit week, which keeps what was banked and
 adds nothing.
+
+## Look and motion (by eye)
+
+The suite can't judge whether it looks right. After a UI change, run it, then
+open the screenshots in `tests/screenshots/` — the dashboard in every theme on
+phone and desktop. Also check by hand with the OS "reduce motion" setting on:
+everything should simply be there, no entrances, glows or sweeps.
+
+```bash
+python3 scripts/check_contrast.py      # WCAG AA for every theme; exits 1 on a miss
+```
 
 ## Quick checks
 
