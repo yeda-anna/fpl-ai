@@ -74,6 +74,20 @@ async function phone(browser){
     const got = (await page.textContent('#v-home-squad .tile .val')).trim();
     ok('phone: counters count up to the true value', got === want, `${got} vs ${want}`);
   }
+  {
+    // Home wears the team's name, and My squad opens with a roast of the last gameweek's score
+    const ent = await page.evaluate(t => fetch(`/api/entry/${t}?horizon=5`).then(r => r.json()), TEAM);
+    const pts = ent.history.length ? String(ent.history[ent.history.length - 1].points) : '';
+    ok('phone: the Home title is the team name from FPL', (await page.textContent('#view-title')).trim() === ent.entry.name, await page.textContent('#view-title'));
+    const sub = (await page.textContent('#view-sub')).trim();
+    ok('phone: My squad opens with a roast of the week’s score', await page.$eval('#view-sub', e => e.classList.contains('verdict')) && sub.length > 25
+       && !/projected forward/i.test(sub) && (!pts || sub.includes(pts) || /average|shocker/i.test(sub)), sub);
+    await page.click('#segs button[data-seg="picks"]'); await page.waitForTimeout(200);
+    ok('phone: other Home pages keep the team name and their own line', (await page.textContent('#view-title')).trim() === ent.entry.name
+       && !(await page.$eval('#view-sub', e => e.classList.contains('verdict'))));
+    await page.click('#segs button[data-seg="squad"]'); await page.waitForTimeout(200);
+    ok('phone: the verdict is the same line on the way back', (await page.textContent('#view-sub')).trim() === sub);
+  }
   ok('phone: home fits width', await noOverflow(page), lastOverflow.join(', '));
   await page.screenshot({ path: `${OUT}/m-02-home.png` });
 
@@ -82,6 +96,7 @@ async function phone(browser){
   for (const t of tabs) {
     await page.click(`#dock button[data-tab="${t}"]`); await page.waitForTimeout(250);
     ok(`phone: ${t} tab is highlighted`, await page.$eval(`#dock button[data-tab="${t}"]`, b => b.classList.contains('on')));
+    if (t === 'plan') ok('phone: other tabs keep their own title', (await page.textContent('#view-title')).trim() === 'Plan', await page.textContent('#view-title'));
     const segs = await page.$$eval('#segs:not([hidden]) button[data-seg]', bs => bs.map(b => b.dataset.seg));
     for (const s of (segs.length ? segs : [null])) {
       if (s) await page.click(`#segs button[data-seg="${s}"]`);

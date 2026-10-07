@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-07 — Your name up in lights, and a verdict on your week
+
+- Home is now titled with your team's name, read from FPL with your Team ID,
+  instead of "Home".
+- My squad opens with a dark football roast of your last gameweek instead of a
+  description — "62 points, 10 above average. A mid-table side that thinks it's
+  in a title race in October." It's picked by your score against the average,
+  stays the same until a new gameweek is scored, and lives only in the page
+  head; the numbers below stay plain.
+- e2e: 93 checks.
+
 ## 2026-10-07 — Neon, five tabs, and your Team ID remembered
 
 - **One neon look.** Near-black violet, dark glass, and three neons: lime for

@@ -57,7 +57,7 @@ switcher under the title.
 
 | Tab | Sub-pages |
 | --- | --- |
-| **Home** | My squad · Grade · Picks |
+| **Home** (titled with your team's name) | My squad · Grade · Picks |
 | **Plan** | Transfers · Chips |
 | **Players** | Projections · Compare · Prices · Line-ups · Set pieces · DEFCON |
 | **Leagues** | Mini-league |
@@ -150,6 +150,13 @@ and on the landing card, plus a `#logo` symbol (same paths, literal colours) for
   the loader ("putting the kettle on", "Sharma ji’s son finished this ages ago").
   The lines live in `QUIPS` in `app.js`, aimed at the manager's own luck, never
   at a religion, caste, region, community, body or real person.
+- **The week's verdict.** On Home the title is the team's own name from FPL, and
+  My squad opens with a dark football roast of the last gameweek in place of a
+  description: one line from `SCORE_ROASTS`, picked by the score against the
+  average (great, above, level, below, awful, no average yet, no games yet) and
+  seeded by team and gameweek so it doesn't change on a re-render. It's set in
+  italics in the page head and fades in once the score is known. It may quote
+  the score; it never gives advice.
 - Plain and exact in errors, numbers, buttons and advice. A manager acting on a
   number should never have to decode a joke.
 - No club crests, sponsors, real kit designs, or other products' logos and copy.

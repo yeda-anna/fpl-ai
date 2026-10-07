@@ -167,6 +167,11 @@ button{font:inherit}
 .title-line{display:block;width:180px;height:14px;margin:4px 0 0 -2px;overflow:visible}
 .title-line path{fill:none;stroke:url(#neonStroke);stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 4px rgba(34,240,255,.8))}
 .page-head p{margin:6px 0 0;color:var(--ink-2);font-size:14.5px;max-width:70ch}
+.page-head h1{overflow-wrap:anywhere}
+/* Home → My squad: the week's verdict, a dark football roast of your score */
+.page-head p.verdict{font-style:italic;color:var(--ink)}
+.page-head p.fresh{animation:verdict-in .55s var(--ease)}
+@keyframes verdict-in{from{opacity:0;transform:translateY(5px)}}
 .view{display:none}
 .view.on{display:block}
 .relative{position:relative;z-index:1}
