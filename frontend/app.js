@@ -70,6 +70,61 @@ function quip(kind){
   return list[i];
 }
 
+/* ---------------- the week's verdict ----------------
+   Home → My squad opens with a dark football roast of your last gameweek, chosen
+   by how your score compares with the average. It lives in the page head, apart
+   from the numbers, and never gives advice. The pick is seeded by team and
+   gameweek, so it stays put on a re-render and changes when a new week is scored. */
+const SCORE_ROASTS = {
+  great: [
+    '{pts} points, {diff} above the average. Enjoy it — the board’s full backing usually arrives the week before the sack.',
+    '{pts} points. Frame it. By next week this squad goes back to being a loan nobody wants.',
+    '{diff} clear of the average. Your mini-league has asked for a doping test.',
+    '{pts} points. A proper statement win. Regression to the mean is already on the team bus.',
+    '{pts} points. Even a stopped clock does the double once a season.'
+  ],
+  above: [
+    '{pts} points, {diff} above average. A mid-table side that thinks it’s in a title race in October.',
+    'Beat the average by {diff}. Not a statement win — a scrappy 1–0 against ten men.',
+    '{pts} points. Respectable. The kind of week a pundit forgets before the ad break.',
+    '{pts} points. The fans aren’t singing your name, but they’ve stopped singing about you.',
+    'Just above average. Somewhere a director of football is calling it “a platform to build on”.'
+  ],
+  level: [
+    'Exactly average: {pts} points of pure, uncut mid-table.',
+    'Bang on the average. Nobody will remember this gameweek, least of all you.'
+  ],
+  below: [
+    '{pts} points, {diff} under the average. The vote of confidence has been drafted.',
+    '{diff} below average. Somewhere a director of football is quietly googling your replacement.',
+    '{pts} points. Not a disaster — just the slow misery of a relegation six-pointer you drew 0–0.',
+    '{diff} short of the average. Your captain played like he’s already agreed a free in the summer.',
+    '{pts} points. The away end has gone very quiet.'
+  ],
+  awful: [
+    '{pts} points. That’s not a gameweek, it’s an own goal with replays from three angles.',
+    '{diff} below the average. The fans started leaving in the 60th minute of your season.',
+    '{pts} points. Even your bench has asked to go out on loan.',
+    'A shocker. The sack-race bookies have stopped taking bets on you.',
+    '{pts} points. Park the bus. Then sell the bus. Then play your Wildcard.'
+  ],
+  none: [
+    'No average yet. Enjoy the last few minutes before the post-match interview.',
+    'The average isn’t out. The dressing room has gone very quiet anyway.'
+  ],
+  fresh: [
+    'No games played yet. Unbeaten, undefeated and completely unproven.'
+  ]
+};
+function scoreRoast(teamId, last, vsAvg){
+  const d = vsAvg == null ? null : Math.round(vsAvg);
+  const kind = !last ? 'fresh' : d == null ? 'none' : d >= 15 ? 'great' : d > 0 ? 'above' : d === 0 ? 'level' : d > -15 ? 'below' : 'awful';
+  const list = SCORE_ROASTS[kind], seed = teamId + '|' + (last ? last.gw + ':' + last.points : '-');
+  let h = 0; for(let i=0;i<seed.length;i++) h = (h*31 + seed.charCodeAt(i)) | 0;
+  const slots = {pts: last ? last.points : '–', diff: d == null ? '' : Math.abs(d)};
+  return list[Math.abs(h) % list.length].replace(/\{(\w+)\}/g, (m,k)=> slots[k] != null ? slots[k] : m);
+}
+
 /* A neon ball looping along a path while the numbers come in (pure CSS animation). */
 const LOADER = `<svg class="loader" viewBox="0 0 120 40" aria-hidden="true">
   <path class="trk" d="M10 30 C 30 2, 50 2, 60 20 S 90 38, 110 10"/>
@@ -149,6 +204,8 @@ async function viewSquad(t){
     const lastGw = meta.events.find(x=>x.id===meta.current_gw) || {};
     const last = e.history.length ? e.history[e.history.length-1] : null;
     const vsAvg = last && lastGw.average!=null ? last.points - lastGw.average : null;
+    S.squadSub = scoreRoast(S.teamId, last, vsAvg);
+    if(cur.tab === 'home' && cur.seg === 'squad') syncHead(true);
     const av = (e.chips_available||{})[e.next_gw] || [], CH = {wildcard:'WC',freehit:'FH',bboost:'BB','3xc':'TC'};
     t.innerHTML = `
       <div class="grid g4 mb">
@@ -182,7 +239,10 @@ async function viewSquad(t){
         </div>
       </div>`;
     if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; Motion.burst(innerWidth/2, 180, 120); }
-  }catch(err){ t.innerHTML = errBox(err); }
+  }catch(err){
+    t.innerHTML = errBox(err);
+    if(cur.tab === 'home' && cur.seg === 'squad') el('view-sub').textContent = 'Couldn’t read the scoreline right now.';
+  }
 }
 
 /* ---------------- Home: this week's picks (no team needed) ---------------- */
@@ -833,7 +893,7 @@ const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 
 const TABS = [
   {id:'home', label:'Home', icon:'home', title:'Home', segs:[
-    {id:'squad', label:'My squad', view:viewSquad, sub:'Your squad projected forward, your best eleven and your free transfers.'},
+    {id:'squad', label:'My squad', view:viewSquad, sub:'Add your team and we’ll tell you how your week went. Gently. Ish.', waiting:'Checking the scoreline…'},
     {id:'grade', label:'Grade',    view:viewRate,  sub:'Your squad scored out of 100, with the fixes that move the score most.'},
     {id:'picks', label:'Picks',    view:viewPicks, sub:'This week’s captains, differentials, best value and the dream team.'}]},
   {id:'plan', label:'Plan', icon:'plan', title:'Plan', segs:[
@@ -873,8 +933,7 @@ function go(tabId, segId){
     const on = b.dataset.tab === t.id; b.classList.toggle('on', on);
     if(on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  el('view-title').textContent = t.title;
-  el('view-sub').textContent = seg.sub;
+  syncHead();
   const segs = el('segs');
   if(t.segs.length > 1){
     if(segs.dataset.tab !== t.id){
@@ -900,7 +959,17 @@ function render(tab, seg){
   s.view(el(`v-${tab}-${seg}`));
 }
 const rerender = () => render(cur.tab, cur.seg);
-function invalidate(){ S.loaded = {}; S.entry = null; }
+function invalidate(){ S.loaded = {}; S.entry = null; S.squadSub = ''; }
+function syncHead(animate){
+  if(!cur.tab) return;
+  const t = tabOf(cur.tab), seg = t.segs.find(s=>s.id===cur.seg) || t.segs[0];
+  const verdict = t.id === 'home' && seg.id === 'squad' && S.teamId;
+  el('view-title').textContent = t.id === 'home' && S.teamId ? (S.teamName || 'Team '+S.teamId) : t.title;
+  const sub = el('view-sub');
+  sub.textContent = verdict ? (S.squadSub || seg.waiting) : seg.sub;
+  sub.classList.toggle('verdict', !!(verdict && S.squadSub));
+  if(animate){ sub.classList.remove('fresh'); void sub.offsetWidth; sub.classList.add('fresh'); }
+}
 function routeFromHash(){
   let h = location.hash.slice(1);
   if(h === 'model'){ h = ''; openMenu(); }
@@ -922,6 +991,7 @@ function updateTeamPill(){
   el('teamLabel').textContent = S.teamId ? (S.teamName || 'Team '+S.teamId) : 'Add team';
   el('teamAvatar').innerHTML = named ? esc(initials(S.teamName)) : '<svg aria-hidden="true" viewBox="0 0 32 32"><use href="#logo"/></svg>';
   el('teamBtn').setAttribute('aria-label', S.teamId ? 'Change team' : 'Add your team');
+  if(cur.tab === 'home') syncHead();
 }
 function openLanding(){
   const L = el('landing');

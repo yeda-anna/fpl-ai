@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass. 88 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass. 93 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -25,6 +25,9 @@ What it covers:
   an empty ID and an unknown team each get a clear message; a real ID goes
   straight to Home → My squad, is saved in `localStorage`, names the team pill,
   and the first read asks FPL afresh (`fresh=1`).
+- Home is titled with the team's name from FPL; My squad opens with a roast of
+  the week's score (and the same line on the way back); other Home pages keep
+  their own line; other tabs keep their own title.
 - **Five tabs** in the dock and no "More". Every tab and every sub-page renders
   without an error box, fits a 390px phone (**overflow scan**) and has its own
   address (`#tab/sub`).

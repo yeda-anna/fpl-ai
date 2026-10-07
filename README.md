@@ -102,6 +102,8 @@ ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG A
 - **Five tabs**, nothing hidden behind "More": **Home** (My squad · Grade ·
   Picks), **Plan** (Transfers · Chips), **Players** (Projections · Compare ·
   Prices · Line-ups · Set pieces · DEFCON), **Leagues** and **Ask**.
+- **Your name up in lights:** Home is titled with your team's name from FPL, and
+  My squad opens with a dark football roast of your last gameweek's score.
 - **Motion** from [GSAP](https://gsap.com/docs/v3/) and
   [anime.js](https://animejs.com/documentation), vendored (no CDN): neon SVG
   paths that draw themselves, light pulses running along the sky's wires, tab
@@ -115,7 +117,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 88 headless checks, phone + desktop + reduced motion
+    npm --prefix tests test            # 93 headless checks, phone + desktop + reduced motion
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).
