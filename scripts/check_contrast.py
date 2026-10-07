@@ -1,4 +1,4 @@
-"""WCAG contrast check for every theme in frontend/styles.css.
+"""WCAG contrast check for the colours in frontend/styles.css (one neon theme, in :root).
 
 Run:  python3 scripts/check_contrast.py          (exit 1 if anything is under AA)
 
@@ -49,7 +49,7 @@ def blocks(css):
     for m in re.finditer(r"(\[data-theme=[^{]+|:root[^{]*)\{([^}]*)\}", css):
         sel, body = m.group(1), m.group(2)
         toks = dict((k, v.strip()) for k, v in re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", body))
-        for name in re.findall(r'data-theme="(\w+)"', sel) or (["forest"] if sel.startswith(":root") else []):
+        for name in re.findall(r'data-theme="(\w+)"', sel) or (["neon"] if sel.startswith(":root") else []):
             out.setdefault(name, {}).update(toks)
     return out
 
@@ -57,10 +57,11 @@ def blocks(css):
 def main():
     css = open(CSS, encoding="utf-8").read()
     themes = blocks(css)
-    base = themes["forest"]
+    base = themes["neon"]
     failures = 0
     print("%-9s %7s %7s %7s %7s %7s %7s %7s | %s" % ("theme", "ink", "ink-2", "ink-3", "accent", "up", "down", "warn", "on-accent vs CTA / info gradients"))
-    for name in ("openmic", "roast", "forest", "midnight", "graphite", "chalk"):
+    names = [n for n in themes if n != "neon"] or ["neon"]          # a single theme lives in :root
+    for name in names:
         t = dict(base); t.update(themes.get(name, {}))
         bg = over(parse_color(t["--glass-3"]), parse_color(t["--base-hi"]))
         row = []

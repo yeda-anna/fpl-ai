@@ -8,7 +8,8 @@ repository. Read this first; the `docs/` folder has the detail.
 Mug's Game FC is a Fantasy Premier League planner. A FastAPI backend pulls the
 official FPL API, projects expected points (xPts) for every player, and runs a
 mixed-integer solver over transfers, captaincy and chips. A no-build vanilla-JS
-single-page app renders it, with a glass design and a mobile app shell.
+single-page app renders it in a neon look, animated with GSAP and anime.js,
+with five tabs and a mobile app shell.
 
 Live: https://fpl-ai-production-966c.up.railway.app · Repo: yeda-anna/fpl-ai
 
@@ -27,10 +28,10 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 108 checks, phone 390×844 + desktop 1440×900
+npm --prefix tests test        # 88 checks, phone 390×844 + desktop 1440×900 + reduced motion
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
-python3 scripts/check_contrast.py                 # WCAG AA for all six themes
-node --check frontend/app.js   # quick syntax check
+python3 scripts/check_contrast.py                 # WCAG AA for the neon palette
+node --check frontend/app.js && node --check frontend/motion.js   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
 
@@ -49,12 +50,14 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/solver.py` | Multi-gameweek MIP (PuLP/CBC), alternative paths via no-good cuts |
 | `backend/analysis.py` | Chips, Rate My Team, compare, weekly picks, mini-leagues |
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
-| `frontend/index.html` | Shell: top bar, tab dock, More sheet, welcome screen, icon sprite, logo |
-| `frontend/styles.css` | Design system: tokens, glass, components, breakpoints, logo animation |
-| `frontend/app.js` | All ten views, navigation, team prompt, minute edits, the roast engine and the stage effects (confetti, count-up, glow) |
-| `frontend/roast.js` | The roast pools (loading, welcome, verdicts, captain, plan, grade, chip, Copilot…) — plain data, loaded before `app.js` |
+| `frontend/index.html` | Shell: top bar, neon sky, the five-tab dock, the landing screen (neon pitch scene), logo, scripts |
+| `frontend/styles.css` | Design system: the neon tokens, glass, components, landing, dock, breakpoints |
+| `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
+| `frontend/motion.js` | All animation: GSAP (timelines, DrawSVG, MotionPath, counters, indicators) and anime.js (sky pulses, icon drawing, springs) |
+| `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin) and anime.js 4.5, vendored — see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `scripts/calibrate.py` | Projection sanity check |
+| `scripts/check_contrast.py` | WCAG AA check for the palette |
 | `docs/` | Architecture, model, solver, API, design, data, testing, deployment |
 | `.claude/agents/` | Specialist sub-agents for this repo |
 | `.claude/skills/` | Step-by-step procedures (run, test, calibrate, deploy, design, add a feature) |
@@ -75,54 +78,52 @@ suite at **0 failures** — see `docs/TESTING.md`.
   empty squad must not spend free transfers (see `solver.py`).
 
 **Frontend**
-- No build step, no framework, no CDN dependencies. Plain JS in `app.js`.
+- No build step, no framework, no CDN. Plain JS in `app.js`; animation in
+  `motion.js` using the two vendored libraries in `frontend/vendor/` (GSAP with
+  DrawSVG and MotionPath, anime.js). Don't add a third; upgrade by replacing the
+  files and noting the version in `frontend/vendor/README.md`.
 - Cache-busting is automatic: the server rewrites `/static/*.css|js` links in
   `index.html` to `?v=<content hash>`, serves the page and every `/api/` answer
   `no-store`, and `app.js` reloads when `/version` reports a newer build. Never hand-write `?v=` numbers,
-  and keep new CSS/JS referenced as `/static/<file>` so they're fingerprinted too.
-- Colours come from tokens only (`docs/DESIGN.md`). Every theme follows
-  **60:30:10** — base background, tinted glass content, and a primary plus a
-  secondary highlight (lime `#D4FC79` with sky, hot pink or ember; saffron in
-  Dark Roast). Text on a highlight uses `--on-accent`, never white.
-- Six themes: `openmic` (default), `roast` (Dark Roast), `forest`, `midnight`,
-  `graphite`, `chalk`, plus `auto`. A new theme touches four places: its token
-  block in `styles.css` (including the stage tokens), `THEMES` in `app.js`, the
-  colour map in the pre-paint script in `index.html`, and the `COLORS` map and
-  theme count in `tests/e2e.js`. Every text token must pass AA in every theme —
-  run `python3 scripts/check_contrast.py`.
-- Glass is crisp frosted: `--glass-fill`, a hairline border, the top `--rim`
-  highlight and two-layer shadows. Glow is welcome on edges, things you can
-  press and highlights (pointer-lit card edge, breathing primary button, captain
-  ring, the verdict border) — never as a coloured wash behind running text.
-- Live `backdrop-filter` only on floating chrome: `.nav-bar, .tabbar, .more-panel,
-  .sheet, .ob-card, .adv-body, .theme-pop, .toast`. In-page cards stay flat
-  translucent glass.
+  and keep new CSS/JS referenced as `/static/<file>` (sub-folders are fine:
+  `/static/vendor/…`) so they're fingerprinted too.
+- **One neon look, no theme picker.** Colours come from the `:root` tokens only
+  (`docs/DESIGN.md`), split **60:30:10** — near-black violet, dark glass, and
+  three neons: lime (`--neon-l`, "do this"), cyan (`--neon-c`, lines and
+  information), magenta (`--neon-m`, the ball and celebration). Text on a neon
+  fill uses `--on-accent`, never white. Every text token must pass AA — run
+  `python3 scripts/check_contrast.py`.
+- Neon lives on strokes, edges and things you can press — never as a wash behind
+  running text. Cards stay dark and nearly solid so the sky's wires never run
+  behind words.
+- **Five tabs** (Home, Plan, Players, Leagues, Ask) with sub-pages in the section
+  switcher — add a new page as a sub-page in `TABS` (`app.js`), not as a sixth
+  tab, and give it an address (`#tab/sub`). Keep old addresses mapped in `LEGACY`.
+- **The Team ID is asked once per device** on the landing screen and kept in
+  `localStorage` (`fplai_team`); returning visitors go straight to their team.
+  Team views `await teamReady()` so the first read after a page load is fresh.
+- Live `backdrop-filter` only on floating chrome: `.nav-bar, .dock, .sheet,
+  .land-card, .adv-body, .toast`. In-page cards never blur.
 - Single-column grids use `minmax(0,1fr)`, never bare `1fr` (it blows out on phones).
 - Phone layout must not widen the viewport: the e2e suite scans every element
   against 390px. Long strings need `overflow-wrap:anywhere`.
 - Keep request races in mind: a view that can fire overlapping requests must
   ignore stale responses (see the `XP.seq` pattern in `viewXpts`).
-- Respect `prefers-reduced-motion` (a global rule turns every animation off, so
-  new motion needs no special case — but use `animation-fill-mode: backwards`
-  for entrances so hover transforms keep working, and give JS-driven motion
-  (`REDUCED`) a static path).
+- Respect `prefers-reduced-motion`: the CSS rule turns every animation off and
+  every `Motion` function must leave things in their finished state when
+  `Motion.reduced` is true or its library didn't load. Clear inline transforms
+  when an animation ends (GSAP `clearProps`) so hover effects keep working.
 
 **Brand and content**
 - Name: **Mug's Game FC**. Tagline: "Fantasy football is a mug's game. Might as
-  well do the maths." Logo: a club mug with a football dunked in it, animated.
-- Tone: light British humour, Indian dark humour and deadpan roast comedy in
-  taglines, empty states, loading lines, the welcome screen and the dashboard
-  verdict ("just having a nose", "putting the kettle on", "Sharma ji’s son
-  finished this ages ago"). Every line is original and lives in `frontend/roast.js`;
-  never attribute a line to a real comedian or reuse anyone's material. Aim them
-  at the manager's own luck, rank and choices — never at a religion, caste,
-  region, community, body, family tragedy or real person.
-- **Roasts sit under suggestions, never inside them.** A roast is a separate
-  labelled aside (`roastHtml()`, `.roast`, "Roast:" for screen readers) beneath a
-  suggestion. The advice, the numbers and every error stay plain, exact and
-  joke-free, and a roast never restates a number. **Roast mode** (More → Theme)
-  switches every roast, quip and verdict off; a new suggestion gets a roast and
-  must respect that switch.
+  well do the maths." Logo: a club mug with a football dunked in it, drawn as a
+  neon sign (cyan mug, magenta ball, lime steam).
+- Tone: light British humour and Indian dark humour on the landing screen and
+  under the loader ("putting the kettle on", "Sharma ji’s son finished this ages
+  ago"). Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —
+  never at a religion, caste, region, community, body or real person. **Never**
+  in errors, numbers or anything a manager acts on. There are no roasts under
+  suggestions any more; don't bring them back without asking.
 - Shirts are plain silhouettes in club colours. No crests, sponsors, real kit
   designs or other sites' logos, mascots or UI copy.
 - Don't commit raw FPL API responses (`.cache/` is git-ignored); fetch them live.

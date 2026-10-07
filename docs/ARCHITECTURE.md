@@ -73,15 +73,18 @@ API request after boot may wait for that warm-up.
 
 ## Frontend
 
-No build, no framework. `index.html` holds the shell (top bar, tab dock, More
-sheet, welcome screen, SVG sprite and the logo). `app.js` routes by hash
-(`#dashboard`, `#xpts`, `#solver`, `#chips`, `#copilot`, `#rate`, `#compare`,
-`#league`, `#scout`, `#model`) to ten view functions, each of which fetches
-its data and renders HTML strings. State that survives a reload lives in
-`localStorage` under `fplai_*` keys (team, team name, theme, roast mode, minute
-overrides, last league). `roast.js` (loaded first) holds the roast pools; `app.js`
-owns the engine that picks, fills and escapes them. See `DESIGN.md` for the visual
-system and the stage layer.
+No build, no framework, no CDN. `index.html` holds the shell (top bar, the neon
+sky, the dock, the landing screen and its pitch scene, the logo). `app.js`
+defines five tabs and their sub-pages in `TABS` and routes by hash
+(`#home/squad`, `#plan/chips`, `#players/compare` …; old addresses like
+`#solver` are mapped in `LEGACY`). Each sub-page is a view function that fetches
+its data and renders HTML strings into its own `<section>`. `motion.js` wraps the
+vendored GSAP and anime.js; a `MutationObserver` animates new cards in as views
+render. State that survives a reload lives in `localStorage` under `fplai_*`
+keys (team ID, team name, minute overrides, last league). A saved team ID skips
+the landing screen; `loadSavedTeam()` reads it fresh (`fresh=1`) and team views
+`await teamReady()` before their own requests. See `DESIGN.md` for the visual
+system and motion.
 
 ## Freshness (cache policy)
 
@@ -92,7 +95,7 @@ build step:
 | What | Header / behaviour |
 | --- | --- |
 | `/` (index.html) | `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` (+ `Pragma`, `Expires`). The browser never keeps its own copy, so a refresh always fetches the page afresh, and back/forward doesn't resurrect a stale one |
-| `/static/*.css`, `/static/*.js` | the server rewrites their links in index.html to `?v=<sha256[:12]>` of the file; those URLs are `immutable`, cached for a year. Reloads stay fast and are still always current, because the hash in the page changes with the file |
+| `/static/*.css`, `/static/*.js` (sub-folders too, e.g. `/static/vendor/gsap.min.js`) | the server rewrites their links in index.html to `?v=<sha256[:12]>` of the file; those URLs are `immutable`, cached for a year. Reloads stay fast and are still always current, because the hash in the page changes with the file |
 | other `/static/*` (icon, manifest) | `no-cache` |
 | `/api/*` | `no-store` (same full set as the page) |
 | `/version` | `{"build": "<id>"}`, `no-store` |

@@ -23,17 +23,18 @@ takes: `uvicorn main:app --app-dir backend --host 0.0.0.0 --port $PORT`.
 `Procfile` carries the same command for other hosts. `/healthz` answers
 instantly; the model builds in the background on startup.
 
-The app asks for your FPL Team ID every time it opens (it remembers the last
-one, so it's a single tap) and you can always skip and just browse. The ID is
-the number in the address bar on your Points page:
+The first time you open it on a device, the app asks for your FPL Team ID and
+saves it in your browser; after that it goes straight to your team (change or
+forget it from the team pill or the ⓘ menu). You can also skip and just browse.
+The ID is the number in the address bar on your Points page:
 `fantasy.premierleague.com/entry/<ID>/event/5`.
 
 ### On your phone
 
-The layout becomes an app below 1024px wide: a floating tab dock (Home,
-Points, Solver, Copilot, More), with the remaining tools in a More sheet and
-details opening as bottom sheets. Use **Add to Home Screen** to launch it
-full-screen like a native app.
+The layout becomes an app below 1024px wide: a floating neon dock with all
+five tabs (Home, Plan, Players, Leagues, Ask), sub-pages in a switcher under the
+title, and details opening as bottom sheets. Use **Add to Home Screen** to launch
+it full-screen like a native app.
 
 ### Offline mode
 
@@ -90,42 +91,31 @@ copy is served.
 
 ## Look and feel
 
-Crisp frosted glass lit like a comedy-club stage: stage lights sweep the
-backdrop, cards catch a glow that follows your pointer, numbers count up, plans
-rise in one after another, the week's verdict wears a rotating lit border, and a
-big week earns confetti. Panels keep the fine light rim and soft shadow, coloured
-**60 : 30 : 10** (background : content : highlight). Pick a theme from the
-palette button (or **More → Theme** on a phone):
+**Neon, at night.** One look, no theme picker: near-black violet, dark glass and
+three neons — lime for "do this", cyan for lines and information, magenta for the
+ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG AA
+(`python3 scripts/check_contrast.py`).
 
-| Theme | 60% background | 30% content | 10% highlight |
-| --- | --- | --- | --- |
-| Open Mic (default) | `#140B26` ink-violet | lilac glass | lime `#D4FC79` · hot pink `#FF6FB5` |
-| Dark Roast | `#1D120C` espresso | cream glass | saffron `#FFB454` · ember `#FF7A45` |
-| Forest | `#1B4332` | mint glass | lime · sky `#8FD3F4` |
-| Midnight | `#0E1726` | sky-tinted glass | lime · sky |
-| Graphite | `#17191C` | neutral glass | lime · sky |
-| Chalk (light) | `#F2FBEC` | white glass | lime · forest |
-| Match system | Chalk by day, Open Mic at night | | |
+- **Landing:** the first visit on a device asks for your FPL Team ID over a neon
+  pitch that draws itself while the ball flies into the net. The ID is saved in
+  your browser, so every later visit goes straight to your team.
+- **Five tabs**, nothing hidden behind "More": **Home** (My squad · Grade ·
+  Picks), **Plan** (Transfers · Chips), **Players** (Projections · Compare ·
+  Prices · Line-ups · Set pieces · DEFCON), **Leagues** and **Ask**.
+- **Motion** from [GSAP](https://gsap.com/docs/v3/) and
+  [anime.js](https://animejs.com/documentation), vendored (no CDN): neon SVG
+  paths that draw themselves, light pulses running along the sky's wires, tab
+  icons that draw in, sliding indicators, counters, springy buttons, confetti for
+  a big week. `prefers-reduced-motion` turns all of it off.
 
-Lime (or saffron) is for "do this" (buttons, active tab, captain), the second
-highlight for glow and information. Every theme passes WCAG AA for all text
-(`python3 scripts/check_contrast.py`), and `prefers-reduced-motion` turns all of
-the motion off.
-
-**Roast mode** (More → Theme, on by default): a short deadpan roast under every
-suggestion — captain picks, transfer plans, chip timing, your grade, Copilot's
-answers. Indian dark humour and British dry wit, aimed only at the manager's own
-luck and rank, always a separate labelled aside, never inside the advice or the
-numbers. One switch turns every roast off. Tap the logo five times for a surprise.
-
-The full system — tokens, glass rules, the stage layer, breakpoints, the animated
-mug logo and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
+The full system — tokens, motion, navigation, breakpoints, the neon mug logo
+and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Tests
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 108 headless checks, phone + desktop
+    npm --prefix tests test            # 88 headless checks, phone + desktop + reduced motion
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).
@@ -167,8 +157,8 @@ See [`docs/TESTING.md`](docs/TESTING.md).
     backend/analysis.py  chips, rating, compare, picks, mini-leagues
     backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
     backend/main.py      FastAPI routes + static hosting
-    frontend/            single-page app, no build step; six themes + match-system, roast.js holds the roasts
-    scripts/check_contrast.py  WCAG AA check for every theme
+    frontend/            single-page app, no build step: app.js (views, tabs), motion.js (GSAP + anime.js), vendor/
+    scripts/check_contrast.py  WCAG AA check for the palette
     tests/               Playwright end-to-end suite
     scripts/calibrate.py projection sanity check
     docs/                the documentation above

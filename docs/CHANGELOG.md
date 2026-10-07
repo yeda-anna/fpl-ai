@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-10-07 — Neon, five tabs, and your Team ID remembered
+
+- **One neon look.** Near-black violet, dark glass, and three neons: lime for
+  "do this", cyan for lines and information, magenta for the ball and
+  celebration. The theme picker and the five other themes are gone. The pitch is
+  dark turf with cyan neon markings. Every text colour passes AA.
+- **Motion by GSAP and anime.js**, vendored in `frontend/vendor/` (no CDN) and
+  wrapped by `frontend/motion.js`. On the landing screen the pitch and goal draw
+  themselves, the neon mug flickers on, and the ball flies along a dotted path
+  into the net. Neon wires cross the sky with pulses of light running along
+  them. Tab icons draw themselves, the dock capsule and section pill slide,
+  the title line redraws, cards rise in, figures count up, and buttons spring.
+  Reduced motion turns all of it off.
+- **Five tabs instead of ten views.** Home (My squad · Grade · Picks), Plan
+  (Transfers · Chips), Players (Projections · Compare · Prices · Line-ups · Set
+  pieces · DEFCON), Leagues, Ask. No "More" sheet. Every sub-page has an address
+  and the old ones still work. How it works, Refresh app and Forget team live in
+  the ⓘ menu.
+- **The Team ID is asked once per device.** The landing screen asks on the first
+  visit and saves it in the browser; after that you go straight to your team.
+- **Roast mode is gone**: no roasts under suggestions, no verdict banner, no
+  switch. The light British and Indian dark humour stays on the landing screen
+  and under the loader.
+- The server now fingerprints assets in sub-folders, so the vendor libraries
+  are content-hashed and cached as immutable like the rest.
+- Tests: the e2e suite is rewritten for the new app — 88 checks on phone,
+  desktop and reduced motion.
+
 ## 2026-10-07 — Stage lights, roasts and two new palettes
 
 - **A stage, not a spreadsheet.** Two stage-light beams sweep the backdrop;
