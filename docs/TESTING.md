@@ -57,6 +57,18 @@ week, skipped weeks banking one, hits, the five-transfer cap, and — the case
 that was wrong — a Wildcard or Free Hit week, which keeps what was banked and
 adds nothing.
 
+## Solver hits (no server, no FPL API)
+
+```bash
+./.venv/bin/python tests/test_solver_hits.py
+```
+
+Builds a synthetic league and checks that the solver takes paid transfers in any
+gameweek, not just the last: with every owned player at 0 xPts it spends the
+whole hit allowance in GW1; hit budgets of 0, 1 and 2 give different plans; a
+hit week leaves one free transfer; and every plan, with or without a Wildcard,
+matches FPL's `min(5, max(0, ft − made) + 1)` rule. About 15 s (CBC).
+
 ## Quick checks
 
 ```bash

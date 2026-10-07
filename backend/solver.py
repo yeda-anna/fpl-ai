@@ -131,6 +131,12 @@ def solve(rows: List[Dict[str, Any]],
     start_bank = int(round(bank * 10))
     have_squad = len(owned) == SQUAD_SIZE
 
+    # Big-M for the roll-over switch below: with kept = 0 the constraint must not bind,
+    # and ft[t-1] - made is never below 1 - SQUAD_SIZE while ft[t] - 1 is at most
+    # MAX_FREE_TRANSFERS - 1.
+    kept: Dict[int, Any] = {}
+    overspend_m = (MAX_FREE_TRANSFERS - 1) + (SQUAD_SIZE - 1)
+
     for t in T:
         gw = gws[t]
         free_squad = (wildcard_gw == gw) or (free_hit_gw == gw) or (not have_squad and t == 0)
@@ -168,7 +174,7 @@ def solve(rows: List[Dict[str, Any]],
         else:
             prob += hits[t] >= made - ft[t]
 
-        # free transfer roll-over: ft_next = min(5, ft_now - made + 1)
+        # free transfer roll-over: ft_next = min(5, max(0, ft_now - made) + 1)
         if t == 0:
             prob += ft[t] == min(MAX_FREE_TRANSFERS, max(1, free_transfers))
         else:
@@ -181,7 +187,14 @@ def solve(rows: List[Dict[str, Any]],
             elif built_from_scratch:
                 prob += ft[t] <= ft[t - 1] + 1       # picking a squad from nothing spends nothing
             else:
-                prob += ft[t] <= ft[t - 1] - prev_made + 1
+                # Taking hits resets the bank to one rather than going negative, so the
+                # max(0, .) has to be modelled: ft[t] <= 1 + ft[t-1] - made only when
+                # made <= ft[t-1] (kept = 1); otherwise (kept = 0) ft[t] is just 1.
+                # Without it ft[t] >= 1 would forbid ever making more transfers than
+                # free ones in any week but the last.
+                kept[t] = pulp.LpVariable("kept_%d" % t, cat="Binary")
+                prob += ft[t] - 1 <= ft[t - 1] - prev_made + overspend_m * (1 - kept[t])
+                prob += ft[t] - 1 <= (MAX_FREE_TRANSFERS - 1) * kept[t]
 
         # budget
         spend = pulp.lpSum(buy[p] * tin[p][t] for p in ids)

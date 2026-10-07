@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **The solver could only take hits in the last gameweek of its horizon.** The
+  free-transfer roll-over was `ft[t] ≤ ft[t−1] − made[t−1] + 1` with `ft ≥ 1`,
+  which made more transfers than free ones infeasible in every week but the
+  last, so `max_hits` only mattered at the end and a plan that should pay a
+  4-point hit now deferred it. The roll-over now models FPL's
+  `min(5, max(0, ft − made) + 1)`: a hit week leaves one free transfer instead
+  of breaking the plan. Scout's "is a hit worth it?" comparison (0, 1 and 2 hits
+  allowed) now sees plans that differ by hit budget, and every solve can take
+  its hits in the first week, where they pay off most.
+- Tests: `tests/test_solver_hits.py`.
+
 ## 2026-10-07 — Clean loads, right free transfers, darker humour
 
 - **Free transfers were one too many after a chip.** A Wildcard or Free Hit week

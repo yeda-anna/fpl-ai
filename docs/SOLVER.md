@@ -12,6 +12,7 @@ program, solved with CBC through PuLP.
 | `capt[p][t]`, `vice[p][t]` | captain, vice-captain |
 | `tin[p][t]`, `tout[p][t]` | transferred in / out before gameweek t |
 | `ft[t]` | free transfers available |
+| `kept[t]` | week t−1 stayed within its free transfers, so the leftover rolls over |
 | `hits[t]` | paid transfers (−4 each) |
 | `bank_v[t]` | money in the bank |
 
@@ -30,7 +31,15 @@ program, solved with CBC through PuLP.
   banked, so the next week you hold the same number you started the chip week
   with — nothing is added. The count shown for later gameweeks is replayed from
   the transfers the plan actually makes.
-- `max_hits` caps paid transfers per week.
+- Hits reset the bank, they don't break the plan. FPL's rule is
+  `ft_next = min(5, max(0, ft − made) + 1)`, so a week that overspends leaves one
+  free transfer next week. `max(0, ·)` is not linear, so each normal week gets a
+  binary `kept[t]` (1 = this week stayed within its free transfers): when set,
+  `ft[t+1] − 1 ≤ ft[t] − made[t]`; when clear, `ft[t+1] = 1`. A plain
+  `ft[t+1] ≤ ft[t] − made[t] + 1` with `ft ≥ 1` would forbid more transfers than
+  free ones in every week but the last, so hits could only ever be taken at the
+  end of the horizon.
+- `max_hits` caps paid transfers per week (`hits[t] ≥ made[t] − ft[t]`).
 - **Building from scratch** (no current squad): the first squad is free and
   must not spend banked transfers.
 
