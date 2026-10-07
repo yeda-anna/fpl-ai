@@ -25,7 +25,11 @@ program, solved with CBC through PuLP.
 - Budget: bank rolls forward; selling uses `selling_price()` (purchase price
   plus the rise less the sell-on fee, rounded down).
 - Free transfers: start from the manager's count, bank one per unused week up
-  to the season cap; a Wildcard or Free Hit week makes transfers free.
+  to the season cap (`rules.roll_free_transfers`). A Wildcard or Free Hit week
+  makes transfers free, uses up that week's own free transfer and keeps what was
+  banked, so the next week you hold the same number you started the chip week
+  with — nothing is added. The count shown for later gameweeks is replayed from
+  the transfers the plan actually makes.
 - `max_hits` caps paid transfers per week.
 - **Building from scratch** (no current squad): the first squad is free and
   must not spend banked transfers.

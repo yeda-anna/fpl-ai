@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes:
-phone 390×844 and desktop 1440×900. 81 checks.
+phone 390×844 and desktop 1440×900. 88 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -38,9 +38,24 @@ What it covers:
   outside tap and on Escape, survives a relaunch; old `light`/`dark` settings
   map to Chalk/Forest. Screenshots of the dashboard in every theme.
 - Freshness: the page carries a build id equal to `/version`, CSS/JS URLs are
-  content-hashed, and `/` is served `no-cache`.
+  content-hashed, `/` and `/api/*` are `no-store`, the first read of your team
+  after a page load sends `fresh=1` and later reads don't, and **More → Refresh
+  app** reloads to a clean launch.
+- House humour: the welcome screen, every loading state and the dashboard mood
+  line carry a quip.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
+
+## Free-transfer rules (no server needed)
+
+```bash
+./.venv/bin/python tests/test_free_transfers.py
+```
+
+Replays synthetic histories through the same code the app uses: a transfer a
+week, skipped weeks banking one, hits, the five-transfer cap, and — the case
+that was wrong — a Wildcard or Free Hit week, which keeps what was banked and
+adds nothing.
 
 ## Quick checks
 

@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 
 import pulp
 
+from rules import roll_free_transfers
+
 SQUAD_SIZE = 15
 XI_SIZE = 11
 POS_QUOTA = {1: 2, 2: 5, 3: 5, 4: 3}          # GK, DEF, MID, FWD in the 15
@@ -172,9 +174,12 @@ def solve(rows: List[Dict[str, Any]],
         else:
             prev_made = pulp.lpSum(tin[p][t - 1] for p in ids)
             built_from_scratch = (not have_squad and t - 1 == 0)
-            if (wildcard_gw == gws[t - 1]) or (free_hit_gw == gws[t - 1]) or built_from_scratch:
-                # chips - and picking a squad from nothing - don't spend free transfers
-                prob += ft[t] <= ft[t - 1] + 1
+            if (wildcard_gw == gws[t - 1]) or (free_hit_gw == gws[t - 1]):
+                # a chip week uses up its own free transfer and keeps the banked ones:
+                # next week you hold what you started this one with (see rules.roll_free_transfers)
+                prob += ft[t] <= ft[t - 1]
+            elif built_from_scratch:
+                prob += ft[t] <= ft[t - 1] + 1       # picking a squad from nothing spends nothing
             else:
                 prob += ft[t] <= ft[t - 1] - prev_made + 1
 
@@ -209,6 +214,19 @@ def solve(rows: List[Dict[str, Any]],
     def val(v):
         return int(round(v.value() or 0))
 
+    # The ft variables only bound the rolled-over count from above, so show the count
+    # FPL itself would give, replayed from the transfers the plan actually makes.
+    ft_shown: List[int] = []
+    for t in T:
+        if t == 0:
+            ft_shown.append(val(ft[0]))
+            continue
+        prev_made = sum(val(tin[p][t - 1]) for p in ids)
+        from_scratch = not have_squad and t - 1 == 0
+        chip_week = gws[t - 1] in (wildcard_gw, free_hit_gw)
+        ft_shown.append(roll_free_transfers(ft_shown[t - 1], 0 if from_scratch else prev_made,
+                                            chip_week, MAX_FREE_TRANSFERS))
+
     plan = []
     for t in T:
         ins = [index[p] for p in ids if val(tin[p][t]) == 1]
@@ -241,7 +259,7 @@ def solve(rows: List[Dict[str, Any]],
             "transfers_out": [light(r) for r in outs],
             "hits": n_hits,
             "hit_cost": n_hits * HIT_COST,
-            "free_transfers": val(ft[t]),
+            "free_transfers": ft_shown[t],
             "bank": round(val(bank_v[t]) / 10.0, 1),
             "captain": light(index[cap_id]) if cap_id else None,
             "vice_captain": light(index[vice_id]) if vice_id else None,

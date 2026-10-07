@@ -70,6 +70,7 @@
   <symbol id="i-team" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 4 4 6.2 2.5 10.5l3 1.2V20h13v-8.3l3-1.2L20 6.2 15.5 4a3.6 3.6 0 0 1-7 0z"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></symbol>
   <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.2 0-1 .8-1.7 1.8-1.7h2.1A4.3 4.3 0 0 0 21 10.9C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="7.4" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></symbol>
 </svg>
@@ -182,6 +183,7 @@
     <div class="more-actions">
       <button class="btn" id="moreTeam"><svg><use href="#i-team"/></svg><span>Change team</span></button>
       <button class="btn" id="moreTheme"><svg><use href="#i-palette"/></svg><span>Theme</span></button>
+      <button class="btn" id="moreRefresh"><svg><use href="#i-refresh"/></svg><span>Refresh app</span></button>
     </div>
   </div>
 </div>
@@ -215,6 +217,7 @@
     <div id="obWelcome"></div>
     <h2>Mug’s Game <span class="fc">FC</span></h2>
     <p class="tagline">Fantasy football is a mug’s game. Might as well do the maths.</p>
+    <p class="ob-quip" id="obQuip"></p>
     <div class="ob-field">
       <label for="obTeam">Your FPL Team ID</label>
       <input id="obTeam" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 1234567" enterkeyhint="go">

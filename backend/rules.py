@@ -28,6 +28,19 @@ CONCEDED_PER_PENALTY = 2
 DC_THRESHOLD = {1: None, 2: 10, 3: 12, 4: 12}
 
 
+def roll_free_transfers(ft: int, made: int, chip_week: bool, max_ft: int) -> int:
+    """Free transfers for the next gameweek, given this week's count and what was done.
+
+    Normal week: spend `made` of the `ft` you had, keep what's left, gain one.
+    Wildcard / Free Hit week: the week's own free transfer is used up by the chip
+    and nothing already banked is lost, so next week you have the same number you
+    started this one with - no extra one is added.
+    """
+    if chip_week:
+        return max(1, min(max_ft, ft))
+    return min(max_ft, max(0, ft - made) + 1)
+
+
 class Rules(object):
     def __init__(self, bootstrap: Dict[str, Any]):
         gc = bootstrap.get("game_config") or {}

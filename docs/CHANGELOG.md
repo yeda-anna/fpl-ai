@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-07 — Clean loads, right free transfers, darker humour
+
+- **Free transfers were one too many after a chip.** A Wildcard or Free Hit week
+  uses up that week's own free transfer and keeps what was banked, so the next
+  week you hold the same number you had going in. The replay (and the solver)
+  added one on top. A manager on 1 free transfer who had wildcarded saw 2; one
+  on 2 saw 3. Fixed in `rules.roll_free_transfers`, used by both. The solver
+  plan now shows the free-transfer count FPL would give for each later week.
+  A history that is newer than the cached calendar no longer counts a gameweek
+  the squad on screen hasn't reached.
+- **Mobile always loads clean.** The page and every API answer are `no-store`
+  (the browser keeps no copy and back/forward can't resurrect a stale page);
+  scripts and styles stay content-hashed and immutable, so reloads are still
+  quick. The first read of your team after each page load re-reads it from FPL
+  (`fresh=1`), the app re-reads it after ten minutes away, a page restored from
+  the back/forward cache reloads, and **More → Refresh app** gives home-screen
+  apps the reload button they lack.
+- **Indian dark humour**, alongside the British kind: a line on the welcome
+  screen, under every loading spinner, and a mood line on the dashboard that
+  reacts to your gameweek score against the average. Never in errors, numbers or
+  advice.
+- Tests: 88 e2e checks, plus `tests/test_free_transfers.py`.
+
 ## 2026-10-06 — Crisp glass and themes
 
 - **Crisp frosted glass.** Panels are evenly lit with a fine light rim along

@@ -27,7 +27,8 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 81 checks, phone 390×844 + desktop 1440×900
+npm --prefix tests test        # 88 checks, phone 390×844 + desktop 1440×900
+./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 node --check frontend/app.js   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
@@ -98,9 +99,12 @@ suite at **0 failures** — see `docs/TESTING.md`.
 **Brand and content**
 - Name: **Mug's Game FC**. Tagline: "Fantasy football is a mug's game. Might as
   well do the maths." Logo: a club mug with a football dunked in it, animated.
-- Tone: light British humour in taglines, empty states and loading lines
-  ("just having a nose", "putting the kettle on"). **Never** in errors, numbers
-  or anything a manager acts on.
+- Tone: light British humour and Indian dark humour in taglines, empty states,
+  loading lines and the dashboard mood line ("just having a nose", "putting the
+  kettle on", "Sharma ji’s son finished this ages ago"). Lines live in `QUIPS`
+  in `app.js`; aim them at the manager's own luck and rank, never at a religion,
+  caste, region, community or real person. **Never** in errors, numbers or
+  anything a manager acts on.
 - Shirts are plain silhouettes in club colours. No crests, sponsors, real kit
   designs or other sites' logos, mascots or UI copy.
 - Don't commit raw FPL API responses (`.cache/` is git-ignored); fetch them live.

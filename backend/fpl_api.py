@@ -74,6 +74,36 @@ def _stale_cache(key: str) -> Optional[Any]:
         return None
 
 
+# A page load asks for a clean slate of the manager's own data (squad, bank,
+# transfers, chips), so a transfer made on the FPL site shows up on refresh instead
+# of after the cache expires. Purges are throttled per team so reloading in a loop
+# can't hammer the FPL API.
+REFRESH_MIN_AGE = 20
+_purged: Dict[int, float] = {}
+
+
+def refresh_team(team_id: int, picks_gw: Optional[int] = None) -> bool:
+    """Forget cached FPL responses for one manager. True if anything was purged."""
+    if CACHE_ONLY:
+        return False
+    now = time.time()
+    if now - _purged.get(team_id, 0.0) < REFRESH_MIN_AGE:
+        return False
+    _purged[team_id] = now
+    keys = ["entry-%d" % team_id, "history-%d" % team_id, "transfers-%d" % team_id]
+    if picks_gw:
+        keys.append("picks-%d-%d" % (team_id, picks_gw))
+    purged = False
+    for key in keys:
+        try:
+            # Expire rather than delete: if the FPL API is down the old copy still serves.
+            os.utime(_cache_path(key), (0, 0))
+            purged = True
+        except OSError:
+            pass
+    return purged
+
+
 # Offline mode: serve only what's already cached and never touch the network.
 # Handy for development and tests on machines that can't reach the FPL API.
 CACHE_ONLY = os.environ.get("FPL_CACHE_ONLY", "").strip().lower() in ("1", "true", "yes")

@@ -146,8 +146,12 @@ the ball once. `prefers-reduced-motion` stops all of it.
 
 - Name: **Mug's Game FC**. Tagline: "Fantasy football is a mug's game. Might as
   well do the maths."
-- Light British humour in empty states, loading lines and the welcome screen
-  ("putting the kettle on", "just having a nose").
+- Light British humour and Indian dark humour in empty states, loading lines,
+  the welcome screen and the dashboard mood line ("putting the kettle on",
+  "just having a nose", "Sharma ji’s son finished this ages ago"). The pools
+  live in `QUIPS` in `app.js`. The dark humour is gallows humour about the
+  manager's own luck and rank, never about a religion, caste, region, community
+  or real person, and never about anything serious.
 - Plain and exact in errors, numbers, buttons and advice. A manager acting on a
   number should never have to decode a joke.
 - No club crests, sponsors, real kit designs, or other products' logos and copy.

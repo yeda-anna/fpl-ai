@@ -11,7 +11,7 @@ copy when the API fails.
 | `bootstrap-static/` | `bootstrap()` | 15 min | players, clubs, gameweeks, prices, flags, **game rules** (`game_config`, `game_settings`, `element_types`, `chips`), price-change progress, set-piece orders, `scout_risks` |
 | `fixtures/` | `fixtures()` | 15 min | fixture list, difficulty, kick-off, results |
 | `entry/{id}/` | `entry()` | 5 min | manager name, rank, team value, bank |
-| `entry/{id}/history/` | `entry_history()` | 10 min | past gameweeks, chips used (free transfers are replayed from this) |
+| `entry/{id}/history/` | `entry_history()` | 10 min | past gameweeks, chips used (free transfers are replayed from this: one gained a week, spent as transfers are made, a Wildcard/Free Hit week leaves the count unchanged) |
 | `entry/{id}/event/{gw}/picks/` | `entry_picks()` | 5 min | the manager's squad, captain, purchase prices |
 | `entry/{id}/transfers/` | `entry_transfers()` | — | transfer history (purchase prices) |
 | `event/{gw}/live/` | `live()` / `live_final()` | 2 min / 6 h once finished | per-gameweek minutes and stats for recent form |
