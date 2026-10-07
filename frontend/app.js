@@ -11,8 +11,10 @@ const S = {
   horizon: 5,
   overrides: store.get('fplai_minutes', {}),   // {playerId: minutes} - your own numbers
   entry: null, meta: null, loaded: {},
-  fresh: true          // the next read of your team bypasses the server's cache (every page load starts true)
+  fresh: true,         // the next read of your team bypasses the server's cache (every page load starts true)
+  roast: store.get('fplai_roast', true) !== false   // dark roast humour under suggestions (More → Theme)
 };
+const REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 const el  = id => document.getElementById(id);
 const POS = {1:'GKP',2:'DEF',3:'MID',4:'FWD'};
@@ -46,65 +48,35 @@ const ovParam = () => Object.entries(S.overrides).map(([k,v])=>k+':'+v).join(','
 const entryUrl = id => `/api/entry/${id}?horizon=${S.horizon}${ovQuery()}${S.fresh ? '&fresh=1' : ''}`;
 const ovQuery = () => { const o = ovParam(); return o ? '&overrides='+encodeURIComponent(o) : ''; };
 
-/* ---------------- house humour ----------------
-   British dry wit in the taglines, Indian dark humour in the waiting and the
-   welcome. Every line is aimed at the manager's own misery, never at a group of
-   people. Humour lives in loading lines, empty states and the mood line only —
-   never in errors, numbers or anything a manager acts on. */
-const QUIPS = {
-  loading: [
-    'Sharma ji’s son finished this ages ago. Beta, take your time.',
-    'Hope is a free transfer. You’ll roll it over and never use it.',
-    'Optimising your squad. Papa gave up optimising you years ago.',
-    'Loading like a Bengaluru commute: moving, but not going anywhere.',
-    'Log kya kahenge? Your overall rank already did.',
-    'Chai is brewing. Your rank is not.',
-    'Unlike your relatives, the maths will not ask when you’re settling down.',
-    'Jugaad is not a transfer strategy. We checked.',
-    'Every captain pick is an act of faith. We’re here for the postmortem.',
-    'Still faster than reading the 47 ‘Good Morning’ forwards in the family group.',
-    'Like a Mumbai local at peak hour: crowded, late, and somehow you’re still in it.',
-    '“Tumse na ho payega,” said everyone. We’re running the numbers anyway.'
-  ],
-  welcome: [
-    'Your captain will blank. Your relatives will still ask what happened.',
-    'Rank in the millions? Don’t worry, beta. It’s a stable, pensionable position.',
-    'Everyone says “tumse na ho payega”. The model says: let’s see the expected points.',
-    'Be like Sharma ji’s son: roll the transfer, ignore the group chat.',
-    'Fantasy football: an EMI of hope, repaid in heartbreak, with interest.',
-    'Your parents wanted a doctor or an engineer. Instead you’re agonising over a £5.5m defender.'
-  ],
-  mood: {
-    great: [
-      'Beating the average by that much? Relatives will call it luck. They’re right. Don’t tell them.',
-      'For one week, Sharma ji’s son is taking notes from you. Enjoy it. The captain blanks next week.'
-    ],
-    above: [
-      'Above average. In an Indian household that means: “Good. But why not more?”',
-      'Above average: enough to feel clever, not enough to stop checking the app at 2 AM.'
-    ],
-    below: [
-      'Below average. Beta, this is why we said engineering.',
-      'Slightly below average. Think of it as character building, like every relative calls your last job.'
-    ],
-    awful: [
-      'That score deserves a moment of silence, then a Wildcard, then another moment of silence.',
-      'Well below average. Even your bench looked embarrassed on your behalf.'
-    ]
-  }
-};
+/* ---------------- roast engine ----------------
+   The pools live in roast.js (read its header for the house rules). A roast is a
+   separate, labelled aside under a suggestion — never inside the advice, a number
+   or an error — and Roast mode (More → Theme) switches every one of them off. */
 const lastQuip = {};
-function quip(kind){
-  const list = kind.split('.').reduce((o,k)=>o && o[k], QUIPS);
+const hashSeed = str => { let h = 0; for(let i=0;i<str.length;i++) h = (h*31 + str.charCodeAt(i)) | 0; return Math.abs(h); };
+function pickFrom(list, key, seed){
   if(!Array.isArray(list) || !list.length) return '';
-  let i = Math.floor(Math.random()*list.length);
-  if(list.length > 1 && i === lastQuip[kind]) i = (i+1) % list.length;   // never the same line twice running
-  lastQuip[kind] = i;
+  let i;
+  if(seed != null) i = hashSeed(String(seed)) % list.length;           // stable: the same plan keeps the same roast
+  else { i = Math.floor(Math.random()*list.length); if(list.length > 1 && i === lastQuip[key]) i = (i+1) % list.length; lastQuip[key] = i; }
   return list[i];
 }
-const moodQuip = vsAvg => vsAvg==null ? '' : quip(vsAvg >= 15 ? 'mood.great' : vsAvg >= 0 ? 'mood.above' : vsAvg > -15 ? 'mood.below' : 'mood.awful');
+const fillSlots = (t, ctx) => t.replace(/\{(\w+)\}/g, (m,k)=> ctx && ctx[k] != null ? ctx[k] : '');
+function quip(kind, ctx, seed){
+  if(!S.roast) return '';
+  const v = kind.split('.').reduce((o,k)=>o && o[k], ROAST);
+  const text = typeof v === 'string' ? v : pickFrom(v, kind, seed);
+  return text ? fillSlots(text, ctx) : '';
+}
+const roastHtml = (kind, ctx, seed, extra) => {
+  const t = quip(kind, ctx, seed);
+  return t ? `<div class="roast ${extra||''}" role="note"><span class="fl" aria-hidden="true"><svg><use href="#i-flame"/></svg></span><span class="tx"><span class="sr">Roast: </span>${esc(t)}</span></div>` : '';
+};
+const moodKind = vsAvg => vsAvg==null ? 'mood.none' : vsAvg >= 15 ? 'mood.great' : vsAvg >= 0 ? 'mood.above' : vsAvg > -15 ? 'mood.below' : 'mood.awful';
+const moodQuip = vsAvg => quip(moodKind(vsAvg));
 
-const loading = t => `<div class="card"><div class="loading has-quip">${esc(t||'Working')}</div><div class="quip">${esc(quip('loading'))}</div></div>`;
+const loading = t => { const q = quip('loading');
+  return `<div class="card"><div class="loading ${q?'has-quip':''}">${esc(t||'Working')}</div>${q?`<div class="quip">${esc(q)}</div>`:''}</div>`; };
 const errBox  = e => `<div class="err"><b>That didn’t work.</b> ${esc(e.message||e)}</div>`;
 const pos  = p => `<span class="pill pos${p}">${POS[p]}</span>`;
 const fdr  = f => `<span class="fdr fdr${f}">${f}</span>`;
@@ -131,7 +103,9 @@ function go(view){
     b.dataset.view ? b.dataset.view===view : !TAB_VIEWS.includes(view)));
   document.querySelectorAll('#moreGrid button').forEach(b=>b.classList.toggle('on', b.dataset.view===view));
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='view-'+view));
-  el('view-title').textContent = TITLES[view][0];
+  const h1 = el('view-title'); h1.textContent = TITLES[view][0];
+  h1.classList.remove('sweep'); void h1.offsetWidth; h1.classList.add('sweep');
+  placeTabInd();
   el('view-sub').textContent   = TITLES[view][1];
   closeMore();
   if(location.hash.slice(1) !== view){ try{ history.replaceState(null, '', '#'+view); }catch(e){} }
@@ -273,12 +247,13 @@ async function viewDashboard(t){
     const [picks, meta] = await Promise.all([api(`/api/picks?horizon=${S.horizon}`), S.meta ? S.meta : api('/api/meta')]);
     S.meta = meta;
     const lastGw = meta.events.find(e=>e.id===meta.current_gw) || {};
-    let head = '';
+    let head = '', vsAvgForHero = null;
     if(S.teamId){
       const e = await api(`/api/entry/${S.teamId}?horizon=${S.horizon}${ovQuery()}`);
       S.entry = e;
       const last = e.history.length ? e.history[e.history.length-1] : null;
       const vsAvg = last && lastGw.average!=null ? last.points - lastGw.average : null;
+      vsAvgForHero = vsAvg;
       head = `
       <div class="grid g4 mb">
         ${tile('Overall rank', e.entry.overall_rank ? e.entry.overall_rank.toLocaleString() : '–', esc(e.entry.name||''))}
@@ -287,7 +262,10 @@ async function viewDashboard(t){
         ${tile('Squad value', '£'+num(e.entry.value,1)+'m', '£'+num(e.bank,1)+'m in the bank')}
         ${tile('Free transfers', e.free_transfers, (()=>{ const av=(e.chips_available||{})[e.next_gw]||[]; const N={wildcard:'WC',freehit:'FH',bboost:'BB','3xc':'TC'}; return av.length ? 'Chips now: '+av.map(c=>N[c]).join(' · ') : 'No chips until GW20'; })())}
       </div>
-      ${moodQuip(vsAvg) ? `<div class="mood" id="mood">${esc(moodQuip(vsAvg))}</div>` : ''}
+      ${S.roast ? `<div class="roast-hero" id="mood"><div class="in">
+        <span class="fl" aria-hidden="true"><svg><use href="#i-flame"/></svg></span>
+        <div class="tx"><span class="k">This week’s verdict</span><span id="moodTx">${esc(moodQuip(vsAvg))}</span></div>
+        <button class="btn sm" id="reroast" type="button">Roast me again</button></div></div>` : ''}
       <div class="grid g23 mb">
         <div class="card">
           <h3>Best XI for GW${e.next_gw} <span class="r">${e.formation} · ${num(e.xi_xpts)} xPts</span></h3>
@@ -332,16 +310,21 @@ async function viewDashboard(t){
     t.innerHTML = head + pulse + `
       <div class="grid g3 mb">
         <div class="card lift"><h3>Captain picks <span class="r">GW${picks.gw}</span></h3>
-          ${list(picks.captains.slice(0,7), p=>`<td class="num accent"><b>${num(p.xpts)}</b></td>`, 'Single-gameweek projection. Doubled if captained.')}</div>
+          ${list(picks.captains.slice(0,7), p=>`<td class="num accent"><b>${num(p.xpts)}</b></td>`, 'Single-gameweek projection. Doubled if captained.')}
+          ${picks.captains.length ? roastHtml('captain', {c1:picks.captains[0].web_name, c2:(picks.captains[1]||picks.captains[0]).web_name}, 'cap'+picks.gw) : ''}</div>
         <div class="card lift"><h3>Differentials <span class="r">under 15% owned</span></h3>
-          ${list(picks.differentials.slice(0,7), p=>`<td class="num dim">${num(p.selected_by_percent,1)}%</td><td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`, `Right column: projected points over ${S.horizon} gameweeks.`)}</div>
+          ${list(picks.differentials.slice(0,7), p=>`<td class="num dim">${num(p.selected_by_percent,1)}%</td><td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`, `Right column: projected points over ${S.horizon} gameweeks.`)}
+          ${roastHtml('differentials', {}, 'dif'+picks.gw)}</div>
         <div class="card lift"><h3>Best value <span class="r">points per £m</span></h3>
-          ${list(picks.best_value.slice(0,7), p=>`<td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`)}</div>
+          ${list(picks.best_value.slice(0,7), p=>`<td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`)}
+          ${roastHtml('value', {}, 'val'+picks.gw)}</div>
       </div>
       <div class="card">
         <h3>Dream team for GW${picks.gw} <span class="r">${picks.dream_team.formation} · £${num(picks.dream_team.cost,1)}m · ${num(picks.dream_team.total)} xPts</span></h3>
         ${pitch(picks.dream_team.xi, [], picks.dream_team.captain, null)}
+        ${roastHtml('dream', {}, 'dream'+picks.gw)}
       </div>`;
+    wireRoastHero(vsAvgForHero);
   }catch(e){ t.innerHTML = errBox(e); }
 }
 
@@ -366,6 +349,7 @@ async function viewXpts(t){
         ${nEdits?`<button class="btn sm" id="resetMins">Reset ${nEdits} minute edit${nEdits>1?'s':''}</button>`:''}
       </div>
     </div></div>
+    ${roastHtml('xpts', {}, 'xp', 'top')}
     <div id="xpTable">${loading('Projecting every player')}</div>`;
 
   try{
@@ -553,12 +537,18 @@ async function viewSolver(t){
     try{
       SV.r = await post('/api/solve', body); SV.key = key; SV.path = 0; SV.gw = 0;
       draw();
+      const best = SV.r.paths[0];
+      if(best && best.gain_vs_nothing > 0.5){ const b = el('runSolve').getBoundingClientRect(); confetti(b.left + b.width/2, b.top - 6, 55); }   // burst from the button's top edge, clear of its label
     }catch(err){ el('svRight').innerHTML = errBox(err); el('svLeft').innerHTML = ''; }
     el('runSolve').disabled = false;
     el('runSolve').innerHTML = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4.5v15l12.5-7.5z"/></svg>Suggest transfers';
   };
 
   const CHIPS = {Wildcard:'WC', 'Free Hit':'FH'};
+  const planKind = p => {
+    const moves = p.gameweeks.reduce((n,g)=>n + g.transfers_in.length, 0);
+    return !moves ? 'nothing' : p.total_hits ? 'hits' : p.gameweeks.some(g=>g.chip) ? 'chip' : moves >= 6 ? 'many' : 'sensible';
+  };
   const drawLeft = ()=>{
     const r = SV.r, p = r.paths[SV.path], g = p.gameweeks[SV.gw], best = r.paths[0].total_xpts;
     const header = `<div class="pitch-top">
@@ -588,6 +578,7 @@ async function viewSolver(t){
         <div><div class="stat-k">vs no transfers</div><div class="stat-v">${sign(p.gain_vs_nothing,1)}</div></div>
         <div><div class="stat-k">Template rating</div><div class="stat-v">${p.template_rating}<small>/100</small></div></div>
       </div>
+      ${roastHtml('plan.'+planKind(p), {}, 'plan'+SV.path+'|'+SV.key)}
       <div class="gw-strip">${p.gameweeks.map((g,i)=>`<button class="gw-c ${i===SV.gw?'on':''}" data-i="${i}">
         <div class="g">GW${g.gw}</div><div class="v">${num(g.xpts,1)}</div>
         <div class="h ${g.chip?'chip':''}">${g.chip?(CHIPS[g.chip]||g.chip):g.hits?'−'+g.hit_cost:''}</div></button>`).join('')}</div>
@@ -622,6 +613,7 @@ async function viewChips(t){
     const top = r.best_plans[0];
     t.innerHTML = `
       ${top?`<div class="grid g4 mb">${top.picks.map(c=>tile(CHIP[c.chip], 'GW'+c.gw, `<span class="up">${sign(c.gain,1)} xPts</span>`)).join('')}</div>`:''}
+      ${roastHtml('chip.'+(top && top.picks[0] ? ({WC:'wildcard',FH:'freehit',BB:'bboost',TC:'3xc'})[top.picks[0].chip] || 'none' : 'none'), {}, null, 'top')}
       <div class="card mb"><h3>Best chip plans <span class="r">next ${S.horizon} gameweeks</span></h3>
         ${r.best_plans.slice(0,5).map((p,i)=>`<div class="plan">
           <div class="hd"><div class="gw">Plan ${i+1}</div><div class="sub"><b class="up">${sign(p.total_gain,1)} xPts</b> over playing nothing</div></div>
@@ -666,6 +658,7 @@ async function viewCopilot(t){
       const needsTeam = !r.has_team && ['hit','transfer','rate','chip','bench'].includes(r.intent);
       el('ans').innerHTML = `<div class="grid g23">
         <div><div class="bubble">${esc(r.answer)}</div>
+          ${roastHtml('copilot.'+(ROAST.copilot[r.intent] ? r.intent : 'overview'), {}, q)}
           ${r.points.length?`<div class="card" style="margin-top:14px"><h3>Why</h3>${r.points.map(p=>`<div class="note">${esc(p)}</div>`).join('')}</div>`:''}
           ${needsTeam?'<div class="note" style="margin-top:12px">Load your Team ID to get this answer for your own squad.</div>':''}</div>
         <div>${r.table?`<div class="card"><h3>${esc(r.table.title)}</h3><div class="well"><table>
@@ -690,9 +683,12 @@ async function viewRate(t){
       <div class="grid g3 mb">
         <div class="card" style="text-align:center;padding:26px 20px">
           <h3 style="justify-content:center">${esc(r.entry.name||'Your team')}</h3>
-          <div class="grade">${esc(r.grade)}</div>
-          <div style="font-size:30px;font-weight:700;letter-spacing:-.03em;margin-top:8px">${num(r.overall,0)}<span class="dim" style="font-size:16px"> / 100</span></div>
+          <div class="grade-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--ring-a)"/><stop offset="1" style="stop-color:var(--ring-b)"/></linearGradient></defs>
+            <circle class="trk" cx="60" cy="60" r="52"/><circle class="arc" cx="60" cy="60" r="52" pathLength="100" style="--p:${Math.max(2,Math.min(100,r.overall))}"/></svg>
+            <div class="grade">${esc(r.grade)}</div></div>
+          <div class="cu" style="font-size:30px;font-weight:700;letter-spacing:-.03em;margin-top:8px">${num(r.overall,0)}<span class="dim" style="font-size:16px"> / 100</span></div>
           <div class="sub">Rank ${r.entry.overall_rank?r.entry.overall_rank.toLocaleString():'–'}</div>
+          ${roastHtml('grade.'+gradeBand(r.grade), {}, 'grade'+r.grade+r.overall)}
         </div>
         <div class="card"><h3>How the score is built</h3>
           ${Object.entries(r.scores).map(([k,v])=>`<div style="margin-bottom:12px">
@@ -709,7 +705,7 @@ async function viewRate(t){
         </div>
       </div>
       <div class="grid g2">
-        <div class="card"><h3>Fix these first</h3>${r.notes.map(x=>`<div class="note">${esc(x)}</div>`).join('')}</div>
+        <div class="card"><h3>Fix these first</h3>${r.notes.map(x=>`<div class="note">${esc(x)}</div>${roastHtml('note.'+noteKind(x))}`).join('')}</div>
         <div class="card"><h3>Moves that raise the score</h3>
           <div class="well"><table><thead><tr><th>Out</th><th>In</th><th class="num">Gain</th></tr></thead><tbody>
           ${r.top_upgrades.map(u=>`<tr>
@@ -717,10 +713,17 @@ async function viewRate(t){
             <td><span class="up nm">${esc(u.in.web_name)}</span><div class="u2">${esc(u.in.team_short)} · £${num(u.in.price,1)}m · ${num(u.in.xpts_total,1)}</div></td>
             <td class="num up"><b>${sign(u.gain,1)}</b></td></tr>`).join('') || '<tr><td colspan="3" class="sub">No clear upgrade within budget.</td></tr>'}
           </tbody></table></div>
+          ${r.top_upgrades[0] ? roastHtml('upgrades', {out:r.top_upgrades[0].out.web_name, in:r.top_upgrades[0].in.web_name}, 'up'+r.top_upgrades[0].out.id) : ''}
           <div class="legend">Extra xPts over ${S.horizon} gameweeks, affordable with your current bank.</div></div>
       </div>`;
+    if(/^A/.test(r.grade)){ const c = t.querySelector('.grade-ring'); if(c){ const b = c.getBoundingClientRect(); confetti(b.left + b.width/2, b.top + b.height/2, 110); } }
   }catch(e){ t.innerHTML = errBox(e); }
 }
+const gradeBand = g => /^A/.test(g) ? 'top' : /^B/.test(g) ? 'good' : /^C/.test(g) ? 'mid' : 'low';
+const noteKind = text =>
+  /flagged player/.test(text) ? 'flagged' : /Projecting under/.test(text) ? 'dead' : /best squad your/.test(text) ? 'gap' :
+  /bench projects/.test(text) ? 'bench' : /at £9\.0m or above/.test(text) ? 'premium' : /widely held/.test(text) ? 'diffs' :
+  /template squad/.test(text) ? 'templates' : /in the bank/.test(text) ? 'bank' : 'clean';
 
 /* ---------------- Compare ---------------- */
 async function viewCompare(t){
@@ -748,7 +751,8 @@ async function viewCompare(t){
           <div style="text-align:right"><div style="font-size:22px;font-weight:700">${esc(r.a.web_name)}</div><div class="sub">${esc(r.a.team_short)} · ${r.a.pos_name} · £${num(r.a.price,1)}m</div></div>
           <div class="bubble" style="text-align:center;font-size:14px">${esc(r.verdict)}</div>
           <div><div style="font-size:22px;font-weight:700">${esc(r.b.web_name)}</div><div class="sub">${esc(r.b.team_short)} · ${r.b.pos_name} · £${num(r.b.price,1)}m</div></div>
-        </div>${r.reasons.map(x=>`<div class="note" style="margin-top:12px">${esc(x)}</div>`).join('')}</div>
+        </div>${r.reasons.map(x=>`<div class="note" style="margin-top:12px">${esc(x)}</div>`).join('')}
+        ${(()=>{ const aw = r.a.xpts_total >= r.b.xpts_total; return roastHtml('compare', {a:r.a.web_name, b:r.b.web_name, w:(aw?r.a:r.b).web_name, l:(aw?r.b:r.a).web_name}, 'cmp'+r.a.id+'-'+r.b.id); })()}</div>
         <div class="grid g2">
           <div class="card"><h3>Head to head</h3><div class="well"><table><tbody>
             ${row('xpts_next','xPts, next GW')}${row('xpts_total','xPts, '+S.horizon+' GW',v=>num(v,1))}
@@ -793,6 +797,7 @@ async function viewLeague(t){
           ${tile('Most owned', esc(o0?o0.player.web_name:'—'), o0?o0.pct+'% of rivals':'')}
           ${tile('Top effective ownership', esc(e0?e0.player.web_name:'—'), e0?e0.effective_ownership+'% incl. captaincy':'')}
         </div>
+        ${top ? roastHtml('league', {name:top.name, mo:o0?o0.player.web_name:'one player'}, 'lg'+id, 'top') : ''}
         <div class="card mb"><h3>Chance to win <span class="r">${r.sims.toLocaleString()} simulations over ${S.horizon} GW</span></h3>
           <div class="well"><table><thead><tr><th>#</th><th>Manager</th><th class="num">Points</th><th class="num">Projected</th><th style="width:30%">Win</th><th class="num">Top 3</th></tr></thead><tbody>
           ${r.managers.map(m=>`<tr><td class="dim">${m.rank}</td>
@@ -839,6 +844,7 @@ async function viewScout(t){
             ${tm.rotation_risks.length?`<div class="legend"><b>Rotation risk:</b> ${tm.rotation_risks.map(r=>esc(r.player.web_name)+' '+r.p_start+'%').join(', ')}</div>`:''}
             ${tm.doubts.length?`<div class="legend"><b>Flagged:</b> ${tm.doubts.map(d=>esc(d.player.web_name)).join(', ')}</div>`:''}
           </div>`).join('')}</div>`;
+        o.insertAdjacentHTML('afterbegin', roastHtml('scout.lineups', {}, null, 'top'));
         return;
       }
       if(!data){ o.innerHTML = loading('Scouting'); data = await api(`/api/scout?horizon=${S.horizon}`); }
@@ -880,6 +886,7 @@ async function viewScout(t){
             <td class="num accent">${num(x.xpts_from_dc)}</td><td class="num">${x.dc_total}</td></tr>`).join('')}</tbody></table></div>
           <div class="legend">Defenders score 2 for 10 clearances, blocks, interceptions and tackles in a match; midfielders and forwards need 12, with recoveries also counting.</div></div>`;
       }
+      if(!o.querySelector('.err')) o.insertAdjacentHTML('afterbegin', roastHtml('scout.'+scoutTab, {}, null, 'top'));
     }catch(e){ o.innerHTML = errBox(e); }
   };
   el('scTabs').addEventListener('click', e=>{
@@ -950,28 +957,34 @@ const VIEWS = {dashboard:viewDashboard, xpts:viewXpts, solver:viewSolver, chips:
    Each theme is a set of tokens in styles.css. `sw` is its 60:30:10 split
    (background, content, highlight) drawn as the swatch. */
 const THEMES = [
-  {id:'forest',   name:'Forest',       note:'Deep green. The house colours.',      sw:['#1B4332','#96E6A1','#D4FC79'], color:'#1B4332'},
+  {id:'openmic',  name:'Open Mic',     note:'Stage-lit violet. Lime and hot pink.', sw:['#140B26','#B79CFF','#D4FC79'], color:'#140B26'},
+  {id:'roast',    name:'Dark Roast',   note:'Espresso, saffron and ember.',         sw:['#1D120C','#FFB454','#FF7A45'], color:'#1D120C'},
+  {id:'forest',   name:'Forest',       note:'Deep green. The original house colours.', sw:['#1B4332','#96E6A1','#D4FC79'], color:'#1B4332'},
   {id:'midnight', name:'Midnight',     note:'Floodlit navy for late deadlines.',   sw:['#0E1726','#8FD3F4','#D4FC79'], color:'#0E1726'},
   {id:'graphite', name:'Graphite',     note:'Matte charcoal. Just the numbers.', sw:['#17191C','#C7CCD2','#D4FC79'], color:'#17191C'},
   {id:'chalk',    name:'Chalk',        note:'Light, for sunny Saturdays.',         sw:['#F2FBEC','#96E6A1','#1B4332'], color:'#F2FBEC'},
-  {id:'auto',     name:'Match system', note:'Forest at night, Chalk by day.',      sw:null},
+  {id:'auto',     name:'Match system', note:'Open Mic at night, Chalk by day.',    sw:null},
 ];
 const LEGACY_THEME = {dark:'forest', light:'chalk'};
 const lightQuery = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
-const themePref = () => { const t = store.get('fplai_theme', 'forest'); return LEGACY_THEME[t] || (THEMES.some(x=>x.id===t) ? t : 'forest'); };
-const resolveTheme = pref => pref === 'auto' ? (lightQuery && lightQuery.matches ? 'chalk' : 'forest') : pref;
+const themePref = () => { const t = store.get('fplai_theme', 'openmic'); return LEGACY_THEME[t] || (THEMES.some(x=>x.id===t) ? t : 'openmic'); };
+const resolveTheme = pref => pref === 'auto' ? (lightQuery && lightQuery.matches ? 'chalk' : 'openmic') : pref;
 function applyTheme(pref){
   const id = resolveTheme(pref), th = THEMES.find(x=>x.id===id) || THEMES[0];
   document.documentElement.dataset.theme = th.id;
   const m = document.querySelector('meta[name=theme-color]'); if(m) m.content = th.color;
   document.querySelectorAll('#themeList button').forEach(b=>b.setAttribute('aria-checked', String(b.dataset.themeId === pref)));
 }
-function setTheme(pref){ store.set('fplai_theme', pref); applyTheme(pref); }
+function setTheme(pref){
+  const root = document.documentElement;
+  if(!REDUCED){ root.classList.add('theming'); clearTimeout(setTheme.t); setTheme.t = setTimeout(()=>root.classList.remove('theming'), 600); }   // cross-fade the colours
+  store.set('fplai_theme', pref); applyTheme(pref);
+}
 if(lightQuery) (lightQuery.addEventListener ? lightQuery.addEventListener('change', ()=>{ if(themePref()==='auto') applyTheme('auto'); })
                                            : lightQuery.addListener(()=>{ if(themePref()==='auto') applyTheme('auto'); }));
 
 function swatch(t){
-  if(!t.sw) return `<span class="tp-sw tp-auto" aria-hidden="true"><i style="background:#1B4332"></i><i style="background:#F2FBEC"></i></span>`;
+  if(!t.sw) return `<span class="tp-sw tp-auto" aria-hidden="true"><i style="background:#140B26"></i><i style="background:#F2FBEC"></i></span>`;
   const [bg, content, hi] = t.sw;   // 60 : 30 : 10 as a ring
   return `<span class="tp-sw" aria-hidden="true" style="background:conic-gradient(${bg} 0 216deg, ${content} 216deg 324deg, ${hi} 324deg 360deg)"></span>`;
 }
@@ -1000,7 +1013,129 @@ document.addEventListener('pointerdown', e=>{
   if(!el('themePop').hidden && !e.target.closest('#themePop, #themeBtn, #moreTheme')) closeThemePicker();
 });
 applyTheme(themePref());
-document.querySelector('.brand').addEventListener('click', ()=>go('dashboard'));
+let brandTaps = [];
+document.querySelector('.brand').addEventListener('click', ()=>{
+  go('dashboard');
+  const now = Date.now(); brandTaps = brandTaps.filter(t=>now - t < 1500); brandTaps.push(now);
+  if(brandTaps.length >= 5){ brandTaps = []; toast(S.roast ? pickFrom(ROAST.tap, 'tap') : 'Nothing to see here.'); confetti(innerWidth/2, 80, 130); }
+});
+
+
+/* ---------------- stage: glow, motion and the little surprises ---------------- */
+/* Confetti: a one-shot burst on a canvas, coloured from the current theme. */
+const fxCanvas = el('fx'), fxCtx = fxCanvas.getContext ? fxCanvas.getContext('2d') : null;
+let fxBits = [], fxRaf = 0, fxDpr = 1;
+function confetti(x, y, n){
+  if(REDUCED || !fxCtx) return;
+  fxDpr = Math.min(2, window.devicePixelRatio || 1);
+  fxCanvas.width = innerWidth * fxDpr; fxCanvas.height = innerHeight * fxDpr;
+  const css = getComputedStyle(document.documentElement);
+  const cols = ['--accent','--accent-2','--warn','--up','--ink'].map(v=>css.getPropertyValue(v).trim()).filter(Boolean);
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, v = 5 + Math.random()*9;
+    fxBits.push({x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v - 6, g:.28 + Math.random()*.12, w:5 + Math.random()*6, h:3 + Math.random()*5,
+      r:Math.random()*6.28, vr:(Math.random()-.5)*.4, c:cols[i % cols.length], life:1});
+  }
+  if(!fxRaf) fxRaf = requestAnimationFrame(fxStep);
+}
+function fxStep(){
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  fxBits = fxBits.filter(b=>b.life > 0 && b.y < innerHeight + 40);
+  for(const b of fxBits){
+    b.vx *= .99; b.vy += b.g; b.x += b.vx; b.y += b.vy; b.r += b.vr; b.life -= .012;
+    fxCtx.save(); fxCtx.globalAlpha = Math.max(0, Math.min(1, b.life*1.6));
+    fxCtx.translate(b.x*fxDpr, b.y*fxDpr); fxCtx.rotate(b.r); fxCtx.fillStyle = b.c;
+    fxCtx.fillRect(-b.w/2*fxDpr, -b.h/2*fxDpr, b.w*fxDpr, b.h*fxDpr); fxCtx.restore();
+  }
+  if(fxBits.length) fxRaf = requestAnimationFrame(fxStep);
+  else { fxRaf = 0; fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height); }
+}
+
+/* Toast: one short line that floats up, then leaves. */
+let toastTimer = 0;
+function toast(text){
+  el('toastTx').textContent = text; el('toast').classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el('toast').classList.remove('show'), 2800);
+}
+
+/* Roast mode: one switch, under Theme. Off removes every roast, quip and verdict. */
+function syncRoastUi(){ el('roastSwitch').setAttribute('aria-checked', String(S.roast)); }
+function setRoast(on){
+  S.roast = on; store.set('fplai_roast', on); syncRoastUi();
+  toast(pickFrom(ROAST.toggle[on ? 'on' : 'off'], 'toggle'));
+  if(!el('onboard').hidden) el('obQuip').textContent = quip('welcome');
+  invalidate(); render(current);
+}
+el('roastSwitch').addEventListener('click', ()=>setRoast(!S.roast));
+syncRoastUi();
+
+/* The week's verdict banner: roast me again, and a burst when you've had a big week. */
+function wireRoastHero(vsAvg){
+  const b = el('reroast'); if(!b) return;
+  b.onclick = ()=>{
+    const tx = el('moodTx'); tx.textContent = moodQuip(vsAvg);
+    tx.style.animation = 'none'; void tx.offsetWidth; tx.style.animation = '';
+    if(vsAvg != null && vsAvg >= 15){ const r = b.getBoundingClientRect(); confetti(r.left + r.width/2, r.top, 70); }
+  };
+  if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; const r = el('mood').getBoundingClientRect(); confetti(innerWidth/2, r.top + 40, 120); }
+}
+
+/* Numbers count up to their value the first time they appear. */
+const CU_SEL = '.tile .val, .stat-v, .path .pv, .gw-score, .gw-c .v, .cu';
+function countUp(node){
+  if(REDUCED || node.dataset.cu) return;
+  const tn = Array.prototype.find.call(node.childNodes, n=>n.nodeType === 3 && /\d/.test(n.nodeValue));
+  if(!tn || !/^\D{0,2}-?[\d,]*\.?\d+\D{0,3}$/.test(tn.nodeValue.trim())) return;      // a plain figure, not a name with a digit in it
+  const m = tn.nodeValue.match(/^(\D*?)(-?[\d,]*\.?\d+)([\s\S]*)$/); if(!m) return;
+  const target = parseFloat(m[2].replace(/,/g, '')); if(!isFinite(target)) return;
+  const dec = (m[2].split('.')[1] || '').length, comma = m[2].indexOf(',') >= 0, final = tn.nodeValue;
+  const fmt = v => { let t = v.toFixed(dec); if(comma){ const [a,b] = t.split('.'); t = a.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (b ? '.'+b : ''); } return m[1] + t + m[3]; };
+  node.dataset.cu = '1';
+  const t0 = performance.now(), dur = 700;
+  tn.nodeValue = fmt(0);
+  const step = now => { const k = Math.min(1, (now - t0)/dur); tn.nodeValue = k < 1 ? fmt(target * (1 - Math.pow(1 - k, 3))) : final; if(k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+/* Cards, tiles and plans rise in one after another; counters start. New nodes only,
+   so a table that grows or a pitch that re-draws doesn't replay the whole page. */
+const IN_SEL = '.tile, .card, .path, .plan, .gw-c, .stats-row > div, .need-team';
+const fxSeen = new WeakSet();
+let fxIdx = 0, fxQueued = false;
+function fxScan(root){
+  if(!fxQueued){ fxQueued = true; requestAnimationFrame(()=>{ fxIdx = 0; fxQueued = false; }); }
+  const hit = (sel) => (root.matches && root.matches(sel) ? [root] : []).concat(Array.prototype.slice.call(root.querySelectorAll(sel)));
+  hit(IN_SEL).forEach(n=>{
+    if(fxSeen.has(n)) return; fxSeen.add(n);
+    n.style.setProperty('--i', Math.min(fxIdx++, 11)); n.classList.add('fx-in');
+  });
+  hit(CU_SEL).forEach(countUp);
+}
+new MutationObserver(muts=>{ muts.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType === 1) fxScan(n); })); })
+  .observe(document.querySelector('.page'), {childList:true, subtree:true});
+
+/* A light that follows the pointer along the edge of whichever card you're over. */
+if(window.matchMedia && matchMedia('(hover:hover)').matches){
+  let raf = 0, last = null;
+  document.addEventListener('pointermove', e=>{
+    last = e; if(raf) return;
+    raf = requestAnimationFrame(()=>{
+      raf = 0; const c = last.target.closest ? last.target.closest('.card, .tile') : null; if(!c) return;
+      const r = c.getBoundingClientRect();
+      c.style.setProperty('--mx', (last.clientX - r.left) + 'px'); c.style.setProperty('--my', (last.clientY - r.top) + 'px');
+    });
+  }, {passive:true});
+}
+
+/* The phone dock's glowing capsule slides to the active tab. */
+function placeTabInd(){
+  const bar = el('tabbar'); if(!bar || getComputedStyle(bar).display === 'none') return;
+  const on = bar.querySelector('button.on'); if(!on) return;
+  bar.style.setProperty('--tx', on.offsetLeft + 'px'); bar.style.setProperty('--tw', on.offsetWidth + 'px'); bar.classList.add('has-ind');
+}
+window.addEventListener('resize', placeTabInd);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(placeTabInd);
+placeTabInd();
 
 (async function boot(){
   S.horizon = +el('horizon').value;

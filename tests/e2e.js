@@ -46,6 +46,7 @@ async function phone(browser){
 
   await page.goto(BASE, { waitUntil: 'networkidle' });
   ok('phone: team screen shows on launch', await page.isVisible('#onboard'));
+  ok('phone: a first visit opens in Open Mic', await page.$eval('html', e => e.dataset.theme === 'openmic'));
   ok('phone: tab dock visible, desktop links hidden', await page.isVisible('#tabbar') && !(await page.isVisible('#nav')));
   ok('phone: welcome screen carries a line of house humour', (await page.textContent('#obQuip')).trim().length > 20, await page.textContent('#obQuip'));
   await page.screenshot({ path: `${OUT}/m-01-onboard.png` });
@@ -68,6 +69,19 @@ async function phone(browser){
     const mood = await page.$('#mood');
     ok('phone: dashboard mood line shows when the gameweek average is known', /not out yet/.test(sub) || (!!mood && (await mood.textContent()).trim().length > 20), sub);
   }
+  await page.waitForTimeout(1300);   // let the counters land
+  {
+    const want = await page.evaluate(() => fetch('/api/entry/1?horizon=5').then(r => r.json()).then(j => j.entry.overall_rank ? j.entry.overall_rank.toLocaleString() : '–'));
+    const got = (await page.textContent('#view-dashboard .tile .val')).trim();
+    ok('phone: counters count up to the true value', got === want, `${got} vs ${want}`);
+  }
+  ok('phone: dashboard shows the week’s verdict banner', !!(await page.$('#view-dashboard .roast-hero #moodTx')) && (await page.textContent('#moodTx')).trim().length > 20);
+  {
+    const before = await page.textContent('#moodTx'); await page.click('#reroast'); await page.waitForTimeout(150);
+    ok('phone: “Roast me again” gives a different line', (await page.textContent('#moodTx')) !== before);
+  }
+  ok('phone: a roast sits under the captain picks', (await page.$$('#view-dashboard .card.lift .roast')).length >= 1);
+  ok('phone: roasts are labelled for screen readers', await page.$eval('#view-dashboard .roast .sr', e => /roast/i.test(e.textContent)));
   ok('phone: loading states carry a quip', await page.evaluate(() => /class="quip">[^<]{15,}/.test(loading('x')) && quip('loading').length > 15));
   ok('phone: dashboard fits width', await noOverflow(page), lastOverflow.join(', '));
   await page.screenshot({ path: `${OUT}/m-02-dashboard.png`, fullPage: false });
@@ -78,6 +92,7 @@ async function phone(browser){
   await page.waitForSelector('#xpBody tr', { timeout: 30000 });
   ok('phone: xPts table renders', (await page.$$('#xpBody tr')).length >= 20);
   ok('phone: xPts page has no sideways page scroll', await noOverflow(page), lastOverflow.join(', '));
+  ok('phone: xPts carries a roast', (await page.$$('#view-xpts .roast')).length >= 1);
   const who = (await page.textContent('#xpBody tr td:first-child a')).trim();
   const before = await page.textContent('#xpBody tr td:last-child');
   await page.click('#xpBody tr .mins'); await page.fill('#xpBody tr .mins input', '45'); await page.keyboard.press('Enter');
@@ -98,6 +113,7 @@ async function phone(browser){
   const cmdY = await page.$eval('.ws-cmd', e => e.getBoundingClientRect().top);
   const pitchY = await page.$eval('#svLeft', e => e.getBoundingClientRect().top);
   ok('phone: solver controls sit above the pitch', cmdY < pitchY);
+  ok('phone: the plan carries a roast, separate from the advice', (await page.$$('#svRight .roast')).length === 1 && !(await page.$('#svRight .timeline .roast')));
   ok('phone: solver fits width', await noOverflow(page), lastOverflow.join(', '));
   await page.screenshot({ path: `${OUT}/m-04-solver.png` });
   await page.$eval('#svLeft', e => e.scrollIntoView());
@@ -114,6 +130,7 @@ async function phone(browser){
   await page.click('#view-copilot .chipset button');
   await page.waitForSelector('#ans .bubble', { timeout: 60000 });
   ok('phone: copilot answers', (await page.textContent('#ans .bubble')).length > 20);
+  ok('phone: the answer carries a roast, outside the answer bubble', (await page.$$('#ans .roast')).length === 1 && !(await page.$('#ans .bubble .roast')));
   ok('phone: copilot fits width', await noOverflow(page), lastOverflow.join(', '));
   await page.screenshot({ path: `${OUT}/m-05-copilot.png` });
 
@@ -135,6 +152,8 @@ async function phone(browser){
     catch (e) { ok(`phone: ${v} renders`, false, (await errBoxes(page, v)).join(' | ') || 'timed out'); }
     ok(`phone: ${v} has no error box`, (await errBoxes(page, v)).length === 0, (await errBoxes(page, v)).join(' | '));
     ok(`phone: ${v} fits width`, await noOverflow(page), lastOverflow.join(', '));
+    if (['rate', 'compare', 'scout', 'chips'].includes(v)) ok(`phone: ${v} carries a roast`, (await page.$$(`#view-${v} .roast`)).length > 0);
+    if (v === 'rate') ok('phone: rate shows a grade ring that fills to the score', !!(await page.$('#view-rate .grade-ring .arc')) && (await page.$$('#view-rate .note + .roast')).length >= 1);
     ok(`phone: More tab highlighted for ${v}`, await page.$eval('#tabbar button[data-more]', e => e.classList.contains('on')));
     await page.screenshot({ path: `${OUT}/m-07-${v}.png` });
   }
@@ -169,11 +188,19 @@ async function phone(browser){
   await page.click('#tabbar button[data-more]'); await page.waitForTimeout(400);
   await page.click('#moreTheme'); await page.waitForTimeout(350);
   ok('phone: theme picker opens from More', await page.isVisible('#themePop'));
-  ok('phone: theme picker lists 4 themes + system', (await page.$$('#themeList button')).length === 5);
+  ok('phone: theme picker lists 6 themes + system', (await page.$$('#themeList button')).length === 7);
   ok('phone: theme picker fits width', await noOverflow(page), lastOverflow.join(', '));
+  ok('phone: Roast mode switch is on by default', (await page.getAttribute('#roastSwitch', 'aria-checked')) === 'true');
+  await page.click('#roastSwitch'); await page.waitForTimeout(400);
+  ok('phone: Roast mode off removes every roast, quip and verdict',
+     (await page.getAttribute('#roastSwitch', 'aria-checked')) === 'false' && (await page.$$('#view-dashboard .roast, #view-dashboard .roast-hero, #view-dashboard .quip')).length === 0);
+  ok('phone: Roast mode off is remembered', await page.evaluate(() => localStorage.getItem('fplai_roast') === 'false'));
+  await page.click('#roastSwitch');
+  try { await page.waitForSelector('#view-dashboard .roast-hero', { timeout: 60000 }); ok('phone: Roast mode back on brings the roasts back', true); }
+  catch (e) { ok('phone: Roast mode back on brings the roasts back', false, 'timed out'); }
   await page.screenshot({ path: `${OUT}/m-10a-theme-picker.png` });
-  const COLORS = { forest: '#1B4332', midnight: '#0E1726', graphite: '#17191C', chalk: '#F2FBEC' };
-  for (const id of ['midnight', 'graphite', 'forest', 'chalk']) {
+  const COLORS = { openmic: '#140B26', roast: '#1D120C', forest: '#1B4332', midnight: '#0E1726', graphite: '#17191C', chalk: '#F2FBEC' };
+  for (const id of ['roast', 'openmic', 'midnight', 'graphite', 'forest', 'chalk']) {
     await page.click(`#themeList button[data-theme-id="${id}"]`); await page.waitForTimeout(250);
     const st = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme,
       color: document.querySelector('meta[name=theme-color]').content,
@@ -257,7 +284,7 @@ async function desktop(browser){
   ok('desktop: theme popover opens inside the window', box.l >= 0 && box.r <= 1440 && box.t >= 60 && box.b <= 900, JSON.stringify(box));
   ok('desktop: theme button reports expanded', (await page.getAttribute('#themeBtn', 'aria-expanded')) === 'true');
   await page.screenshot({ path: `${OUT}/d-04a-theme-picker.png` });
-  for (const id of ['midnight', 'graphite', 'chalk']) {
+  for (const id of ['roast', 'openmic', 'midnight', 'graphite', 'chalk']) {
     await page.click(`#themeList button[data-theme-id="${id}"]`); await page.waitForTimeout(250);
     await page.keyboard.press('Escape'); await page.waitForTimeout(250);
     await page.screenshot({ path: `${OUT}/d-04-dashboard-${id}.png` });

@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10-07 — Stage lights, roasts and two new palettes
+
+- **A stage, not a spreadsheet.** Two stage-light beams sweep the backdrop;
+  cards and tiles catch a glow that follows your pointer; the primary button,
+  the selected plan and the logo breathe; cards, tiles and plans rise in one
+  after another; numbers count up to their value; the players walk onto the
+  pitch row by row; bars and sparklines grow; the page title catches a glint on
+  every navigation; the phone dock's capsule slides (with a little overshoot) to
+  the tab you tap; theme changes cross-fade. Everything stops under
+  `prefers-reduced-motion`.
+- **Two new themes.** **Open Mic** (ink-violet, lilac glass, lime and hot pink)
+  is the new default for first visits; **Dark Roast** (espresso, cream glass,
+  saffron and ember). Forest, Midnight, Graphite and Chalk stay, and a saved
+  choice is respected. All six pass WCAG AA — `scripts/check_contrast.py` checks
+  them and exits non-zero on a miss.
+- **Roast mode.** A deadpan roast under every suggestion — the captain picks,
+  differentials and value picks, each solver plan, chip timing, your Rate My Team
+  grade and every fix, each Copilot answer, comparisons, league favourites and
+  every Scout tab — in Indian-household and chess-blunder roast-comedy register.
+  Roasts are separate labelled asides, never inside the advice, a number or an
+  error. The dashboard opens with **This week's verdict**, a banner with a
+  rotating lit border that reacts to your score against the average; **Roast me
+  again** re-rolls it. One switch (More → Theme) turns every roast off.
+- **Confetti** for a big week, an A grade, a solver plan that gains and, if you
+  tap the logo five times, no reason at all.
+- **Rate My Team** draws its grade inside a ring that fills to your score.
+- Lines now live in `frontend/roast.js`; the engine and effects are in `app.js`.
+- Tests: 108 e2e checks (was 88), including counters, the verdict banner, a
+  roast on every view, the roast switch and the six themes.
+
 ## 2026-10-07 — Clean loads, right free transfers, darker humour
 
 - **Free transfers were one too many after a chip.** A Wildcard or Free Hit week

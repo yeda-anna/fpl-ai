@@ -90,29 +90,42 @@ copy is served.
 
 ## Look and feel
 
-Crisp frosted glass: evenly lit panels with a fine light rim along the top
-edge and a soft shadow, coloured **60 : 30 : 10** (background : content :
-highlight). Pick a theme from the palette button (or **More → Theme** on a
-phone):
+Crisp frosted glass lit like a comedy-club stage: stage lights sweep the
+backdrop, cards catch a glow that follows your pointer, numbers count up, plans
+rise in one after another, the week's verdict wears a rotating lit border, and a
+big week earns confetti. Panels keep the fine light rim and soft shadow, coloured
+**60 : 30 : 10** (background : content : highlight). Pick a theme from the
+palette button (or **More → Theme** on a phone):
 
 | Theme | 60% background | 30% content | 10% highlight |
 | --- | --- | --- | --- |
-| Forest (default) | `#1B4332` | mint glass | lime `#D4FC79` · sky `#8FD3F4` |
+| Open Mic (default) | `#140B26` ink-violet | lilac glass | lime `#D4FC79` · hot pink `#FF6FB5` |
+| Dark Roast | `#1D120C` espresso | cream glass | saffron `#FFB454` · ember `#FF7A45` |
+| Forest | `#1B4332` | mint glass | lime · sky `#8FD3F4` |
 | Midnight | `#0E1726` | sky-tinted glass | lime · sky |
 | Graphite | `#17191C` | neutral glass | lime · sky |
 | Chalk (light) | `#F2FBEC` | white glass | lime · forest |
-| Match system | Chalk by day, Forest at night | | |
+| Match system | Chalk by day, Open Mic at night | | |
 
-Lime is for "do this" (buttons, active tab, captain), sky for information.
-Every theme passes WCAG AA for all text. The
-full system — tokens, glass rules, breakpoints, the animated mug logo and the
-house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
+Lime (or saffron) is for "do this" (buttons, active tab, captain), the second
+highlight for glow and information. Every theme passes WCAG AA for all text
+(`python3 scripts/check_contrast.py`), and `prefers-reduced-motion` turns all of
+the motion off.
+
+**Roast mode** (More → Theme, on by default): a short deadpan roast under every
+suggestion — captain picks, transfer plans, chip timing, your grade, Copilot's
+answers. Indian dark humour and British dry wit, aimed only at the manager's own
+luck and rank, always a separate labelled aside, never inside the advice or the
+numbers. One switch turns every roast off. Tap the logo five times for a surprise.
+
+The full system — tokens, glass rules, the stage layer, breakpoints, the animated
+mug logo and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Tests
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 88 headless checks, phone + desktop
+    npm --prefix tests test            # 108 headless checks, phone + desktop
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).
@@ -154,7 +167,8 @@ See [`docs/TESTING.md`](docs/TESTING.md).
     backend/analysis.py  chips, rating, compare, picks, mini-leagues
     backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
     backend/main.py      FastAPI routes + static hosting
-    frontend/            single-page app, no build step; four themes + match-system
+    frontend/            single-page app, no build step; six themes + match-system, roast.js holds the roasts
+    scripts/check_contrast.py  WCAG AA check for every theme
     tests/               Playwright end-to-end suite
     scripts/calibrate.py projection sanity check
     docs/                the documentation above
