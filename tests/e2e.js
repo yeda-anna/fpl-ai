@@ -41,10 +41,13 @@ async function phone(browser){
   page.on('pageerror', e => consoleErrors.push('pageerror: ' + e.message));
   const badResponses = [];
   page.on('response', r => { if (r.status() >= 400 && !r.url().includes('/api/entry/999999999')) badResponses.push(r.status() + ' ' + r.url()); });
+  const entryReads = [];
+  page.on('request', r => { if (/\/api\/entry\/1\?/.test(r.url())) entryReads.push(r.url()); });
 
   await page.goto(BASE, { waitUntil: 'networkidle' });
   ok('phone: team screen shows on launch', await page.isVisible('#onboard'));
   ok('phone: tab dock visible, desktop links hidden', await page.isVisible('#tabbar') && !(await page.isVisible('#nav')));
+  ok('phone: welcome screen carries a line of house humour', (await page.textContent('#obQuip')).trim().length > 20, await page.textContent('#obQuip'));
   await page.screenshot({ path: `${OUT}/m-01-onboard.png` });
 
   // a team that doesn't exist
@@ -58,6 +61,14 @@ async function phone(browser){
   await page.waitForSelector('#view-dashboard .pitch-card', { timeout: 30000 });
   ok('phone: team loads, pitch renders', true);
   ok('phone: team pill shows team name', !/add team/i.test(await page.textContent('#teamLabel')), await page.textContent('#teamLabel'));
+  ok('phone: first read of your team after a page load asks FPL afresh (fresh=1), later reads use the cache',
+     entryReads.length >= 2 && /[?&]fresh=1/.test(entryReads[0]) && !/fresh=1/.test(entryReads[entryReads.length - 1]), entryReads.join('  '));
+  {
+    const sub = await page.textContent('#view-dashboard .tile:nth-child(2) .sub');
+    const mood = await page.$('#mood');
+    ok('phone: dashboard mood line shows when the gameweek average is known', /not out yet/.test(sub) || (!!mood && (await mood.textContent()).trim().length > 20), sub);
+  }
+  ok('phone: loading states carry a quip', await page.evaluate(() => /class="quip">[^<]{15,}/.test(loading('x')) && quip('loading').length > 15));
   ok('phone: dashboard fits width', await noOverflow(page), lastOverflow.join(', '));
   await page.screenshot({ path: `${OUT}/m-02-dashboard.png`, fullPage: false });
   await page.screenshot({ path: `${OUT}/m-02b-dashboard-full.png`, fullPage: true });
@@ -195,6 +206,12 @@ async function phone(browser){
   await page.click('#obSkip');
 
   const realErrors = consoleErrors.filter(m => !/Failed to load resource/.test(m));
+  // Refresh app: a home-screen app has no reload button, so More has one. It must really reload.
+  await page.click('#tabbar button[data-more]'); await page.waitForTimeout(400);
+  ok('phone: More sheet has a Refresh app button', await page.isVisible('#moreRefresh'));
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }), page.click('#moreRefresh')]);
+  ok('phone: Refresh app reloads to a clean launch', await page.isVisible('#onboard'));
+
   ok('phone: no console errors', realErrors.length === 0, realErrors.slice(0, 4).join(' || '));
   ok('phone: no failed requests (besides the deliberate unknown team)', badResponses.length === 0, badResponses.slice(0, 4).join(' || '));
   await ctx.close();
@@ -219,7 +236,9 @@ async function desktop(browser){
     const refs = await page.$$eval('link[rel=stylesheet][href^="/static/"], script[src^="/static/"]', els => els.map(e => e.getAttribute('href') || e.getAttribute('src')));
     ok('desktop: CSS and JS are content-fingerprinted', refs.length >= 2 && refs.every(u => /\?v=[0-9a-f]{12}$/.test(u)), refs.join(', '));
     const head = await page.evaluate(() => fetch('/', { cache: 'no-store' }).then(r => r.headers.get('cache-control')));
-    ok('desktop: page is revalidated on every open', /no-cache/.test(head || ''), head);
+    ok('desktop: page is never stored by the browser (no-store)', /no-store/.test(head || ''), head);
+    const apiHead = await page.evaluate(() => fetch('/api/meta').then(r => r.headers.get('cache-control')));
+    ok('desktop: API answers are never stored by the browser (no-store)', /no-store/.test(apiHead || ''), apiHead);
   }
   await page.screenshot({ path: `${OUT}/d-02-dashboard.png` });
   for (const v of ['xpts', 'solver', 'chips', 'copilot', 'rate', 'compare', 'league', 'scout', 'model']) {

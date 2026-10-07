@@ -615,7 +615,8 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 .ob-mark svg{width:64px;height:64px}
 @keyframes bob{50%{transform:translateY(-5px) rotate(-3deg)}}
 .ob-card h2{font-size:28px;font-weight:850;letter-spacing:-.04em}
-.ob-card .tagline{color:var(--ink-2);margin:6px 0 24px;font-size:15px}
+.ob-card .tagline{color:var(--ink-2);margin:6px 0 10px;font-size:15px}
+.ob-quip{margin:0 0 20px;font-size:13px;line-height:1.5;font-style:italic;color:var(--ink-3);min-height:2.6em;overflow-wrap:anywhere}
 .ob-field{text-align:left;display:flex;flex-direction:column;gap:7px}
 .ob-field label{font-size:12px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
 .ob-field input{font-size:20px;font-weight:700;padding:14px 16px;border-radius:16px;letter-spacing:.02em;text-align:center}
@@ -631,6 +632,9 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 .loading:after{content:'';display:inline-block;width:15px;height:15px;margin-left:10px;vertical-align:-3px;border-radius:50%;
   border:2px solid var(--glass-line-2);border-top-color:var(--accent);animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.loading.has-quip{padding-bottom:14px}
+.quip{padding:0 24px 36px;text-align:center;font-size:13px;line-height:1.55;font-style:italic;color:var(--ink-3);overflow-wrap:anywhere}
+.mood{margin:-6px 4px 18px;font-size:13px;line-height:1.55;font-style:italic;color:var(--ink-3);overflow-wrap:anywhere}
 .skel{border-radius:16px;background:linear-gradient(90deg,var(--glass) 0%,var(--glass-3) 50%,var(--glass) 100%);
   background-size:200% 100%;animation:shimmer 1.4s linear infinite}
 @keyframes shimmer{to{background-position:-200% 0}}
@@ -694,6 +698,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
   .more-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
   .more-actions .btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:16px}
   .more-actions .btn svg{width:17px;height:17px}
+  .more-actions #moreRefresh{grid-column:1 / -1}
 
 }
 

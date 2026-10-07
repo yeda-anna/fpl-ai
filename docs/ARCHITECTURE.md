@@ -83,20 +83,32 @@ last league). See `DESIGN.md` for the visual system.
 
 ## Freshness (cache policy)
 
-Every open must show the latest design, including home-screen apps that
-iOS keeps alive for days. `main.py` handles it with no build step:
+Every open must show the latest design and the latest squad, including
+home-screen apps that iOS keeps alive for days. `main.py` handles it with no
+build step:
 
 | What | Header / behaviour |
 | --- | --- |
-| `/` (index.html) | `Cache-Control: no-cache, must-revalidate` + `ETag` = build id → the browser asks every time and gets a cheap `304` when nothing changed |
-| `/static/*.css`, `/static/*.js` | the server rewrites their links in index.html to `?v=<sha256[:12]>` of the file; those URLs are `immutable`, cached for a year |
+| `/` (index.html) | `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` (+ `Pragma`, `Expires`). The browser never keeps its own copy, so a refresh always fetches the page afresh, and back/forward doesn't resurrect a stale one |
+| `/static/*.css`, `/static/*.js` | the server rewrites their links in index.html to `?v=<sha256[:12]>` of the file; those URLs are `immutable`, cached for a year. Reloads stay fast and are still always current, because the hash in the page changes with the file |
 | other `/static/*` (icon, manifest) | `no-cache` |
-| `/api/*` | `no-store` unless the route sets its own |
+| `/api/*` | `no-store` (same full set as the page) |
 | `/version` | `{"build": "<id>"}`, `no-store` |
 
+Data is fresh too. The FPL responses behind a manager (`entry`, `history`,
+`picks`, `transfers`) are cached server-side for minutes. The first read of your
+team after each page load is `GET /api/entry/{id}?fresh=1`, which expires those
+files (`fpl_api.refresh_team`; the old copy stays as a fallback if FPL is down)
+so a transfer made on the FPL site shows up on refresh. Purges are throttled to
+one per team per 20 seconds. The app does the same quietly (`softRefresh`) when
+you come back after ten minutes away, and **More → Refresh app** does a full
+reload for home-screen apps that have no reload button. All `fetch` calls from
+`app.js` use `cache: 'no-store'`.
+
 The page carries `<meta name="app-build">`. `app.js` calls `/version` when the app
-returns to the foreground (`visibilitychange`, `focus`, back/forward-cache
-`pageshow`), at most once a minute, and reloads if the build has changed. The
+returns to the foreground (`visibilitychange`, `focus`), at most once a minute,
+and reloads if the build has changed. A page restored from the back/forward
+cache is reloaded straight away. The
 hashes are recomputed whenever a file's mtime or size changes, so local edits
 show up on reload without restarting the server.
 

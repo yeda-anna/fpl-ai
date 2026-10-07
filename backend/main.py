@@ -10,13 +10,14 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import analysis
 import fpl_api
 import priors
+import rules as rules_mod
 import scout as scout_mod
 import solver as solver_mod
 import xpts
@@ -100,25 +101,29 @@ def rows_with(horizon: int, overrides: Optional[Dict[int, float]] = None):
     return patched
 
 
-def estimate_free_transfers(team_id: int, current_gw: int) -> int:
-    """FPL does not publish free transfers, so replay the rule over the season."""
-    try:
-        history = fpl_api.entry_history(team_id)
-    except Exception:
-        return 1
+def replay_free_transfers(history: Dict[str, Any], current_gw: int, max_ft: int) -> int:
+    """Free transfers for the gameweek after `current_gw`, replayed from a manager's history."""
     chip_gws = {c["event"]: c["name"] for c in history.get("chips", [])}
     # Nothing is banked before GW1 - the GW1 squad is picked for free - so the
     # first rollover leaves exactly one free transfer for GW2.
     ft = 0
     for ev in history.get("current", []):
         gw = ev["event"]
-        made = ev.get("event_transfers", 0)
-        chip = chip_gws.get(gw)
-        if chip in ("wildcard", "freehit"):
-            ft = min(solver_mod.MAX_FREE_TRANSFERS, ft + 1)
-            continue
-        ft = min(solver_mod.MAX_FREE_TRANSFERS, max(0, ft - made) + 1)
-    return max(1, min(solver_mod.MAX_FREE_TRANSFERS, ft))
+        if gw > current_gw:
+            continue    # the history is newer than our cached calendar; stay in step with the squad we show
+        ft = rules_mod.roll_free_transfers(
+            ft, ev.get("event_transfers", 0) or 0,
+            chip_gws.get(gw) in ("wildcard", "freehit"), max_ft)
+    return max(1, min(max_ft, ft))
+
+
+def estimate_free_transfers(team_id: int, current_gw: int) -> int:
+    """FPL does not publish free transfers, so replay the rule over the season."""
+    try:
+        history = fpl_api.entry_history(team_id)
+    except Exception:
+        return 1
+    return replay_free_transfers(history, current_gw, solver_mod.MAX_FREE_TRANSFERS)
 
 
 def load_team(team_id: int, horizon: int, overrides: Optional[Dict[int, float]] = None):
@@ -267,7 +272,10 @@ def player(player_id: int, horizon: int = Query(6, ge=1, le=10),
 
 
 @app.get("/api/entry/{team_id}")
-def team(team_id: int, horizon: int = Query(5, ge=1, le=10), overrides: Optional[str] = None):
+def team(team_id: int, horizon: int = Query(5, ge=1, le=10), overrides: Optional[str] = None,
+         fresh: bool = False):
+    if fresh:       # a page load: re-read this manager from FPL rather than from the cache
+        fpl_api.refresh_team(team_id, engine().current_gw)
     ctx = load_team(team_id, horizon, parse_overrides(overrides))
     split = analysis.squad_split(ctx["squad_rows"], 0)
     return {
@@ -495,13 +503,17 @@ def health():
 
 # --- frontend --------------------------------------------------------------
 # Browsers (and home-screen apps on iOS especially) hold on to a page they've
-# seen before. To make every visit pick up the latest design:
-#   * index.html is served with `no-cache`, so it is revalidated on every open;
+# seen before. To make every visit pick up the latest build and data:
+#   * index.html and every /api/ answer are `no-store`: a phone never keeps its
+#     own copy, so a refresh (or back/forward, which `no-store` also keeps out of
+#     the back/forward cache) always fetches the page afresh;
 #   * each /static/*.css|js reference in it is rewritten to `?v=<content hash>`,
 #     so a changed file gets a new URL and those URLs can be cached forever;
 #   * the page carries a build id; app.js compares it with /version when the app
 #     comes back to the foreground and reloads if a newer build has shipped.
 # Nothing to bump by hand.
+NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache", "Expires": "0"}
 _ASSET_REF = re.compile(r'(/static/([\w.-]+\.(?:css|js)))(?:\?v=[\w.-]*)?(?=["\'])')
 _page = {"key": None, "html": "", "build": ""}
 _page_lock = threading.Lock()
@@ -549,7 +561,8 @@ async def cache_policy(request: Request, call_next):
         else:
             response.headers["Cache-Control"] = "no-cache"
     elif path.startswith("/api/"):
-        response.headers.setdefault("Cache-Control", "no-store")
+        for name, value in NO_STORE.items():
+            response.headers[name] = value
     return response
 
 
@@ -561,14 +574,10 @@ if os.path.isdir(FRONTEND):
 def version():
     """The current frontend build, for open apps to notice a new deploy."""
     _, build = _render_index()
-    return JSONResponse({"build": build}, headers={"Cache-Control": "no-store"})
+    return JSONResponse({"build": build}, headers=NO_STORE)
 
 
 @app.api_route("/", methods=["GET", "HEAD"])
-def index(request: Request):
-    html, build = _render_index()
-    etag = '"%s"' % build
-    headers = {"Cache-Control": "no-cache, must-revalidate", "ETag": etag}
-    if request.headers.get("if-none-match") == etag:
-        return Response(status_code=304, headers=headers)
-    return HTMLResponse(html, headers=headers)
+def index():
+    html, _ = _render_index()
+    return HTMLResponse(html, headers=NO_STORE)

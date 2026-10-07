@@ -10,7 +10,8 @@ const S = {
   teamId: store.get('fplai_team', ''),
   horizon: 5,
   overrides: store.get('fplai_minutes', {}),   // {playerId: minutes} - your own numbers
-  entry: null, meta: null, loaded: {}
+  entry: null, meta: null, loaded: {},
+  fresh: true          // the next read of your team bypasses the server's cache (every page load starts true)
 };
 
 const el  = id => document.getElementById(id);
@@ -33,7 +34,7 @@ const TITLES = {
 };
 
 async function api(path, opts){
-  const r = await fetch(path, opts);
+  const r = await fetch(path, Object.assign({cache:'no-store'}, opts));   // never a browser-held copy
   if(!r.ok){
     let m; try{ m = (await r.json()).detail; }catch(e){ m = r.statusText; }
     throw new Error(m || ('Request failed ('+r.status+')'));
@@ -42,9 +43,68 @@ async function api(path, opts){
 }
 const post = (path, body) => api(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
 const ovParam = () => Object.entries(S.overrides).map(([k,v])=>k+':'+v).join(',');
+const entryUrl = id => `/api/entry/${id}?horizon=${S.horizon}${ovQuery()}${S.fresh ? '&fresh=1' : ''}`;
 const ovQuery = () => { const o = ovParam(); return o ? '&overrides='+encodeURIComponent(o) : ''; };
 
-const loading = t => `<div class="card"><div class="loading">${esc(t||'Working')}</div></div>`;
+/* ---------------- house humour ----------------
+   British dry wit in the taglines, Indian dark humour in the waiting and the
+   welcome. Every line is aimed at the manager's own misery, never at a group of
+   people. Humour lives in loading lines, empty states and the mood line only —
+   never in errors, numbers or anything a manager acts on. */
+const QUIPS = {
+  loading: [
+    'Sharma ji’s son finished this ages ago. Beta, take your time.',
+    'Hope is a free transfer. You’ll roll it over and never use it.',
+    'Optimising your squad. Papa gave up optimising you years ago.',
+    'Loading like a Bengaluru commute: moving, but not going anywhere.',
+    'Log kya kahenge? Your overall rank already did.',
+    'Chai is brewing. Your rank is not.',
+    'Unlike your relatives, the maths will not ask when you’re settling down.',
+    'Jugaad is not a transfer strategy. We checked.',
+    'Every captain pick is an act of faith. We’re here for the postmortem.',
+    'Still faster than reading the 47 ‘Good Morning’ forwards in the family group.',
+    'Like a Mumbai local at peak hour: crowded, late, and somehow you’re still in it.',
+    '“Tumse na ho payega,” said everyone. We’re running the numbers anyway.'
+  ],
+  welcome: [
+    'Your captain will blank. Your relatives will still ask what happened.',
+    'Rank in the millions? Don’t worry, beta. It’s a stable, pensionable position.',
+    'Everyone says “tumse na ho payega”. The model says: let’s see the expected points.',
+    'Be like Sharma ji’s son: roll the transfer, ignore the group chat.',
+    'Fantasy football: an EMI of hope, repaid in heartbreak, with interest.',
+    'Your parents wanted a doctor or an engineer. Instead you’re agonising over a £5.5m defender.'
+  ],
+  mood: {
+    great: [
+      'Beating the average by that much? Relatives will call it luck. They’re right. Don’t tell them.',
+      'For one week, Sharma ji’s son is taking notes from you. Enjoy it. The captain blanks next week.'
+    ],
+    above: [
+      'Above average. In an Indian household that means: “Good. But why not more?”',
+      'Above average: enough to feel clever, not enough to stop checking the app at 2 AM.'
+    ],
+    below: [
+      'Below average. Beta, this is why we said engineering.',
+      'Slightly below average. Think of it as character building, like every relative calls your last job.'
+    ],
+    awful: [
+      'That score deserves a moment of silence, then a Wildcard, then another moment of silence.',
+      'Well below average. Even your bench looked embarrassed on your behalf.'
+    ]
+  }
+};
+const lastQuip = {};
+function quip(kind){
+  const list = kind.split('.').reduce((o,k)=>o && o[k], QUIPS);
+  if(!Array.isArray(list) || !list.length) return '';
+  let i = Math.floor(Math.random()*list.length);
+  if(list.length > 1 && i === lastQuip[kind]) i = (i+1) % list.length;   // never the same line twice running
+  lastQuip[kind] = i;
+  return list[i];
+}
+const moodQuip = vsAvg => vsAvg==null ? '' : quip(vsAvg >= 15 ? 'mood.great' : vsAvg >= 0 ? 'mood.above' : vsAvg > -15 ? 'mood.below' : 'mood.awful');
+
+const loading = t => `<div class="card"><div class="loading has-quip">${esc(t||'Working')}</div><div class="quip">${esc(quip('loading'))}</div></div>`;
 const errBox  = e => `<div class="err"><b>That didn’t work.</b> ${esc(e.message||e)}</div>`;
 const pos  = p => `<span class="pill pos${p}">${POS[p]}</span>`;
 const fdr  = f => `<span class="fdr fdr${f}">${f}</span>`;
@@ -93,6 +153,9 @@ el('more').addEventListener('click', e=>{
 });
 el('moreTeam').addEventListener('click', ()=>{ closeMore(); openOnboard(); });
 el('moreTheme').addEventListener('click', ()=>{ closeMore(); openThemePicker(); });
+/* A home-screen app has no reload button, so give it one. The server never lets a
+   browser keep the page, so this is always a clean load. */
+el('moreRefresh').addEventListener('click', ()=>{ closeMore(); location.reload(); });
 function invalidate(){ S.loaded = {}; S.entry = null; }
 el('horizon').addEventListener('change', ()=>{ S.horizon = +el('horizon').value; invalidate(); render(current); });
 
@@ -108,6 +171,7 @@ function openOnboard(){
   const remembered = store.get('fplai_team', ''), rname = store.get('fplai_team_name', '');
   el('obTeam').value = S.teamId || remembered || '';
   el('obErr').textContent = '';
+  el('obQuip').textContent = quip('welcome');
   el('obWelcome').innerHTML = (remembered && rname)
     ? `<span class="ob-welcome"><span class="avatar">${esc(initials(rname))}</span>Welcome back, ${esc(rname)}</span>` : '';
   el('obGo').querySelector('span').textContent = (remembered || S.teamId) ? 'Continue' : 'Load my team';
@@ -126,7 +190,8 @@ el('obForm').addEventListener('submit', async e=>{
   const btn = el('obGo'), label = btn.querySelector('span').textContent;
   btn.disabled = true; btn.querySelector('span').textContent = 'Finding your team…';
   try{
-    const ent = await api(`/api/entry/${id}?horizon=${S.horizon}${ovQuery()}`);
+    const ent = await api(entryUrl(id));
+    S.fresh = false;
     S.teamId = id; S.teamName = (ent.entry && ent.entry.name) || ('Team '+id);
     store.set('fplai_team', id); store.set('fplai_team_name', S.teamName);
     closeOnboard(); updateTeamPill(); invalidate(); S.entry = ent; render(current);
@@ -222,6 +287,7 @@ async function viewDashboard(t){
         ${tile('Squad value', '£'+num(e.entry.value,1)+'m', '£'+num(e.bank,1)+'m in the bank')}
         ${tile('Free transfers', e.free_transfers, (()=>{ const av=(e.chips_available||{})[e.next_gw]||[]; const N={wildcard:'WC',freehit:'FH',bboost:'BB','3xc':'TC'}; return av.length ? 'Chips now: '+av.map(c=>N[c]).join(' · ') : 'No chips until GW20'; })())}
       </div>
+      ${moodQuip(vsAvg) ? `<div class="mood" id="mood">${esc(moodQuip(vsAvg))}</div>` : ''}
       <div class="grid g23 mb">
         <div class="card">
           <h3>Best XI for GW${e.next_gw} <span class="r">${e.formation} · ${num(e.xi_xpts)} xPts</span></h3>
@@ -481,7 +547,7 @@ async function viewSolver(t){
     el('adv').open = false;
     if(SV.key === key && SV.r){ draw(); return; }
     el('runSolve').disabled = true;
-    el('runSolve').innerHTML = 'Putting the kettle on — optimising '+S.horizon+' gameweeks…';
+    el('runSolve').innerHTML = (Math.random() < .5 ? 'Putting the kettle on' : 'Chai on the stove')+' — optimising '+S.horizon+' gameweeks…';
     el('svLeft').innerHTML = `<div class="skel" style="height:86px;margin-bottom:16px"></div><div class="skel" style="height:640px;border-radius:24px"></div>`;
     el('svRight').innerHTML = `<div class="skel" style="height:70px;margin:22px 0 18px"></div><div class="skel" style="height:96px;margin-bottom:12px"></div><div class="skel" style="height:300px"></div>`;
     try{
@@ -954,14 +1020,23 @@ window.addEventListener('hashchange', ()=>{ const h = location.hash.slice(1); if
 /* Fresh on every open. The server stamps each page with a build id; when the
    app returns to the foreground (switching tabs, reopening the home-screen app,
    restoring from the back/forward cache) we ask for the current build and
-   reload if a newer one has shipped. Checks are throttled to one a minute. */
+   reload if a newer one has shipped. Checks are throttled to one a minute.
+   Come back after a long absence and your squad, bank and transfers are re-read
+   from FPL too, so a transfer made on the FPL site is never missing. */
+const STALE_AFTER = 10 * 60 * 1000;
+async function softRefresh(){
+  S.meta = null; S.fresh = true;
+  if(S.teamId){
+    try{ await api(entryUrl(S.teamId)); S.fresh = false; }catch(e){ /* offline: show what we have */ }
+  }
+  invalidate(); render(current);
+}
 (function freshness(){
   const meta = document.querySelector('meta[name="app-build"]');
   const mine = meta && meta.content;
-  if(!mine) return;
-  let last = 0, reloading = false;
+  let last = 0, reloading = false, hiddenAt = 0;
   async function check(){
-    if(reloading || Date.now() - last < 60000) return;
+    if(!mine || reloading || Date.now() - last < 60000) return;
     last = Date.now();
     try{
       const r = await fetch('/version', {cache:'no-store'});
@@ -970,7 +1045,16 @@ window.addEventListener('hashchange', ()=>{ const h = location.hash.slice(1); if
       if(build && build !== mine){ reloading = true; location.reload(); }
     }catch(e){ /* offline: keep what we have */ }
   }
-  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') check(); });
-  window.addEventListener('pageshow', e=>{ if(e.persisted){ last = 0; check(); } });
+  function back(){
+    check();
+    if(hiddenAt && Date.now() - hiddenAt > STALE_AFTER && !reloading){ hiddenAt = 0; softRefresh(); }
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'hidden'){ hiddenAt = Date.now(); }
+    else back();
+  });
+  window.addEventListener('pageshow', e=>{
+    if(e.persisted){ last = 0; location.reload(); }      // restored from the back/forward cache: start clean
+  });
   window.addEventListener('focus', check);
 })();
