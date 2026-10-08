@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass. 93 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass. 104 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -20,8 +20,13 @@ the first argument to `node tests/e2e.js` to put them elsewhere.
 
 What it covers:
 
-- **Landing:** a first visit opens it; GSAP, both plugins, anime.js and
-  `Motion` load from `/static/vendor`; it has the neon pitch scene and a quip;
+- **The opening film:** the page is named Captain's Log; GSAP, both plugins,
+  anime.js, Motion, Theatre.js and AutoAnimate load from `/static/vendor`, with
+  `FX`, `Magic` and `Intro`; the film plays on launch with its timecode running,
+  **Skip** ends it, it plays again on a fresh launch and gets out of the way by
+  itself, the menu turns it off (and then the app opens straight away), it runs
+  to its end on desktop, and there is none under reduced motion.
+- **Landing:** a first visit opens it; it has the neon pitch scene and a quip;
   an empty ID and an unknown team each get a clear message; a real ID goes
   straight to Home → My squad, is saved in `localStorage`, names the team pill,
   and the first read asks FPL afresh (`fresh=1`).
@@ -31,19 +36,21 @@ What it covers:
 - **Five tabs** in the dock and no "More". Every tab and every sub-page renders
   without an error box, fits a 390px phone (**overflow scan**) and has its own
   address (`#tab/sub`).
-- The tools still work: a minutes edit lowers xPts and resets, the solver returns
-  plans and steps through gameweeks, the Copilot answers, a mini-league is
-  analysed, the player sheet opens.
+- The tools still work: re-sorting the projections moves the rows in place
+  (AutoAnimate, the table is kept), a minutes edit lowers xPts and resets, the
+  solver returns plans and steps through gameweeks, the Copilot answers and
+  keeps a log (newest entry first), a mini-league is analysed, the player sheet
+  opens.
 - The menu opens with How it works; **Refresh app** reloads and the saved team
   skips the landing screen; old addresses (`#solver`) land in the right place;
   **Forget team** clears the device and asks again; **Just browsing** lands on
   Picks and team-only pages offer to add a team.
 - Desktop: tab links shown and dock hidden; the page carries a build id equal to
   `/version`; every CSS/JS file, vendor libraries included, is content-hashed;
-  `/` and `/api/*` are `no-store`; each tab renders; a returning visitor skips
-  the landing screen.
-- Counters land on the true value; with reduced motion everything is visible
-  at once and nothing counts up.
+  `/` and `/api/*` are `no-store`; scripts arrive gzipped; each tab renders; a
+  returning visitor skips the landing screen.
+- Counters (spring tickers) land on the true value; with reduced motion
+  everything is visible at once and nothing counts up.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
 

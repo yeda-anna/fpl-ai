@@ -1,7 +1,8 @@
 # Design system
 
-Everything visual lives in `frontend/styles.css` (tokens, components, layout)
-and `frontend/motion.js` (animation). Colours are custom properties
+Everything visual lives in `frontend/styles.css` (tokens, components, layout),
+`frontend/motion.js` (`FX`, animation), `frontend/magic.js` (`Magic`, the Magic UI
+effects) and `frontend/intro.js` (`Intro`, the opening film). Colours are custom properties
 ("tokens") declared once in `:root`. Change a token, not a component.
 
 ## One look: neon
@@ -59,17 +60,71 @@ changing a single page or flow. It lives in the "HUD" block of `styles.css`.
 | --- | --- |
 | **Target-lock corners** on `.card`, `.tile`, `.plan`, `.path`, `.sheet` | `--hud-corners`: eight thin linear gradients painted as the top background layer, coloured by `--bk` (cyan; lime on hover; dark on a lime fill) |
 | **Readouts** | `--hud` (system monospace stack) in uppercase with letter-spacing for labels, card titles, tabs, the switcher, table heads, tags and buttons. Body copy and numbers in tiles stay in the main face |
-| **Eyebrow** | `#view-eyebrow` above the title: `SYS//<TAB>/<SUB> · GW<n>`, set by `syncHead()`, with a blinking lime status light |
-| **Glitch** | `h1.glitch` — a short chromatic jitter when the title changes |
+| **Eyebrow** | `#view-eyebrow` above the title: `LOG//<TAB>/<SUB> · GW<n>` (the captain's log), set by `syncHead()`, with a blinking lime status light and a glint sweeping across (Magic UI Animated Shiny Text) |
+| **Decoding titles** | the page title scrambles and resolves left to right when it changes (Magic UI HyperText) |
 | **Screen texture** | `body:after` CRT scanlines; `.backdrop .dots` dot grid; `.backdrop .beam` a slow scan beam |
 | **Hologram pitch** | `.turf:before` scanlines and `.turf .sweep`, a light band running down the turf |
-| **Boot sequence** | `#boot` on the landing card, typed in by GSAP (`steps()` ease) in `Motion.landingIn` |
-| **Radar ring** | `.land-logo:before/:after` — a conic sweep and a dashed ring spinning the other way |
+| **Boot sequence** | `#boot` on the landing card, typed one character at a time (Magic UI Typing Animation) in `FX.landingIn` |
+| **Orbit** | round the landing logo: rings breathing out (Magic UI Ripple) and two satellites (Magic UI Orbiting Circles) |
 
 Rules: the texture stays faint (scanlines and grid never compete with text);
 corner brackets are decoration only, never a wash; radii are tight (`--r-sm`
 4px … `--r-xl` 14px). Every loop here is CSS and switches off under
 `prefers-reduced-motion`.
+
+## The opening film
+
+Every launch opens with a few seconds of titles while the app loads underneath
+(`intro.js`, a [Theatre.js](https://www.theatrejs.com/docs/latest) sequence):
+
+| Time | What happens | Theatre object |
+| --- | --- | --- |
+| 0 – 0.6 s | letterbox bars close in; REC light and timecode | `Bars`, `Hud` |
+| 0 – 2.3 s | hyperspace: star streaks that slow to a drift (canvas) | `Warp` |
+| 0.85 – 2.2 s | a retro grid floor rises and scrolls towards you (Magic UI Retro Grid) | `Floor` |
+| 0.7 – 2.1 s | the logo draws itself, overshoots into place and ignites with a flash | `Logo`, `Flash` |
+| 1.95 – 4.4 s | rings breathe out round it (Magic UI Ripple) | `Ripple` |
+| 2.0 – 3.1 s | the name decodes (HyperText) as its letters track in | `Title` |
+| 2.8 – 3.75 s | the captain's log entry types itself: "Stardate GW8. Morale: questionable." | `Line` |
+| 4.0 – 4.6 s | the camera flies into the ball and the film irises open onto the app | `Camera`, `Iris` |
+
+- The keyframes are numbers in `KEYS` (`intro.js`): `[seconds, value, easing to
+  the next]`. They're turned into Theatre's project state at load — the JSON that
+  Theatre Studio would export — so a change to the film is a change to `KEYS`.
+  Theatre Studio itself (AGPL) is a development tool and is not shipped.
+- Each object's `onValuesChange` writes custom properties (`--bars`, `--zoom`,
+  `--hole` …) on `#intro`; the CSS in the "opening film" block does the rest. The
+  playhead (`sequence.pointer.position`) drives the timecode and the scrubber.
+- Skip at any time: tap anywhere, Esc/Enter/Space, or "Skip intro" — it jumps to
+  the outro rather than cutting. The menu's **Opening film** switch turns it off
+  for the device (`fplai_intro`), and "Watch it now" replays it.
+- It never plays under reduced motion, when it's switched off, or when the app
+  reloads itself (a new build, a back/forward restore) — a script in `<head>`
+  decides before the first paint (`no-intro`). A page that took over 9 seconds
+  to arrive skips it too, and a 15-second CSS failsafe hides it if scripts fail.
+- The app never waits on it: views render underneath, and their entrances are
+  held (`FX.hold(Intro.reveal)`) until the iris starts to open, so the app
+  materialises as the film ends.
+
+## Magic UI, rebuilt
+
+[Magic UI](https://magicui.design) is React + Tailwind, so its components are
+rebuilt in plain JS (`magic.js`) and CSS (the "Magic UI" block of `styles.css`),
+following the originals (MIT, `frontend/vendor/magicui-LICENSE.md`).
+
+| Component | Where |
+| --- | --- |
+| HyperText | page titles when they change, the film's title, the name in the top bar on hover |
+| Typing Animation | the landing boot lines; the film's log entry |
+| Meteors | the landing sky |
+| Ripple, Orbiting Circles | round the landing logo; the film's logo |
+| Border Beam | every loading card, the chosen plan in Plan → Transfers |
+| Shimmer Button | "Let's go" and "Suggest transfers" (the spark races while the solver works) |
+| Animated Beam | from the player out to the player in, in the transfer timeline and Grade's upgrades |
+| Retro Grid | the floor of the night sky; the film's floor |
+| Animated Shiny Text | the eyebrow above each title |
+| Scroll Progress | a neon line under the top bar (Motion's `scroll()`) |
+| Blur Fade, Number Ticker, Animated List | cards, figures, and the Copilot's and Grade's reasons (Motion, in `motion.js`) |
 
 ## Navigation
 
@@ -89,7 +144,7 @@ switcher under the title.
   (`#solver`, `#xpts`, `#rate` …) are mapped to the new places, and `#model`
   opens the menu.
 - The ⓘ button opens the menu sheet: change team, refresh the app, forget the
-  team, and How it works.
+  team, the opening film's switch, and How it works.
 
 ## Landing: the Team ID, asked once
 
@@ -102,9 +157,13 @@ offer to add a team.
 
 ## Motion
 
-Two libraries, vendored in `frontend/vendor/` (no CDN), each doing what it's best
-at. All of it lives in `motion.js`, and every function is safe to call when a
-library failed to load or the visitor prefers reduced motion.
+Five libraries, vendored in `frontend/vendor/` (no CDN), each doing what it's
+best at: GSAP for SVG drawing and timelines, anime.js for the sky and icons,
+Motion for springs, in-view and scroll, AutoAnimate for lists that change, and
+Theatre.js for the opening film. It lives in `motion.js` (`FX`), `magic.js` and
+`intro.js`, and every function is safe to call when a library failed to load or
+the visitor prefers reduced motion. (The global `Motion` is the motion.dev
+library; our layer is `FX`.)
 
 | Effect | Library | Where |
 | --- | --- | --- |
@@ -113,9 +172,14 @@ library failed to load or the visitor prefers reduced motion.
 | The tab icon **draws itself** when its tab lights up | anime.js | dock, top bar |
 | The dock capsule and the section pill **slide** to the active item with a little overshoot | GSAP `elastic` | dock, switcher |
 | The neon line under the title redraws on every tab change | GSAP DrawSVG | page head |
-| Views fade up; new cards, tiles and plans **rise in one after another** | GSAP stagger with `clearProps` (so hover transforms still work) | every view |
-| Figures **count up** to their value | GSAP | tiles, solver, grade |
-| Buttons give a **springy press** | anime.js `spring` | all buttons |
+| Views fade up; new cards, tiles and plans **blur-fade in one after another** — the ones further down as you scroll to them (Magic UI Blur Fade) | Motion `animate` + `stagger` + `inView`, inline styles cleared after (so hover transforms still work) | every view |
+| Figures **tick up** to their value on a spring, when they come into view (Magic UI Number Ticker) | Motion spring | tiles, solver, grade |
+| Buttons give a **springy press** | Motion spring | all buttons |
+| The projections table **glides into its new order** when you sort or filter (each player keeps his row); new rows from "Show 40 more" fade in | AutoAnimate on keyed rows (`syncRows`) | Players → Projections |
+| The Copilot keeps a **log**: each answer is an entry, newest on top; older ones slide down and fold | AutoAnimate | Ask |
+| Reasons **drop in one by one** (Magic UI Animated List) | Motion spring + stagger | Ask, Grade |
+| A neon line under the top bar fills as you scroll (Magic UI Scroll Progress) | Motion `scroll()` | top bar |
+| The opening film | Theatre.js sequence | launch |
 | A wrong Team ID gets a head-shake | GSAP | landing |
 | The neon logo in the top bar flickers every few seconds | anime.js | top bar |
 | Confetti for a +15 week, an A grade, a plan that gains, and five taps on the logo | canvas | global |
@@ -124,12 +188,15 @@ Cheap loops stay in CSS: the loader (a neon dash running along a path), the
 breathing glow on the primary button and the selected plan, the captain's ring,
 bars and sparklines growing, and the players walking onto the pitch.
 
-`prefers-reduced-motion`: the CSS rule turns every animation off, and
-`Motion.reduced` makes the JS effects leave things in their finished state.
-Nothing counts up, nothing is ever hidden waiting for an animation.
+`prefers-reduced-motion`: the CSS rule turns every animation off, there is no
+opening film, and `FX.reduced` makes the JS effects leave things in their
+finished state. Nothing counts up, nothing is ever hidden waiting for an
+animation. (AutoAnimate checks the preference itself.)
 
-Keep new motion on `transform`/`opacity`, never animate layout, and clear inline
-transforms when an animation ends (GSAP `clearProps`, anime.js `onComplete`).
+Keep new motion on `transform`/`opacity` (and a little `filter` for the blur
+fade), never animate layout, never animate one element with two libraries at
+once, and clear inline styles when an animation ends (GSAP `clearProps`, Motion
+`.then`, anime.js `onComplete`).
 
 ## Glass and light
 
@@ -157,18 +224,24 @@ strings). The e2e suite scans for this.
 
 ## Logo
 
-A club mug with a football dunked in it, drawn as a **neon sign**: cyan mug,
-magenta ball, lime steam. Stroke-only inline SVG (`.neon-logo`) in the top bar
-and on the landing card, plus a `#logo` symbol (same paths, literal colours) for
-`<use>`. The steam rises on a CSS loop; GSAP draws the landing copy in.
-`frontend/icon.svg` is the app icon: the same neon mug on a night tile.
+A football with a planet's ring round it — the captain's ship's log meets the
+ball — drawn as a **neon sign**: magenta ball with its pentagon, cyan ring, lime
+star. The back of the ring breaks where it passes behind the ball and the front
+crosses over it; the ball's outline breaks where the ring crosses. Stroke-only
+inline SVG (`.neon-logo`: `.ring`, `.ball`, `.star`) in the top bar, on the
+landing card and in the film, plus a `#logo` symbol (same paths, literal
+colours) for `<use>`. The star twinkles on a CSS loop; GSAP draws the landing
+copy in and Theatre.js draws the film's. `frontend/icon.svg` is the app icon
+(the same mark on a night tile); `icon-180.png` (iOS home screen) and
+`icon-192/512.png` (the manifest) are rendered from it.
 
 ## Voice
 
-- Name: **Mug's Game FC**. Tagline: "Fantasy football is a mug's game. Might as
-  well do the maths."
-- Light British humour and Indian dark humour on the landing screen and under
-  the loader ("putting the kettle on", "Sharma ji’s son finished this ages ago").
+- Name: **Captain's Log** — the FPL captain, and a ship's log. Tagline: "Your
+  rank is lost in space. Might as well do the maths."
+- Light British humour and Indian dark humour on the landing screen, under the
+  loader ("putting the kettle on", "Sharma ji’s son finished this ages ago") and
+  in the film's log entry ("Stardate GW8. Morale: questionable.").
   The lines live in `QUIPS` in `app.js`, aimed at the manager's own luck, never
   at a religion, caste, region, community, body or real person.
 - **The week's verdict.** On Home the title is the team's own name from FPL, and
@@ -191,7 +264,8 @@ and on the landing card, plus a `#logo` symbol (same paths, literal colours) for
 3. Nothing to bump — the server fingerprints CSS/JS by content, vendor files
    included (see `ARCHITECTURE.md` → Freshness).
 4. New colours: `python3 scripts/check_contrast.py`.
-5. New motion: put it in `motion.js`, make it a no-op when `reduced` or the
-   library is missing, and check it with "reduce motion" on.
+5. New motion: put it in `motion.js` (or `magic.js` for a Magic UI effect), make
+   it a no-op when `reduced` or the library is missing, and check it with
+   "reduce motion" on.
 6. Run `npm --prefix tests test` — 0 failures — then look at the phone and
    desktop screenshots in `tests/screenshots/`.

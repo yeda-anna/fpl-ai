@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-10-08 — Captain’s Log: a new name, an opening film, and four more ways to move
+
+- **A new name and logo.** Mug’s Game FC is now **Captain’s Log** — your FPL
+  captain, and a ship’s log for the sci-fi look. The logo is a football with a
+  planet’s ring round it, in the same neon (magenta ball, cyan ring, lime star).
+  New tagline: “Your rank is lost in space. Might as well do the maths.” The
+  page title, home-screen name and icons (SVG plus PNGs for iOS and Android)
+  follow it; the readout above each title is now `LOG//PLAN/TRANSFERS · GW8`.
+  Your saved team and settings carry over.
+- **An opening film on every launch**, about four and a half seconds and
+  skippable at any moment: letterbox bars, a jump out of hyperspace over a
+  scrolling grid floor, the logo drawing itself and igniting, the name decoding,
+  the captain’s log typing “Stardate GW8. Morale: questionable.”, then the
+  camera flies into the ball and the film irises open onto the app — which has
+  been loading underneath the whole time. Built with
+  [Theatre.js](https://www.theatrejs.com/docs/latest). Turn it off (or watch it
+  again) from the menu; it never plays with reduced motion, nor when the app
+  reloads itself.
+- **[Magic UI](https://magicui.design) effects**, rebuilt without React: titles
+  decode themselves (HyperText), the landing’s boot lines type out, meteors
+  cross the landing sky, rings and satellites circle the logo, a beam of light
+  runs round loading cards and the chosen plan (Border Beam), a spark races round
+  “Let’s go” and “Suggest transfers” (Shimmer Button), light flows from the
+  player out to the player in (Animated Beam), the night sky has a moving grid
+  floor (Retro Grid), the readout glints, and a neon line under the top bar
+  fills as you scroll.
+- **[Motion](https://motion.dev):** cards blur-fade in as you scroll to them,
+  figures tick up on springs, buttons spring back when pressed, and the
+  Copilot’s and Grade’s reasons drop in one by one.
+- **[AutoAnimate](https://auto-animate.formkit.com):** sorting or filtering the
+  projections now glides the rows into their new order instead of redrawing the
+  table, and the Copilot keeps a log of your questions — newest on top, older
+  answers folded underneath (tap to open).
+- Pages, scripts and data are now sent gzipped. The three new libraries add
+  about 86 KB to the first load and nothing after (they’re cached for good).
+- e2e: 104 checks.
+
 ## 2026-10-08 — The HUD: a sci-fi layer over the neon
 
 Same tabs, same pages, same flow — dressed as a ship's console.

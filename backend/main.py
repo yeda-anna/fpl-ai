@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -25,8 +26,10 @@ import xpts
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
 
-app = FastAPI(title="Mug’s Game FC", version="1.2.0")
+app = FastAPI(title="Captain’s Log", version="1.3.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# Compress the page, the scripts (about 470 KB of animation libraries before gzip) and the JSON.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 _lock = threading.Lock()
 _engine = {"obj": None, "built": 0.0}

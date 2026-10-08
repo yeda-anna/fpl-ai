@@ -1,6 +1,6 @@
 # Architecture
 
-Mug's Game FC is two pieces in one process: a FastAPI backend that does all the
+Captain's Log is two pieces in one process: a FastAPI backend that does all the
 maths, and a static single-page app it serves from `/`.
 
 ```mermaid
@@ -73,14 +73,19 @@ API request after boot may wait for that warm-up.
 
 ## Frontend
 
-No build, no framework, no CDN. `index.html` holds the shell (top bar, the neon
-sky, the dock, the landing screen and its pitch scene, the logo). `app.js`
+No build, no framework, no CDN. `index.html` holds the shell (the opening
+film's stage, top bar, the neon sky, the dock, the landing screen and its pitch
+scene, the logo). `app.js`
 defines five tabs and their sub-pages in `TABS` and routes by hash
 (`#home/squad`, `#plan/chips`, `#players/compare` …; old addresses like
 `#solver` are mapped in `LEGACY`). Each sub-page is a view function that fetches
-its data and renders HTML strings into its own `<section>`. `motion.js` wraps the
-vendored GSAP and anime.js; a `MutationObserver` animates new cards in as views
-render. State that survives a reload lives in `localStorage` under `fplai_*`
+its data and renders HTML strings into its own `<section>`. `motion.js` (`FX`)
+wraps the vendored GSAP, anime.js, Motion and AutoAnimate; a `MutationObserver`
+blur-fades new cards in as views render. `magic.js` (`Magic`) holds the Magic UI
+effects, rebuilt without React. `intro.js` (`Intro`) plays the opening film — a
+Theatre.js sequence — on launch, over the app as it loads; `app.js` starts it
+first, and `FX.hold(Intro.reveal)` keeps the entrances for the moment it opens
+onto the app. State that survives a reload lives in `localStorage` under `fplai_*`
 keys (team ID, team name, minute overrides, last league). A saved team ID skips
 the landing screen; `loadSavedTeam()` reads it fresh (`fresh=1`) and team views
 `await teamReady()` before their own requests. See `DESIGN.md` for the visual
@@ -96,7 +101,8 @@ build step:
 | --- | --- |
 | `/` (index.html) | `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` (+ `Pragma`, `Expires`). The browser never keeps its own copy, so a refresh always fetches the page afresh, and back/forward doesn't resurrect a stale one |
 | `/static/*.css`, `/static/*.js` (sub-folders too, e.g. `/static/vendor/gsap.min.js`) | the server rewrites their links in index.html to `?v=<sha256[:12]>` of the file; those URLs are `immutable`, cached for a year. Reloads stay fast and are still always current, because the hash in the page changes with the file |
-| other `/static/*` (icon, manifest) | `no-cache` |
+| other `/static/*` (icons, manifest) | `no-cache` |
+| everything over 1 KB | gzip when the browser asks for it (`GZipMiddleware`) — the vendored animation libraries are about 470 KB raw, about 165 KB gzipped |
 | `/api/*` | `no-store` (same full set as the page) |
 | `/version` | `{"build": "<id>"}`, `no-store` |
 
@@ -106,14 +112,15 @@ team after each page load is `GET /api/entry/{id}?fresh=1`, which expires those
 files (`fpl_api.refresh_team`; the old copy stays as a fallback if FPL is down)
 so a transfer made on the FPL site shows up on refresh. Purges are throttled to
 one per team per 20 seconds. The app does the same quietly (`softRefresh`) when
-you come back after ten minutes away, and **More → Refresh app** does a full
+you come back after ten minutes away, and the menu's **Refresh app** does a full
 reload for home-screen apps that have no reload button. All `fetch` calls from
 `app.js` use `cache: 'no-store'`.
 
 The page carries `<meta name="app-build">`. `app.js` calls `/version` when the app
 returns to the foreground (`visibilitychange`, `focus`), at most once a minute,
 and reloads if the build has changed. A page restored from the back/forward
-cache is reloaded straight away. The
+cache is reloaded straight away. These reloads the app does by itself skip the
+opening film (`sessionStorage.fplai_quiet`, read by a script in `<head>`). The
 hashes are recomputed whenever a file's mtime or size changes, so local edits
 show up on reload without restarting the server.
 

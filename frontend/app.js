@@ -1,4 +1,5 @@
-/* Mug’s Game FC — frontend. Plain JS, no build step. Animation lives in motion.js. */
+/* Captain’s Log — frontend. Plain JS, no build step. Animation lives in motion.js (FX),
+   the Magic UI effects in magic.js (Magic) and the opening film in intro.js (Intro). */
 'use strict';
 
 const store = {
@@ -58,6 +59,15 @@ const QUIPS = {
     'Fantasy football: an EMI of hope, repaid in heartbreak, with interest.',
     'This app does the maths. You bring the confidence.',
     'Rank in the millions? Don’t worry, beta. It’s a stable position.'
+  ],
+  // the captain's log entry typed in the opening film, after "Stardate GW8."
+  intro: [
+    'Morale: questionable.',
+    'Captain: undecided. Again.',
+    'Rank: lost in space. Searching.',
+    'Free transfers: one. Ideas: eleven.',
+    'Sharma ji’s son already has a green arrow.',
+    'Bench: fully fit. Starters: not.'
   ]
 };
 const lastQuip = {};
@@ -130,8 +140,9 @@ const LOADER = `<svg class="loader" viewBox="0 0 120 40" aria-hidden="true">
   <path class="trk" d="M10 30 C 30 2, 50 2, 60 20 S 90 38, 110 10"/>
   <path class="run" d="M10 30 C 30 2, 50 2, 60 20 S 90 38, 110 10"/>
   <path class="run run2" d="M10 30 C 30 2, 50 2, 60 20 S 90 38, 110 10"/></svg>`;
+const BEAM = '<span class="mg-beam" aria-hidden="true"></span>';      // Magic UI Border Beam (CSS)
 const loading = t => { const q = quip('loading');
-  return `<div class="card"><div class="loading">${LOADER}<span>${esc(t||'Working')}</span></div>${q?`<div class="quip">${esc(q)}</div>`:''}</div>`; };
+  return `<div class="card">${BEAM}<div class="loading">${LOADER}<span>${esc(t||'Working')}</span></div>${q?`<div class="quip">${esc(q)}</div>`:''}</div>`; };
 const errBox  = e => `<div class="err"><b>That didn’t work.</b> ${esc(e.message||e)}</div>`;
 const pos  = p => `<span class="pill pos${p}">${POS[p]}</span>`;
 const fdr  = f => `<span class="fdr fdr${f}">${f}</span>`;
@@ -147,6 +158,9 @@ function needTeam(){
     <button class="btn primary" onclick="openLanding()">Add my team</button></div>`;
 }
 const teamReady = () => S.ready || Promise.resolve(null);
+/* the opening film (intro.js) is optional: everything works if it never loaded */
+const hasFilm = () => typeof Intro !== 'undefined';
+const filmRevealed = () => hasFilm() ? Intro.reveal : Promise.resolve();
 
 /* ---------------- shared drawing ---------------- */
 function spark(vals){
@@ -238,7 +252,7 @@ async function viewSquad(t){
           </tbody></table></div>
         </div>
       </div>`;
-    if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; Motion.burst(innerWidth/2, 180, 120); }
+    if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; FX.burst(innerWidth/2, 180, 120); }
   }catch(err){
     t.innerHTML = errBox(err);
     if(cur.tab === 'home' && cur.seg === 'squad') el('view-sub').textContent = 'Couldn’t read the scoreline right now.';
@@ -280,6 +294,29 @@ async function viewPicks(t){
 }
 
 /* ---------------- Expected Points ---------------- */
+/* Keyed rows: each player keeps his <tr>, which is updated and moved rather than
+   rebuilt, so AutoAnimate can glide the table into a new order when you sort or
+   filter. Rows AutoAnimate is still fading out are marked __aa_del; leave them be.
+   Past 120 rows ("Show all") the animation steps aside. */
+function syncRows(body, list, cells, append){
+  const live = Array.prototype.filter.call(body.children, tr=>!('__aa_del' in tr));
+  const ctl = FX.auto(body);
+  if(ctl){ if((append ? live.length : 0) + list.length > 120) ctl.disable(); else ctl.enable(); }
+  if(append){ body.insertAdjacentHTML('beforeend', list.map(p=>`<tr data-pid="${p.id}">${cells(p)}</tr>`).join('')); return; }
+  const old = new Map(live.map(tr=>[tr.dataset.pid, tr]));
+  const keep = new Set(list.map(p=>String(p.id)));
+  live.forEach(tr=>{ if(!keep.has(tr.dataset.pid)) tr.remove(); });
+  let prev = null;
+  list.forEach(p=>{
+    const id = String(p.id), html = cells(p);
+    let tr = old.get(id);
+    if(!tr){ tr = document.createElement('tr'); tr.dataset.pid = id; }
+    if(tr._html !== html){ tr.innerHTML = html; tr._html = html; }
+    const at = prev ? prev.nextSibling : body.firstChild;
+    if(at !== tr) body.insertBefore(tr, at);
+    prev = tr;
+  });
+}
 const XP = { limit: 40, offset: 0, seq: 0 };
 async function viewXpts(t){
   const nEdits = Object.keys(S.overrides).length;
@@ -316,18 +353,18 @@ async function viewXpts(t){
       const [id,key] = pair.split(':'); if(el(id).value) q.set(key, el(id).value);
     });
     const ov = ovParam(); if(ov) q.set('overrides', ov);
-    if(!append) el('xpTable').innerHTML = loading('Projecting');
+    const card = el('xpTable').querySelector('.card.xp');
+    if(!append){ if(card) card.classList.add('busy'); else el('xpTable').innerHTML = loading('Projecting'); }   // a table already up stays, dimmed
     const mine = ++XP.seq;              // only the newest request may paint the table
     try{
       const d = await api('/api/players?'+q);
       if(mine !== XP.seq || !el('xpTable')) return;
       const gws = d.players.length ? d.players[0].per_gw.map(g=>g.gw) : [];
       const showFdr = el('fFdr').value === 'fdr';
-      const rowHtml = p => {
+      const cells = p => {
         const firstMins = (p.per_gw[0] && p.per_gw[0].fixtures[0]) ? p.per_gw[0].fixtures[0].xmins : 0;
         const edited = S.overrides[p.id] != null;
-        return `<tr>
-          <td><a href="#" onclick="openPlayer(${p.id});return false" class="nm" style="color:var(--ink)">${esc(p.web_name)}</a>${flag(p)}
+        return `<td><a href="#" onclick="openPlayer(${p.id});return false" class="nm" style="color:var(--ink)">${esc(p.web_name)}</a>${flag(p)}
               <div class="u2">${esc(p.team_short)} · ${POS[p.position]} · £${num(p.price,1)}m · ${num(p.selected_by_percent,1)}%</div></td>
           ${p.per_gw.map(g=>{
             if(g.blank) return `<td class="num dim">—</td>`;
@@ -336,20 +373,22 @@ async function viewXpts(t){
             return `<td class="num" title="${esc(g.fixtures.map(f=>f.opponent_short+(f.home?' (H)':' (A)')).join(', '))}" style="${hot}">${num(v,1)}${g.double?'<sup class="accent">2</sup>':''}</td>`;
           }).join('')}
           <td class="num"><span class="mins ${edited?'set':''}" data-pid="${p.id}" title="${edited?'Your number — click to change':'Click to set your own minutes'}">${num(edited?S.overrides[p.id]:firstMins,0)}′ ✎</span></td>
-          <td class="num accent"><b>${num(p.xpts_total,1)}</b></td></tr>`;
+          <td class="num accent"><b>${num(p.xpts_total,1)}</b></td>`;
       };
-      const body = d.players.map(rowHtml).join('');
-      if(append && el('xpBody')){
-        el('xpBody').insertAdjacentHTML('beforeend', body);
-      } else {
-        const ago = d.updated ? Math.max(0, Math.round((Date.now()/1000 - d.updated)/60)) : null;
-        el('xpTable').innerHTML = `<div class="card pad-0">
-          <h3>${d.count} players <span class="r">${ago!=null?'Model rebuilt '+(ago<1?'just now':ago+' min ago'):''}</span></h3>
+      const cols = gws.join(',');
+      if(!el('xpBody') || el('xpBody').dataset.cols !== cols){        // first draw, or the gameweek columns changed
+        el('xpTable').innerHTML = `<div class="card pad-0 xp">
+          <h3><span id="xpCount"></span> <span class="r" id="xpAgo"></span></h3>
           <div class="well flush" style="max-height:none"><table><thead><tr>
             <th>Player</th>${gws.map(g=>`<th class="num">GW${g}</th>`).join('')}<th class="num">Mins</th><th class="num">Total</th>
-          </tr></thead><tbody id="xpBody">${body}</tbody></table></div>
+          </tr></thead><tbody id="xpBody" data-cols="${cols}"></tbody></table></div>
           <div style="padding:12px 20px;display:flex;gap:9px;align-items:center;flex-wrap:wrap" id="xpMore"></div></div>`;
       }
+      const ago = d.updated ? Math.max(0, Math.round((Date.now()/1000 - d.updated)/60)) : null;
+      el('xpCount').textContent = d.count + ' players';
+      el('xpAgo').textContent = ago != null ? 'Model rebuilt ' + (ago < 1 ? 'just now' : ago + ' min ago') : '';
+      syncRows(el('xpBody'), d.players, cells, append);
+      el('xpTable').querySelector('.card.xp').classList.remove('busy');
       const shown = XP.offset + d.players.length;
       el('xpMore').innerHTML = shown < d.count
         ? `<button class="btn sm" id="moreBtn">Show 40 more</button><button class="btn sm" id="allBtn">Show all ${d.count}</button><span class="sub">${shown} of ${d.count}</span>`
@@ -452,7 +491,7 @@ async function viewSolver(t){
           <div class="sub">${Object.keys(S.overrides).length ? 'Using your '+Object.keys(S.overrides).length+' minute edit(s) from Expected Points.' : 'Edit any player’s minutes in Expected Points and the solver will use them.'}</div>
         </div></details>
       </div>
-      <button class="cta" id="runSolve"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg>Suggest transfers</button>
+      <button class="cta mg-shimmer" id="runSolve"><span class="mg-spark" aria-hidden="true"><span></span></span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg><span class="lbl">Suggest transfers</span></button>
     </div>
     <div class="ws-left" id="svLeft"><div class="skel" style="height:86px;margin-bottom:16px"></div><div class="skel" style="height:640px;border-radius:24px"></div></div>
     <div class="ws-res" id="svRight"><div class="skel" style="height:70px;margin:22px 0 18px"></div><div class="skel" style="height:96px;margin-bottom:12px"></div><div class="skel" style="height:300px"></div></div>
@@ -481,18 +520,19 @@ async function viewSolver(t){
     const key = JSON.stringify(body);
     el('adv').open = false;
     if(SV.key === key && SV.r){ draw(); return; }
-    el('runSolve').disabled = true;
-    el('runSolve').innerHTML = (Math.random() < .5 ? 'Putting the kettle on' : 'Chai on the stove')+' — optimising '+S.horizon+' gameweeks…';
+    const btn = el('runSolve');
+    btn.disabled = true; btn.classList.add('busy');        // the shimmer races while the solver works
+    btn.querySelector('.lbl').textContent = (Math.random() < .5 ? 'Putting the kettle on' : 'Chai on the stove')+' — optimising '+S.horizon+' gameweeks…';
     el('svLeft').innerHTML = `<div class="skel" style="height:86px;margin-bottom:16px"></div><div class="skel" style="height:640px;border-radius:24px"></div>`;
     el('svRight').innerHTML = `<div class="skel" style="height:70px;margin:22px 0 18px"></div><div class="skel" style="height:96px;margin-bottom:12px"></div><div class="skel" style="height:300px"></div>`;
     try{
       SV.r = await post('/api/solve', body); SV.key = key; SV.path = 0; SV.gw = 0;
       draw();
       const best = SV.r.paths[0];
-      if(best && best.gain_vs_nothing > 0.5){ const b = el('runSolve').getBoundingClientRect(); Motion.burst(b.left + b.width/2, b.top - 6, 55); }   // burst from the button's top edge, clear of its label
+      if(best && best.gain_vs_nothing > 0.5){ const b = el('runSolve').getBoundingClientRect(); FX.burst(b.left + b.width/2, b.top - 6, 55); }   // burst from the button's top edge, clear of its label
     }catch(err){ el('svRight').innerHTML = errBox(err); el('svLeft').innerHTML = ''; }
-    el('runSolve').disabled = false;
-    el('runSolve').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg>Suggest transfers';
+    btn.disabled = false; btn.classList.remove('busy');
+    btn.querySelector('.lbl').textContent = 'Suggest transfers';
   };
 
   const CHIPS = {Wildcard:'WC', 'Free Hit':'FH'};
@@ -507,7 +547,7 @@ async function viewSolver(t){
           ${g.hits?`<span class="hit">−${g.hit_cost}</span>`:''}${g.chip?`<span class="chip">${CHIPS[g.chip]||g.chip}</span>`:''}</div></div>`;
     el('svLeft').innerHTML = `
       <div class="paths"><div class="lbl">Plans</div>
-        ${r.paths.map((x,i)=>`<button class="path ${i===SV.path?'on':''}" data-k="${i}">
+        ${r.paths.map((x,i)=>`<button class="path ${i===SV.path?'on':''}" data-k="${i}">${i===SV.path?'<span class="mg-beam" aria-hidden="true" style="--from:#fff;--to:var(--neon-m);--dur:5s"></span>':''}
           <div class="pl">${x.label}</div><div class="pv">${num(x.total_xpts,1)}</div>
           <div class="ps">${i===0?'best found':(Math.abs(x.total_xpts-best)<0.05?'level':sign(x.total_xpts-best,1))} · ${x.total_hits?'−'+(x.total_hits*4):'no hits'}</div></button>`).join('')}
       </div>
@@ -533,7 +573,7 @@ async function viewSolver(t){
         ${p.gameweeks.map((g,i)=>`<div class="tl-row ${i===SV.gw?'on':''}" data-i="${i}">
           <div class="tl-gw">GW${g.gw}${g.hits?`<div><span class="tag r">−${g.hit_cost} hit</span></div>`:''}${g.chip?`<div><span class="tag">${g.chip}</span></div>`:''}</div>
           <div class="tl-moves">${g.transfers_in.length ? g.transfers_in.map((pin,k)=>{ const po = g.transfers_out[k];
-              return `<div class="tl-move"><span class="o">${po?esc(po.web_name):'–'}</span><span class="arr">→</span><span class="i">${esc(pin.web_name)}</span></div>`; }).join('')
+              return `<div class="tl-move"><span class="o">${po?esc(po.web_name):'–'}</span>${Magic.beamArrow()}<span class="i">${esc(pin.web_name)}</span></div>`; }).join('')
             : '<div class="tl-roll">Roll</div>'}</div></div>`).join('')}
       </div></div>
       <div class="legend">Captain ${esc(p.gameweeks[SV.gw].captain?p.gameweeks[SV.gw].captain.web_name:'–')}, vice ${esc(p.gameweeks[SV.gw].vice_captain?p.gameweeks[SV.gw].vice_captain.web_name:'–')} in GW${p.gameweeks[SV.gw].gw}.
@@ -594,29 +634,46 @@ async function viewCopilot(t){
       <div class="legend">Answers are read straight off the projection model and the solver, so every claim has a number behind it.
         ${S.teamId?'Answering for team <b>'+esc(S.teamId)+'</b>.':'Add a Team ID for answers about your own squad.'}</div>
     </div>
-    <div id="ans"></div>`;
+    <div id="ans" class="qa-log" aria-live="polite"></div>`;
+  /* The captain's log: every answer is an entry, newest on top. AutoAnimate slides
+     the older ones down; they fold to the question and the answer (tap to unfold).
+     The reasons under a new answer drop in one by one (Magic UI Animated List). */
+  const log = el('ans'), entries = () => Array.prototype.filter.call(log.children, x=>!('__aa_del' in x));
+  FX.auto(log);
   const ask = async q=>{
     if(!q) return; el('q').value = q;
-    el('ans').innerHTML = loading('Working it out');
+    entries().forEach(x=>x.classList.add('old'));
+    const n = ++CP.n, when = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const entry = document.createElement('article');
+    entry.className = 'qa';
+    entry.innerHTML = `<div class="qa-h"><span class="qa-n">Log ${String(n).padStart(3, '0')}</span><span class="qa-q">${esc(q)}</span><span>${esc(when)}</span></div>
+      <div class="qa-body"><div class="loading">${LOADER}<span>Working it out</span></div></div>`;
+    log.insertBefore(entry, log.firstChild);
+    entries().slice(5).forEach(x=>x.remove());          // keep the last five
+    const body = entry.querySelector('.qa-body');
     try{
-      const body = {question:q, horizon:S.horizon}; if(S.teamId) body.team_id = +S.teamId;
-      const ov = ovParam(); if(ov) body.overrides = ov;
-      const r = await post('/api/copilot', body);
+      const b = {question:q, horizon:S.horizon}; if(S.teamId) b.team_id = +S.teamId;
+      const ov = ovParam(); if(ov) b.overrides = ov;
+      const r = await post('/api/copilot', b);
       const needsTeam = !r.has_team && ['hit','transfer','rate','chip','bench'].includes(r.intent);
-      el('ans').innerHTML = `<div class="grid g23">
+      body.innerHTML = `<div class="grid g23">
         <div><div class="bubble">${esc(r.answer)}</div>
-          ${r.points.length?`<div class="card" style="margin-top:14px"><h3>Why</h3>${r.points.map(p=>`<div class="note">${esc(p)}</div>`).join('')}</div>`:''}
-          ${needsTeam?'<div class="note" style="margin-top:12px">Load your Team ID to get this answer for your own squad.</div>':''}</div>
-        <div>${r.table?`<div class="card"><h3>${esc(r.table.title)}</h3><div class="well"><table>
+          <div class="qa-extra">
+          ${r.points.length?`<div class="card qa-why" style="margin-top:14px"><h3>Why</h3>${r.points.map(p=>`<div class="note">${esc(p)}</div>`).join('')}</div>`:''}
+          ${needsTeam?'<div class="note" style="margin-top:12px">Load your Team ID to get this answer for your own squad.</div>':''}</div></div>
+        <div class="qa-extra">${r.table?`<div class="card"><h3>${esc(r.table.title)}</h3><div class="well"><table>
             <thead><tr>${r.table.columns.map((c,i)=>`<th class="${i>1?'num':''}">${esc(c)}</th>`).join('')}</tr></thead>
             <tbody>${r.table.rows.map(row=>`<tr>${row.map((c,i)=>`<td class="${i>1?'num':''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`:''}
           <div class="legend">Read as a question about: <span class="tag">${esc(r.intent)}</span></div></div></div>`;
-    }catch(e){ el('ans').innerHTML = errBox(e); }
+      FX.listIn(body.querySelectorAll('.qa-why .note'));
+    }catch(e){ body.innerHTML = errBox(e); }
   };
   el('askBtn').onclick = ()=>ask(el('q').value.trim());
   el('q').addEventListener('keydown', e=>{ if(e.key==='Enter') ask(el('q').value.trim()); });
   t.querySelector('.chipset').addEventListener('click', e=>{ const b = e.target.closest('button'); if(b) ask(b.dataset.q); });
+  log.addEventListener('click', e=>{ const x = e.target.closest('.qa.old'); if(x) x.classList.remove('old'); });
 }
+const CP = { n: 0 };
 
 /* ---------------- Rate my team ---------------- */
 async function viewRate(t){
@@ -651,17 +708,19 @@ async function viewRate(t){
         </div>
       </div>
       <div class="grid g2">
-        <div class="card"><h3>Fix these first</h3>${r.notes.map(x=>`<div class="note">${esc(x)}</div>`).join('')}</div>
+        <div class="card"><h3>Fix these first</h3><div id="rateNotes">${r.notes.map(x=>`<div class="note">${esc(x)}</div>`).join('')}</div></div>
         <div class="card"><h3>Moves that raise the score</h3>
-          <div class="well"><table><thead><tr><th>Out</th><th>In</th><th class="num">Gain</th></tr></thead><tbody>
+          <div class="well"><table><thead><tr><th>Out</th><th></th><th>In</th><th class="num">Gain</th></tr></thead><tbody>
           ${r.top_upgrades.map(u=>`<tr>
             <td><span class="down nm">${esc(u.out.web_name)}</span><div class="u2">${esc(u.out.team_short)} · £${num(u.out.price,1)}m · ${num(u.out.xpts_total,1)}</div></td>
+            <td style="width:52px;padding-left:0;padding-right:0">${Magic.beamArrow()}</td>
             <td><span class="up nm">${esc(u.in.web_name)}</span><div class="u2">${esc(u.in.team_short)} · £${num(u.in.price,1)}m · ${num(u.in.xpts_total,1)}</div></td>
-            <td class="num up"><b>${sign(u.gain,1)}</b></td></tr>`).join('') || '<tr><td colspan="3" class="sub">No clear upgrade within budget.</td></tr>'}
+            <td class="num up"><b>${sign(u.gain,1)}</b></td></tr>`).join('') || '<tr><td colspan="4" class="sub">No clear upgrade within budget.</td></tr>'}
           </tbody></table></div>
           <div class="legend">Extra xPts over ${S.horizon} gameweeks, affordable with your current bank.</div></div>
       </div>`;
-    if(/^A/.test(r.grade)){ const c = t.querySelector('.grade-ring'); if(c){ const b = c.getBoundingClientRect(); Motion.burst(b.left + b.width/2, b.top + b.height/2, 110); } }
+    FX.listIn(el('rateNotes').children);
+    if(/^A/.test(r.grade)){ const c = t.querySelector('.grade-ring'); if(c){ const b = c.getBoundingClientRect(); FX.burst(b.left + b.width/2, b.top + b.height/2, 110); } }
   }catch(e){ t.innerHTML = errBox(e); }
 }
 /* ---------------- Compare ---------------- */
@@ -948,8 +1007,8 @@ function go(tabId, segId){
   const hash = t.id + '/' + seg.id;
   if(location.hash.slice(1) !== hash){ try{ history.replaceState(null, '', '#'+hash); }catch(e){} }
   render(t.id, seg.id);
-  Motion.navigated({tabChanged, dock:el('dock'), nav:el('nav'), segs, view});
-  if(tabChanged) window.scrollTo({top:0, behavior: Motion.reduced ? 'auto' : 'smooth'});
+  FX.navigated({tabChanged, dock:el('dock'), nav:el('nav'), segs, view});
+  if(tabChanged) window.scrollTo({top:0, behavior: FX.reduced ? 'auto' : 'smooth'});
 }
 function render(tab, seg){
   const key = [S.horizon, S.teamId, ovParam()].join('|'), id = tab+'/'+seg;
@@ -966,8 +1025,8 @@ function syncHead(animate){
   const verdict = t.id === 'home' && seg.id === 'squad' && S.teamId;
   const title = el('view-title'), was = title.textContent;
   title.textContent = t.id === 'home' && S.teamId ? (S.teamName || 'Team '+S.teamId) : t.title;
-  el('view-eyebrow').textContent = 'SYS//' + t.label + (t.segs.length > 1 ? '/' + seg.label : '') + (S.meta ? ' · GW' + S.meta.next_gw : '');
-  if(was !== title.textContent && !Motion.reduced){ title.classList.remove('glitch'); void title.offsetWidth; title.classList.add('glitch'); }
+  el('view-eyebrow').textContent = 'LOG//' + t.label + (t.segs.length > 1 ? '/' + seg.label : '') + (S.meta ? ' · GW' + S.meta.next_gw : '');
+  if(was !== title.textContent) Magic.hyperText(title, {duration:700});
   const sub = el('view-sub');
   sub.textContent = verdict ? (S.squadSub || seg.waiting) : seg.sub;
   sub.classList.toggle('verdict', !!(verdict && S.squadSub));
@@ -1002,14 +1061,19 @@ function openLanding(){
   el('landErr').textContent = '';
   el('landQuip').textContent = quip('welcome');
   el('landSkip').textContent = S.teamId ? 'Cancel' : 'Just browsing';
-  el('landGo').querySelector('span').textContent = S.teamId ? 'Switch team' : 'Let’s go';
+  el('landGo').querySelector('.lbl').textContent = S.teamId ? 'Switch team' : 'Let’s go';
+  if(!L.dataset.dressed){
+    L.dataset.dressed = '1';
+    Magic.ripple(el('landRipple'), 4, {size:86, step:30});
+    Magic.orbit(el('landOrbit'), [{cls:'sat', size:7}, {cls:'sat m', size:6}], {radius:52, duration:9});
+  }
   L.hidden = false; document.body.classList.add('landing-open');
-  Motion.landingIn(L);
+  filmRevealed().then(()=>{ if(!L.hidden) FX.landingIn(L); });
   if(window.matchMedia && matchMedia('(hover:hover)').matches) setTimeout(()=>{ try{ el('landId').focus({preventScroll:true}); }catch(e){} }, 250);
 }
 function closeLanding(){
   if(el('landing').hidden) return;
-  Motion.landingOut(el('landing'), ()=>{ el('landing').hidden = true; document.body.classList.remove('landing-open'); });
+  FX.landingOut(el('landing'), ()=>{ el('landing').hidden = true; document.body.classList.remove('landing-open'); });
 }
 function forgetTeam(){
   store.del('fplai_team'); store.del('fplai_team_name');
@@ -1035,9 +1099,9 @@ function loadSavedTeam(){
 el('landForm').addEventListener('submit', async e=>{
   e.preventDefault();
   const id = el('landId').value.replace(/\D/g, '');
-  if(!id){ el('landErr').textContent = 'Enter your Team ID — or tap “Just browsing”.'; Motion.shake(el('landId')); return; }
-  const btn = el('landGo'), label = btn.querySelector('span').textContent;
-  btn.disabled = true; btn.querySelector('span').textContent = 'Finding your team…';
+  if(!id){ el('landErr').textContent = 'Enter your Team ID — or tap “Just browsing”.'; FX.shake(el('landId')); return; }
+  const btn = el('landGo'), label = btn.querySelector('.lbl').textContent;
+  btn.disabled = true; btn.classList.add('busy'); btn.querySelector('.lbl').textContent = 'Finding your team…';
   try{
     S.fresh = true;
     const ent = await api(entryUrl(id));
@@ -1053,8 +1117,8 @@ el('landForm').addEventListener('submit', async e=>{
     el('landErr').textContent = /no fpl team|not found|404/i.test(err.message)
       ? 'We couldn’t find team '+id+'. Check the number and try again.'
       : 'Couldn’t load that team right now ('+err.message+').';
-    Motion.shake(el('landId'));
-  }finally{ btn.disabled = false; btn.querySelector('span').textContent = label; }
+    FX.shake(el('landId'));
+  }finally{ btn.disabled = false; btn.classList.remove('busy'); btn.querySelector('.lbl').textContent = label; }
 });
 el('landId').addEventListener('input', ()=>{ el('landErr').textContent = ''; });
 el('landSkip').addEventListener('click', ()=>{ closeLanding(); if(!S.teamId && cur.tab === 'home') go('home', 'picks'); });
@@ -1065,13 +1129,16 @@ function openMenu(){
   const root = el('sheet-root');
   root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Menu">
     <button class="btn sm x" id="closeSheet">Close ✕</button>
-    <h2 class="menu-h">Mug’s Game FC</h2>
+    <h2 class="menu-h">Captain’s Log</h2>
     <p class="menu-sub">${S.teamId ? 'Team <b>'+esc(S.teamName || S.teamId)+'</b> is saved on this device.' : 'No team saved on this device.'}</p>
     <div class="menu-actions">
       <button class="btn" id="mTeam">${icon('players')}<span>${S.teamId ? 'Change team' : 'Add team'}</span></button>
       <button class="btn" id="mRefresh">${icon('refresh')}<span>Refresh app</span></button>
       <button class="btn" id="mForget" ${S.teamId ? '' : 'disabled'}>${icon('forget')}<span>Forget team</span></button>
     </div>
+    ${hasFilm() ? `<div class="menu-film"><span class="t">Opening film</span><div class="acts">
+      <button class="btn sm" id="mFilm" aria-pressed="${Intro.isOn() && !FX.reduced}" ${FX.reduced ? 'disabled' : ''}>${FX.reduced ? 'Off — your device asks for less motion' : Intro.isOn() ? 'Plays on every launch' : 'Off'}</button>
+      <button class="btn sm" id="mWatch">Watch it now</button></div></div>` : ''}
     <div id="menuModel"></div></div></div>`;
   const close = ()=>{ root.innerHTML = ''; document.removeEventListener('keydown', onKey); };
   const onKey = e=>{ if(e.key === 'Escape') close(); };
@@ -1081,6 +1148,12 @@ function openMenu(){
   el('mTeam').onclick = ()=>{ close(); openLanding(); };
   el('mRefresh').onclick = ()=>location.reload();       // the page is never stored, so this is always a clean load
   el('mForget').onclick = ()=>{ close(); forgetTeam(); cur = {tab:'', seg:''}; go('home', 'picks'); openLanding(); };
+  if(hasFilm()) el('mFilm').onclick = ()=>{
+    const on = !Intro.isOn(); Intro.setEnabled(on);
+    el('mFilm').setAttribute('aria-pressed', String(on)); el('mFilm').textContent = on ? 'Plays on every launch' : 'Off';
+    toast(on ? 'The opening film plays each time the app opens.' : 'No opening film from now on, on this device.');
+  };
+  if(hasFilm()) el('mWatch').onclick = ()=>{ close(); Intro.replay(introLine); };
   viewModel(el('menuModel'));
 }
 el('menuBtn').addEventListener('click', openMenu);
@@ -1095,14 +1168,17 @@ let brandTaps = [];
 document.querySelector('.brand').addEventListener('click', ()=>{
   go('home');
   const now = Date.now(); brandTaps = brandTaps.filter(t=>now - t < 1500); brandTaps.push(now);
-  if(brandTaps.length >= 5){ brandTaps = []; toast('GOOOAL. (That was the logo. Your team still needs work.)'); Motion.burst(innerWidth/2, 80, 140); }
+  if(brandTaps.length >= 5){ brandTaps = []; toast('Houston, we have a GOAL. (That was the logo. Your team still needs work.)'); FX.burst(innerWidth/2, 80, 140); }
 });
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !el('landing').hidden && S.teamId) closeLanding(); });
 
 /* ---------------- boot ---------------- */
+/* the captain's log entry typed in the opening film, written once the gameweek is known */
+const introLine = () => (S.meta ? 'Stardate GW' + S.meta.next_gw + '. ' : 'Stardate unknown. ') + quip('intro');
+if(hasFilm()){ try{ Intro.play({line:introLine}); }catch(e){ /* the app never waits on the film */ } FX.hold(Intro.reveal); }
 buildChrome();
-Motion.start();
-Motion.observe(el('views'));
+FX.start();
+FX.observe(el('views'));
 (async function boot(){
   S.horizon = +el('horizon').value;
   const saved = String(store.get('fplai_team', '') || '');
@@ -1129,6 +1205,7 @@ Motion.observe(el('views'));
    Come back after a long absence and your squad, bank and transfers are re-read
    from FPL too, so a transfer made on the FPL site is never missing. */
 const STALE_AFTER = 10 * 60 * 1000;
+function quietReload(){ try{ sessionStorage.setItem('fplai_quiet', '1'); }catch(e){} location.reload(); }   // no opening film for these
 async function softRefresh(){
   S.meta = null; S.fresh = true;
   if(S.teamId){
@@ -1147,7 +1224,7 @@ async function softRefresh(){
       const r = await fetch('/version', {cache:'no-store'});
       if(!r.ok) return;
       const {build} = await r.json();
-      if(build && build !== mine){ reloading = true; location.reload(); }
+      if(build && build !== mine){ reloading = true; quietReload(); }
     }catch(e){ /* offline: keep what we have */ }
   }
   function back(){
@@ -1159,7 +1236,7 @@ async function softRefresh(){
     else back();
   });
   window.addEventListener('pageshow', e=>{
-    if(e.persisted){ last = 0; location.reload(); }      // restored from the back/forward cache: start clean
+    if(e.persisted){ last = 0; quietReload(); }         // restored from the back/forward cache: start clean
   });
   window.addEventListener('focus', check);
 })();
