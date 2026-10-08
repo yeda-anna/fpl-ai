@@ -1,6 +1,6 @@
-# Mug’s Game FC ☕⚽
+# Captain’s Log 🪐⚽
 
-Fantasy football is a mug’s game. Might as well do the maths.
+Your rank is lost in space. Might as well do the maths.
 
 A Fantasy Premier League planner: expected points for every player, a
 multi-gameweek transfer solver, chip planning, team rating, mini-league
@@ -91,37 +91,52 @@ copy is served.
 
 ## Look and feel
 
-**Neon, at night.** One look, no theme picker: near-black violet, dark glass and
+**Neon, in orbit.** One look, no theme picker: near-black violet, dark glass and
 three neons — lime for "do this", cyan for lines and information, magenta for the
 ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG AA
 (`python3 scripts/check_contrast.py`).
 
+- **An opening film** on every launch, a few seconds long and skippable: we drop
+  out of hyperspace over a grid floor, the logo — a football with a planet's
+  ring — draws itself and ignites, the name decodes, the captain's log types
+  "Stardate GW8. Morale: questionable.", then the camera flies into the ball and
+  the film irises open onto the app, which has loaded underneath. Keyframed with
+  [Theatre.js](https://www.theatrejs.com/docs/latest); it can be turned off in
+  the menu and never plays under reduced motion.
 - **Landing:** the first visit on a device asks for your FPL Team ID over a neon
-  pitch that draws itself while the ball flies into the net. The ID is saved in
-  your browser, so every later visit goes straight to your team.
+  pitch that draws itself while the ball flies into the net and meteors cross
+  the sky. The ID is saved in your browser, so every later visit goes straight
+  to your team.
 - **Five tabs**, nothing hidden behind "More": **Home** (My squad · Grade ·
   Picks), **Plan** (Transfers · Chips), **Players** (Projections · Compare ·
   Prices · Line-ups · Set pieces · DEFCON), **Leagues** and **Ask**.
 - **Your name up in lights:** Home is titled with your team's name from FPL, and
   My squad opens with a dark football roast of your last gameweek's score.
 - **A sci-fi HUD** over the neon: target-lock corners on every panel, monospace
-  readouts, a `SYS//PLAN/TRANSFERS · GW8` locator above each title, faint
+  readouts, a `LOG//PLAN/TRANSFERS · GW8` locator above each title, faint
   scanlines and a scan beam, a hologram pitch, and a boot sequence on the
   landing screen.
-- **Motion** from [GSAP](https://gsap.com/docs/v3/) and
-  [anime.js](https://animejs.com/documentation), vendored (no CDN): neon SVG
-  paths that draw themselves, light pulses running along the sky's wires, tab
-  icons that draw in, sliding indicators, counters, springy buttons, confetti for
-  a big week. `prefers-reduced-motion` turns all of it off.
+- **Motion**, vendored (no CDN), each library with its own job:
+  [GSAP](https://gsap.com/docs/v3/) draws the neon SVG paths and flies the ball;
+  [anime.js](https://animejs.com/documentation) runs light pulses along the
+  sky's wires and draws the tab icons; [Motion](https://motion.dev) blur-fades
+  cards in as you scroll to them, ticks figures up on springs, springs buttons
+  back and fills the scroll-progress line;
+  [AutoAnimate](https://auto-animate.formkit.com) glides the projections table
+  into its new order when you sort or filter, and slides the Copilot's log down
+  as new answers arrive. [Magic UI](https://magicui.design)'s effects — hyper
+  text, typing, meteors, ripple, orbiting circles, border beams, the shimmer
+  button, animated beams from player out to player in, the retro grid floor —
+  are rebuilt in plain JS and CSS. `prefers-reduced-motion` turns all of it off.
 
-The full system — tokens, motion, navigation, breakpoints, the neon mug logo
+The full system — tokens, motion, navigation, breakpoints, the ringed-ball logo
 and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Tests
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 93 headless checks, phone + desktop + reduced motion
+    npm --prefix tests test            # 104 headless checks, phone + desktop + reduced motion
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).
@@ -163,7 +178,8 @@ See [`docs/TESTING.md`](docs/TESTING.md).
     backend/analysis.py  chips, rating, compare, picks, mini-leagues
     backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
     backend/main.py      FastAPI routes + static hosting
-    frontend/            single-page app, no build step: app.js (views, tabs), motion.js (GSAP + anime.js), vendor/
+    frontend/            single-page app, no build step: app.js (views, tabs), motion.js (FX: GSAP, anime.js, Motion,
+                         AutoAnimate), magic.js (Magic UI, rebuilt), intro.js (the Theatre.js opening film), vendor/
     scripts/check_contrast.py  WCAG AA check for the palette
     tests/               Playwright end-to-end suite
     scripts/calibrate.py projection sanity check

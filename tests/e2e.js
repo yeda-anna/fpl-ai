@@ -1,4 +1,4 @@
-// End-to-end checks for Mug's Game FC on a phone (390x844, touch) and a desktop
+// End-to-end checks for Captain's Log on a phone (390x844, touch) and a desktop
 // (1440x900) viewport. Start the app first, then:  npm --prefix tests test
 //   BASE_URL=http://127.0.0.1:9000/ npm --prefix tests test   (another server)
 //   TEAM_ID=1234567 npm --prefix tests test                    (a real team on live)
@@ -47,10 +47,23 @@ async function phone(browser){
   const entryReads = [];
   page.on('request', r => { if (r.url().includes(`/api/entry/${TEAM}?`)) entryReads.push(r.url()); });
 
-  // ---- first visit: the landing screen asks for the Team ID ----
+  // ---- the opening film plays on launch (Theatre.js), and Skip ends it ----
   await page.goto(BASE, { waitUntil: 'networkidle' });
+  ok('phone: the page is named Captain’s Log', /Captain’s Log/.test(await page.title()), await page.title());
+  ok('phone: animation libraries load from /static/vendor (GSAP, anime.js, Motion, Theatre.js, AutoAnimate)', await page.evaluate(() =>
+    !!(window.gsap && window.DrawSVGPlugin && window.MotionPathPlugin && window.anime && window.Motion && window.Motion.animate && window.Motion.inView
+       && window.Theatre && window.Theatre.core && typeof window.autoAnimate === 'function'
+       && typeof FX !== 'undefined' && typeof Magic !== 'undefined' && typeof Intro !== 'undefined')));
+  {
+    const tc0 = await page.textContent('#inTc'); await page.waitForTimeout(450); const tc1 = await page.textContent('#inTc');
+    ok('phone: the opening film plays on launch, its timecode running', await page.isVisible('#intro') && tc0 !== tc1, `${tc0} → ${tc1}`);
+    await page.waitForTimeout(1800);
+    await page.screenshot({ path: `${OUT}/m-00-film.png` });
+    await page.click('#inSkip');
+    ok('phone: Skip ends the opening film', await page.waitForSelector('#intro', { state: 'hidden', timeout: 3000 }).then(() => true, () => false));
+  }
+  // ---- first visit: the landing screen asks for the Team ID ----
   ok('phone: first visit opens the landing screen', await page.isVisible('#landing'));
-  ok('phone: motion libraries load from /static/vendor', await page.evaluate(() => !!(window.gsap && window.DrawSVGPlugin && window.MotionPathPlugin && window.anime && typeof Motion !== 'undefined')));
   ok('phone: landing carries a line of house humour', (await page.textContent('#landQuip')).trim().length > 20);
   ok('phone: landing has the neon pitch scene', (await page.$$('#scene .ln')).length >= 5 && !!(await page.$('#sceneBall')));
   ok('phone: five tabs in the dock, no "More"', (await page.$$('#dock button[data-tab]')).length === 5 && !(await page.$('[data-more]')));
@@ -115,13 +128,27 @@ async function phone(browser){
   // ---- the tools still do their jobs ----
   await page.click('#dock button[data-tab="players"]'); await page.click('#segs button[data-seg="projections"]');
   await page.waitForSelector('#xpBody tr', { timeout: 30000 });
-  const who = (await page.textContent('#xpBody tr td:first-child a')).trim();
-  const before = await page.textContent('#xpBody tr td:last-child');
-  await page.click('#xpBody tr .mins'); await page.fill('#xpBody tr .mins input', '45'); await page.keyboard.press('Enter');
+  {
+    // re-sorting keeps the table and moves the rows (keyed rows + AutoAnimate) instead of redrawing it
+    const first = await page.$eval('#xpBody tr', tr => tr.dataset.pid);
+    await page.$eval('#xpTable .card.xp', c => { c.dataset.mark = 'kept'; });
+    await page.selectOption('#fSort', 'ownership');
+    const moved = await page.waitForFunction(f => { const tr = [...document.querySelectorAll('#xpBody > tr')].find(x => !('__aa_del' in x)); const c = document.querySelector('#xpTable .card.xp');
+      return c && !c.classList.contains('busy') && tr && tr.dataset.pid !== f; }, first, { timeout: 20000 }).then(() => true, () => false);
+    ok('phone: re-sorting moves the rows in place (AutoAnimate)', moved && await page.$eval('#xpTable .card.xp', c => c.dataset.mark === 'kept')
+       && await page.$eval('#xpBody', b => !!b._aa));
+    await page.selectOption('#fSort', 'xpts_total');
+    await page.waitForFunction(f => { const tr = [...document.querySelectorAll('#xpBody > tr')].find(x => !('__aa_del' in x)); const c = document.querySelector('#xpTable .card.xp');
+      return c && !c.classList.contains('busy') && tr && tr.dataset.pid === f; }, first, { timeout: 20000 }).catch(() => {});
+  }
+  const pid = await page.$$eval('#xpBody > tr', trs => trs.find(x => !('__aa_del' in x)).dataset.pid);
+  const who = (await page.textContent(`#xpBody tr[data-pid="${pid}"] td:first-child a`)).trim();
+  const before = await page.textContent(`#xpBody tr[data-pid="${pid}"] td:last-child`);
+  await page.click(`#xpBody tr[data-pid="${pid}"] .mins`); await page.fill(`#xpBody tr[data-pid="${pid}"] .mins input`, '45'); await page.keyboard.press('Enter');
   await page.waitForSelector('#resetMins', { timeout: 20000 });
   await page.fill('#fSearch', who); await page.press('#fSearch', 'Enter');
-  await page.waitForSelector('#xpBody .mins.set', { timeout: 20000 });
-  const after = await page.textContent('#xpBody tr td:last-child');
+  await page.waitForSelector(`#xpBody tr[data-pid="${pid}"] .mins.set`, { timeout: 20000 });
+  const after = await page.textContent(`#xpBody tr[data-pid="${pid}"] td:last-child`);
   ok('phone: a minutes edit applies', parseFloat(after) < parseFloat(before), `${who}: ${before.trim()} → ${after.trim()} xPts at 45′`);
   await page.click('#resetMins'); await page.waitForSelector('#xpBody tr', { timeout: 20000 });
   ok('phone: a minutes edit resets', !(await page.$('#resetMins')));
@@ -136,6 +163,11 @@ async function phone(browser){
   await page.click('#v-ask-copilot .chipset button');
   await page.waitForSelector('#ans .bubble', { timeout: 60000 });
   ok('phone: the Copilot answers', (await page.textContent('#ans .bubble')).length > 20);
+  await page.click('#v-ask-copilot .chipset button:nth-child(2)');
+  await page.waitForFunction(() => document.querySelectorAll('#ans .qa .bubble').length >= 2, null, { timeout: 60000 }).catch(() => {});
+  ok('phone: the Copilot keeps a log, newest entry first', await page.evaluate(() => {
+    const qa = [...document.querySelectorAll('#ans > .qa')].filter(x => !('__aa_del' in x));
+    return qa.length === 2 && /Log 002/.test(qa[0].textContent) && qa[1].classList.contains('old'); }));
 
   await page.click('#dock button[data-tab="leagues"]');
   await page.fill('#lgId', '314'); await page.selectOption('#lgN', '6'); await page.click('#lgGo');
@@ -155,7 +187,10 @@ async function phone(browser){
   await page.screenshot({ path: `${OUT}/m-04-menu.png` });
   await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }), page.click('#mRefresh')]);
   ok('phone: Refresh app reloads, and the saved team skips the landing screen', !(await page.isVisible('#landing')) && !/add team/i.test(await page.textContent('#teamLabel')));
+  ok('phone: the opening film plays again on a fresh launch, then gets out of the way by itself', await page.isVisible('#intro')
+     && await page.waitForSelector('#intro', { state: 'hidden', timeout: 10000 }).then(() => true, () => false));
   ok('phone: old addresses still work (#solver → #plan/transfers)', await page.goto(BASE + '#solver', { waitUntil: 'networkidle' }).then(() => page.evaluate(() => location.hash)) === '#plan/transfers');
+  await page.click('#inSkip').catch(() => {}); await page.waitForSelector('#intro', { state: 'hidden', timeout: 3000 }).catch(() => {});
   await page.click('#menuBtn'); await page.waitForSelector('#mForget');
   await page.click('#mForget'); await page.waitForTimeout(600);
   ok('phone: Forget team clears the device and asks again', await page.isVisible('#landing') && await page.evaluate(() => localStorage.getItem('fplai_team') === null));
@@ -165,6 +200,13 @@ async function phone(browser){
   ok('phone: a team-only page offers to add a team', await page.waitForSelector('#v-home-grade .need-team', { timeout: 10000 }).then(() => true, () => false));
 
   const realErrors = consoleErrors.filter(m => !/Failed to load resource/.test(m));
+  // the menu can turn the film off for this device
+  await page.click('#menuBtn'); await page.waitForSelector('#mFilm');
+  await page.click('#mFilm');
+  ok('phone: the menu turns the opening film off', await page.evaluate(() => localStorage.getItem('fplai_intro') === '"off"'));
+  await page.keyboard.press('Escape');
+  await page.reload({ waitUntil: 'networkidle' });
+  ok('phone: with the film off, the app opens straight away', !(await page.isVisible('#intro')));
   ok('phone: no console errors', realErrors.length === 0, realErrors.slice(0, 4).join(' || '));
   ok('phone: no failed requests (besides the deliberate unknown team)', badResponses.length === 0, badResponses.slice(0, 4).join(' || '));
   await ctx.close();
@@ -177,6 +219,9 @@ async function desktop(browser){
   page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
   page.on('pageerror', e => consoleErrors.push('pageerror: ' + e.message));
   await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1900);
+  await page.screenshot({ path: `${OUT}/d-00-film.png` });
+  ok('desktop: the opening film runs to its end and opens onto the app', await page.waitForSelector('#intro', { state: 'hidden', timeout: 10000 }).then(() => true, () => false));
   ok('desktop: first visit opens the landing screen', await page.isVisible('#landing'));
   await page.waitForTimeout(1800);
   await page.screenshot({ path: `${OUT}/d-01-landing.png` });
@@ -193,6 +238,8 @@ async function desktop(browser){
     ok('desktop: page is never stored by the browser (no-store)', /no-store/.test(head || ''), head);
     const apiHead = await page.evaluate(() => fetch('/api/meta').then(r => r.headers.get('cache-control')));
     ok('desktop: API answers are never stored by the browser (no-store)', /no-store/.test(apiHead || ''), apiHead);
+    const enc = await page.evaluate(u => fetch(u).then(r => r.headers.get('content-encoding')), refs.find(u => /motion\.min\.js/.test(u)));
+    ok('desktop: scripts are served compressed (gzip)', enc === 'gzip', enc);
   }
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `${OUT}/d-02-home.png` });
@@ -214,6 +261,7 @@ async function reducedMotion(browser){
   const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: 'networkidle' });
+  ok('reduced motion: no opening film', !(await page.isVisible('#intro')));
   await page.fill('#landId', TEAM); await page.click('#landGo');
   await page.waitForSelector('#v-home-squad .tile', { timeout: 30000 });
   const st = await page.evaluate(() => ({ minOpacity: Math.min(...[...document.querySelectorAll('#v-home-squad .tile, #v-home-squad .card')].map(e => +getComputedStyle(e).opacity)),

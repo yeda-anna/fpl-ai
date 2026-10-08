@@ -91,7 +91,7 @@ def main() -> int:
     rows = engine.all_players_horizon(engine.next_gw, max(1, args.horizon))
     by_key = {(r["web_name"], r["team_short"]): r for r in rows}
 
-    print("Mug's Game FC — projection check")
+    print("Captain's Log — projection check")
     print("  GW%d next · %d players · Elo for %d clubs (k=%.5f) · form GWs %s"
           % (engine.next_gw, len(rows), sum(1 for v in engine.elo.values() if v),
              engine.elo_k, sorted(engine.live_by_gw.keys())))

@@ -1,15 +1,16 @@
-# CLAUDE.md — Mug's Game FC
+# CLAUDE.md — Captain's Log
 
 Instructions for Claude Code (and any other coding agent) working in this
 repository. Read this first; the `docs/` folder has the detail.
 
 ## What this is
 
-Mug's Game FC is a Fantasy Premier League planner. A FastAPI backend pulls the
+Captain's Log is a Fantasy Premier League planner. A FastAPI backend pulls the
 official FPL API, projects expected points (xPts) for every player, and runs a
 mixed-integer solver over transfers, captaincy and chips. A no-build vanilla-JS
-single-page app renders it in a neon look, animated with GSAP and anime.js,
-with five tabs and a mobile app shell.
+single-page app renders it in a neon, sci-fi look — it opens with a short
+Theatre.js film, and moves with GSAP, anime.js, Motion, AutoAnimate and effects
+rebuilt from Magic UI — with five tabs and a mobile app shell.
 
 Live: https://fpl-ai-production-966c.up.railway.app · Repo: yeda-anna/fpl-ai
 
@@ -28,10 +29,10 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 93 checks, phone 390×844 + desktop 1440×900 + reduced motion
+npm --prefix tests test        # 104 checks, phone 390×844 + desktop 1440×900 + reduced motion
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the neon palette
-node --check frontend/app.js && node --check frontend/motion.js   # quick syntax check
+for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
 
@@ -50,11 +51,13 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/solver.py` | Multi-gameweek MIP (PuLP/CBC), alternative paths via no-good cuts |
 | `backend/analysis.py` | Chips, Rate My Team, compare, weekly picks, mini-leagues |
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
-| `frontend/index.html` | Shell: top bar, neon sky, the five-tab dock, the landing screen (neon pitch scene), logo, scripts |
-| `frontend/styles.css` | Design system: the neon tokens, glass, components, landing, dock, breakpoints |
+| `frontend/index.html` | Shell: the opening film's stage, top bar, neon sky, the five-tab dock, the landing screen (neon pitch scene), logo, scripts |
+| `frontend/styles.css` | Design system: the neon tokens, glass, components, the HUD layer, the Magic UI effects, the film, landing, dock, breakpoints |
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
-| `frontend/motion.js` | All animation: GSAP (timelines, DrawSVG, MotionPath, counters, indicators) and anime.js (sky pulses, icon drawing, springs) |
-| `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin) and anime.js 4.5, vendored — see its README |
+| `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators), anime.js (sky pulses, icon drawing, flicker), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
+| `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Meteors, Ripple, OrbitingCircles, BorderBeam, ShimmerButton, AnimatedBeam, RetroGrid |
+| `frontend/intro.js` | `Intro`: the opening film, a Theatre.js sequence (keyframes in `KEYS`) played on launch |
+| `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, Theatre.js core 0.7, AutoAnimate 0.10 — vendored, see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `scripts/calibrate.py` | Projection sanity check |
 | `scripts/check_contrast.py` | WCAG AA check for the palette |
@@ -79,9 +82,15 @@ suite at **0 failures** — see `docs/TESTING.md`.
 
 **Frontend**
 - No build step, no framework, no CDN. Plain JS in `app.js`; animation in
-  `motion.js` using the two vendored libraries in `frontend/vendor/` (GSAP with
-  DrawSVG and MotionPath, anime.js). Don't add a third; upgrade by replacing the
-  files and noting the version in `frontend/vendor/README.md`.
+  `motion.js` (`FX`), `magic.js` (`Magic`) and `intro.js` (`Intro`), using the
+  vendored libraries in `frontend/vendor/`, each with its own job: GSAP (+
+  DrawSVG, MotionPath) for SVG drawing and timelines, anime.js for the sky and
+  icons, Motion for springs, in-view and scroll, AutoAnimate for lists that
+  change, Theatre.js core for the opening film. Magic UI is React, so its
+  effects are rebuilt in `magic.js` + CSS — never pull in React for it. Don't
+  add another library without asking; upgrade by replacing the files and noting
+  the version in `frontend/vendor/README.md`. The global `Motion` is the
+  motion.dev library — our layer is `FX`.
 - Cache-busting is automatic: the server rewrites `/static/*.css|js` links in
   `index.html` to `?v=<content hash>`, serves the page and every `/api/` answer
   `no-store`, and `app.js` reloads when `/version` reports a newer build. Never hand-write `?v=` numbers,
@@ -94,7 +103,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
   fill uses `--on-accent`, never white. Every text token must pass AA — run
   `python3 scripts/check_contrast.py`.
 - **The HUD layer** (sci-fi console: corner brackets, mono readouts, the
-  `SYS//…` eyebrow, scanlines, the hologram pitch, the landing boot lines) sits
+  `LOG//…` eyebrow, scanlines, the hologram pitch, the landing boot lines) sits
   on top of the neon — see "The HUD layer" in `docs/DESIGN.md`. New panels get
   the corners by joining the `.card,.tile,.plan,.path,.sheet` selector, not with
   new hex values.
@@ -115,17 +124,28 @@ suite at **0 failures** — see `docs/TESTING.md`.
 - Keep request races in mind: a view that can fire overlapping requests must
   ignore stale responses (see the `XP.seq` pattern in `viewXpts`).
 - Respect `prefers-reduced-motion`: the CSS rule turns every animation off and
-  every `Motion` function must leave things in their finished state when
-  `Motion.reduced` is true or its library didn't load. Clear inline transforms
-  when an animation ends (GSAP `clearProps`) so hover effects keep working.
+  every `FX`/`Magic` function must leave things in their finished state when
+  `FX.reduced` is true or its library didn't load. Clear inline transforms
+  when an animation ends (GSAP `clearProps`, Motion `.then`) so hover effects
+  keep working. Don't animate an element with two libraries at once (the
+  Copilot log is AutoAnimate's, so it isn't in `FX`'s entrance list).
+- **The opening film** plays on every launch (not on in-app navigation, not on
+  the app's own reloads), is skippable at any moment (tap, Esc/Enter/Space,
+  "Skip intro"), can be turned off in the menu (`fplai_intro`), and never runs
+  under reduced motion. The app loads underneath and must never wait on it:
+  `Intro` is optional, and entrances are held only until the film opens onto
+  the app (`FX.hold(Intro.reveal)`). Keep it under five seconds.
 
 **Brand and content**
-- Name: **Mug's Game FC**. Tagline: "Fantasy football is a mug's game. Might as
-  well do the maths." Logo: a club mug with a football dunked in it, drawn as a
-  neon sign (cyan mug, magenta ball, lime steam).
+- Name: **Captain's Log** (the FPL captain, and a ship's log — the sci-fi look).
+  Tagline: "Your rank is lost in space. Might as well do the maths." Logo: a
+  football with a planet's ring round it, drawn as a neon sign (magenta ball,
+  cyan ring, lime star); the back of the ring breaks behind the ball. App icons:
+  `frontend/icon.svg` plus `icon-180/192/512.png` rendered from it.
 - Tone: light British humour and Indian dark humour on the landing screen and
   under the loader ("putting the kettle on", "Sharma ji’s son finished this ages
-  ago"). Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —
+  ago"), and the captain's log entry typed in the opening film ("Stardate GW8.
+  Morale: questionable."). Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —
   never at a religion, caste, region, community, body or real person. **Never**
   in errors or anything a manager acts on.
 - **One roast, by request:** Home's title is the team's own name from FPL, and

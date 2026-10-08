@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents working on **Mug's Game FC**, a Fantasy Premier
+Guidance for AI coding agents working on **Captain's Log**, a Fantasy Premier
 League planner (FastAPI + PuLP backend, no-build vanilla-JS frontend).
 
 The full instructions live in [`CLAUDE.md`](CLAUDE.md). The essentials:
@@ -11,7 +11,7 @@ The full instructions live in [`CLAUDE.md`](CLAUDE.md). The essentials:
   Keep it at 0 failures.
 - **Python 3.9-compatible** backend code. Game rules come from `backend/rules.py`,
   never hardcoded.
-- **Frontend:** no build step, no CDN. Animation is GSAP + anime.js, vendored in `frontend/vendor/` and wrapped by `frontend/motion.js`. One neon look, five tabs, the Team ID asked once per device. Cache-busting is automatic (content-hashed `?v=` added by the server); don't add version numbers by hand.
+- **Frontend:** no build step, no CDN. Animation is GSAP, anime.js, Motion, AutoAnimate and Theatre.js core, vendored in `frontend/vendor/` and wrapped by `frontend/motion.js` (`FX`) and `frontend/intro.js` (the opening film); Magic UI's effects are rebuilt in plain JS in `frontend/magic.js` (no React). One neon look, five tabs, the Team ID asked once per device. Cache-busting is automatic (content-hashed `?v=` added by the server); don't add version numbers by hand.
 - **Brand:** original artwork only; light British humour and Indian dark humour (`QUIPS` in `app.js`) on the landing screen and loaders, never in errors or numbers, never at anyone's expense but the manager's own.
 - **Deploy:** pushing `main` deploys to Railway; check `/healthz` afterwards.
 
