@@ -93,6 +93,11 @@ suite at **0 failures** — see `docs/TESTING.md`.
   information), magenta (`--neon-m`, the ball and celebration). Text on a neon
   fill uses `--on-accent`, never white. Every text token must pass AA — run
   `python3 scripts/check_contrast.py`.
+- **The HUD layer** (sci-fi console: corner brackets, mono readouts, the
+  `SYS//…` eyebrow, scanlines, the hologram pitch, the landing boot lines) sits
+  on top of the neon — see "The HUD layer" in `docs/DESIGN.md`. New panels get
+  the corners by joining the `.card,.tile,.plan,.path,.sheet` selector, not with
+  new hex values.
 - Neon lives on strokes, edges and things you can press — never as a wash behind
   running text. Cards stay dark and nearly solid so the sky's wires never run
   behind words.

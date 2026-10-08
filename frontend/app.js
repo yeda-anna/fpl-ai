@@ -188,7 +188,7 @@ function pitch(xi, bench, captain, vice, opts){
       ${gk.map(p => `<div><div class="slot-lbl">GKP</div>${tok(p)}</div>`).join('')}
       ${out.map((p,i) => `<div><div class="slot-lbl">${i+1}.${POS[p.position]}</div>${tok(p)}</div>`).join('')}</div>` : '';
   return `<div class="pitch-card">${opts.header || ''}
-    <div class="turf"><div class="turf-lines"></div><div class="turf-half"></div>
+    <div class="turf"><div class="sweep"></div><div class="turf-lines"></div><div class="turf-half"></div>
       <div class="turf-plane">${[1,2,3,4].map(q => `<div class="line-row">${rows[q].map(tok).join('')}</div>`).join('')}</div></div>
     ${benchHtml}</div>`;
 }
@@ -964,7 +964,10 @@ function syncHead(animate){
   if(!cur.tab) return;
   const t = tabOf(cur.tab), seg = t.segs.find(s=>s.id===cur.seg) || t.segs[0];
   const verdict = t.id === 'home' && seg.id === 'squad' && S.teamId;
-  el('view-title').textContent = t.id === 'home' && S.teamId ? (S.teamName || 'Team '+S.teamId) : t.title;
+  const title = el('view-title'), was = title.textContent;
+  title.textContent = t.id === 'home' && S.teamId ? (S.teamName || 'Team '+S.teamId) : t.title;
+  el('view-eyebrow').textContent = 'SYS//' + t.label + (t.segs.length > 1 ? '/' + seg.label : '') + (S.meta ? ' · GW' + S.meta.next_gw : '');
+  if(was !== title.textContent && !Motion.reduced){ title.classList.remove('glitch'); void title.offsetWidth; title.classList.add('glitch'); }
   const sub = el('view-sub');
   sub.textContent = verdict ? (S.squadSub || seg.waiting) : seg.sub;
   sub.classList.toggle('verdict', !!(verdict && S.squadSub));
@@ -1114,6 +1117,7 @@ Motion.observe(el('views'));
     S.meta = S.meta || await api('/api/meta');
     const ev = S.meta.events.find(x=>x.id===S.meta.next_gw);
     const dl = ev ? new Date(ev.deadline) : null;
+    syncHead();
     el('rail-foot').textContent = `GW${S.meta.next_gw} deadline · ${dl?dl.toLocaleString([], {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}):'—'}`;
   }catch(e){ el('rail-foot').textContent = 'Model offline'; }
 })();

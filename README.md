@@ -104,6 +104,10 @@ ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG A
   Prices · Line-ups · Set pieces · DEFCON), **Leagues** and **Ask**.
 - **Your name up in lights:** Home is titled with your team's name from FPL, and
   My squad opens with a dark football roast of your last gameweek's score.
+- **A sci-fi HUD** over the neon: target-lock corners on every panel, monospace
+  readouts, a `SYS//PLAN/TRANSFERS · GW8` locator above each title, faint
+  scanlines and a scan beam, a hologram pitch, and a boot sequence on the
+  landing screen.
 - **Motion** from [GSAP](https://gsap.com/docs/v3/) and
   [anime.js](https://animejs.com/documentation), vendored (no CDN): neon SVG
   paths that draw themselves, light pulses running along the sky's wires, tab
