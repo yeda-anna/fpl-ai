@@ -42,6 +42,7 @@ const Motion = (() => {
            .fromTo(q('.scene .goal, .scene .net'), {drawSVG:'0%'}, {drawSVG:'100%', duration:.6, stagger:.08}, .55)
            .fromTo(q('.land-logo .neon-logo path, .land-logo .neon-logo circle'), {drawSVG:'0%'}, {drawSVG:'100%', duration:.9, stagger:.07}, .25);
     }
+    intro.fromTo(q('.boot div'), {opacity:0, x:-10}, {opacity:1, x:0, duration:.3, stagger:.22, ease:'steps(4)', clearProps:'transform'}, .15);
     intro.fromTo(q('.scene .spot'), {scale:0, transformOrigin:'50% 50%'}, {scale:1, duration:.4, ease:'back.out(3)'}, .9);
     if(canA) A.animate(root.querySelector('.land-logo'), {opacity:[0, 1, .3, 1, .55, 1], duration:900, ease:'linear', delay:350});
     landTls.push(intro);

@@ -50,6 +50,27 @@ Rules:
 | `--ring-a → --ring-b` | lime → magenta | the Rate My Team score ring |
 | `#neonStroke` (SVG) | lime → cyan → magenta | the line under each page title |
 
+## The HUD layer
+
+Over the neon sits a sci-fi console: the app reads like a ship's HUD without
+changing a single page or flow. It lives in the "HUD" block of `styles.css`.
+
+| Piece | How |
+| --- | --- |
+| **Target-lock corners** on `.card`, `.tile`, `.plan`, `.path`, `.sheet` | `--hud-corners`: eight thin linear gradients painted as the top background layer, coloured by `--bk` (cyan; lime on hover; dark on a lime fill) |
+| **Readouts** | `--hud` (system monospace stack) in uppercase with letter-spacing for labels, card titles, tabs, the switcher, table heads, tags and buttons. Body copy and numbers in tiles stay in the main face |
+| **Eyebrow** | `#view-eyebrow` above the title: `SYS//<TAB>/<SUB> · GW<n>`, set by `syncHead()`, with a blinking lime status light |
+| **Glitch** | `h1.glitch` — a short chromatic jitter when the title changes |
+| **Screen texture** | `body:after` CRT scanlines; `.backdrop .dots` dot grid; `.backdrop .beam` a slow scan beam |
+| **Hologram pitch** | `.turf:before` scanlines and `.turf .sweep`, a light band running down the turf |
+| **Boot sequence** | `#boot` on the landing card, typed in by GSAP (`steps()` ease) in `Motion.landingIn` |
+| **Radar ring** | `.land-logo:before/:after` — a conic sweep and a dashed ring spinning the other way |
+
+Rules: the texture stays faint (scanlines and grid never compete with text);
+corner brackets are decoration only, never a wash; radii are tight (`--r-sm`
+4px … `--r-xl` 14px). Every loop here is CSS and switches off under
+`prefers-reduced-motion`.
+
 ## Navigation
 
 Five tabs, nothing hidden behind "More". Sub-pages are picked from the section

@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-10-08 — The HUD: a sci-fi layer over the neon
+
+Same tabs, same pages, same flow — dressed as a ship's console.
+
+- **Target-lock corners** on every card, tile and plan: cyan brackets that turn
+  lime on hover.
+- **Readouts in monospace:** labels, card titles, tabs, the section switcher,
+  table heads and buttons are uppercase mono. Above every page title an
+  "eyebrow" shows where you are — `SYS//PLAN/TRANSFERS · GW8` — with a blinking
+  status light, and the title glitches in on change.
+- **Screen texture:** faint CRT scanlines, a dot grid and a slow scan beam
+  across the sky. The pitch is a hologram: scanlines over the turf and a light
+  sweep running down it.
+- **Landing boot sequence:** "LINK FPL MAINFRAME … OK", "xPTS ENGINE … ONLINE",
+  "SOLVER CORE … ARMED", then a blinking cursor waits for your Team ID. The
+  logo sits inside a spinning radar ring.
+- Primary buttons get a hazard-stripe sheen; secondary buttons are cyan
+  outlines; corners are tighter throughout.
+- Reduced motion turns off the beam, the sweep, the glitch and the spin.
+
 ## 2026-10-07 — Your name up in lights, and a verdict on your week
 
 - Home is now titled with your team's name, read from FPL with your Team ID,

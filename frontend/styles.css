@@ -596,6 +596,128 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 /* ============================ phone dock ============================ */
 .dock{display:none}
 
+
+/* =====================================================================
+   HUD — the sci-fi layer. A tactical display laid over the neon: angular
+   panels with targeting brackets, monospace readouts, CRT scanlines, a scan
+   beam, a hologram pitch and chromatic-aberration headings. Layout and
+   colours are unchanged; this only re-dresses them. Reduced motion stops
+   every sweep and blink.
+   ===================================================================== */
+:root{
+  --hud: ui-monospace,"SF Mono","JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --r-sm:4px; --r:6px; --r-lg:10px; --r-xl:14px;
+}
+
+/* corner brackets are declared on each panel so --bk can change per panel and on hover */
+.card,.tile,.plan,.path,.sheet{
+  --bk: rgba(34,240,255,.8);
+  --hud-corners:
+    linear-gradient(var(--bk),var(--bk)) 5px 5px/14px 1.5px no-repeat,
+    linear-gradient(var(--bk),var(--bk)) 5px 5px/1.5px 14px no-repeat,
+    linear-gradient(var(--bk),var(--bk)) calc(100% - 5px) 5px/14px 1.5px no-repeat,
+    linear-gradient(var(--bk),var(--bk)) calc(100% - 5px) 5px/1.5px 14px no-repeat,
+    linear-gradient(var(--bk),var(--bk)) 5px calc(100% - 5px)/14px 1.5px no-repeat,
+    linear-gradient(var(--bk),var(--bk)) 5px calc(100% - 5px)/1.5px 14px no-repeat,
+    linear-gradient(var(--bk),var(--bk)) calc(100% - 5px) calc(100% - 5px)/14px 1.5px no-repeat,
+    linear-gradient(var(--bk),var(--bk)) calc(100% - 5px) calc(100% - 5px)/1.5px 14px no-repeat;
+}
+
+/* ---- the screen: CRT scanlines over the page, a scan beam through the sky ---- */
+body:after{content:'';position:fixed;inset:0;z-index:45;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,0) 0 2px,rgba(0,0,8,.16) 2px 3px)}
+.backdrop .beam{position:absolute;left:0;right:0;top:-30%;height:30%;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(34,240,255,.07) 70%,rgba(34,240,255,.22) 98%,transparent);
+  animation:scan-beam 9s linear infinite}
+@keyframes scan-beam{to{transform:translateY(460%)}}
+.backdrop .dots{position:absolute;inset:0;opacity:.22;
+  background-image:radial-gradient(rgba(34,240,255,.55) 1px,transparent 1.4px);background-size:26px 26px;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 55%);mask-image:linear-gradient(180deg,#000,transparent 55%)}
+
+/* ---- readouts: labels, tabs and headers speak in monospace ---- */
+.tile .lbl,.card h3,label.fld,.segs button,.dock button,.links button,thead th,.tag,.stat-k,.gw-c .g,
+.land-field label,.loading span,.pill,.fc,.bench .slot-lbl,.menu-actions .btn span{font-family:var(--hud);letter-spacing:.12em}
+.segs button,.links button,.dock button{text-transform:uppercase;font-size:12.5px}
+.dock button{font-size:10px}
+.tile .lbl:before,.card h3:before{content:'▸ ';color:var(--neon-c);text-shadow:0 0 8px var(--glow-2)}
+.card h3 .r{font-family:var(--hud);letter-spacing:.04em}
+.tile .val,.stat-v,.path .pv,.gw-score{font-family:var(--display);font-variant-numeric:tabular-nums}
+
+/* ---- the page head: a system readout, then a title with a chromatic edge ---- */
+.eyebrow{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 11.5px/1.3 var(--hud);letter-spacing:.18em;
+  text-transform:uppercase;color:var(--neon-c);text-shadow:0 0 10px var(--glow-2);overflow-wrap:anywhere}
+.eyebrow:before{content:'';flex:none;width:7px;height:7px;border-radius:50%;background:var(--neon-l);box-shadow:0 0 10px var(--neon-l);
+  animation:blink 1.6s steps(2,end) infinite}
+@keyframes blink{50%{opacity:.15}}
+.page-head h1{text-shadow:-1.5px 0 rgba(255,61,203,.55), 1.5px 0 rgba(34,240,255,.55), 0 0 22px rgba(34,240,255,.35)}
+.page-head h1.glitch{animation:glitch .5s steps(4,end)}
+@keyframes glitch{
+  0%{transform:translate(0);clip-path:inset(0 0 0 0)}
+  25%{transform:translate(-3px,1px);clip-path:inset(10% 0 55% 0)}
+  50%{transform:translate(3px,-1px);clip-path:inset(55% 0 8% 0)}
+  75%{transform:translate(-1px,0);clip-path:inset(30% 0 30% 0)}
+  100%{transform:translate(0);clip-path:inset(0 0 0 0)}}
+
+/* ---- panels: angular glass with targeting brackets ---- */
+.card,.tile{background:var(--hud-corners), var(--glass-fill)}
+.card,.tile,.plan,.path,.well,.note,.mv{border-radius:var(--r-lg)}
+.tile{border-radius:var(--r)}
+.card:hover,.tile:hover{--bk: rgba(200,255,61,.95)}
+.path{background:var(--hud-corners), var(--glass-fill)}
+.plan{background:var(--hud-corners), rgba(22,15,54,.7)}
+.path.on{background:var(--hud-corners), var(--grad-cta)}
+.path.on{--bk: rgba(10,6,32,.7)}
+.well{border:1px solid rgba(34,240,255,.12)}
+tbody td{border-radius:0!important}
+tbody tr td:first-child{box-shadow:inset 2px 0 0 rgba(34,240,255,.0)}
+tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
+.segs,.btn,input,select,.adv summary,.team-pill,.icon-btn,.gw-c,.rowtabs,.chipset button,.strip .s{border-radius:var(--r)}
+.segs button,.segs .seg-ind{border-radius:4px}
+
+/* buttons: chamfered, with a hazard-stripe sheen on the primary ones */
+.btn.primary,.cta{border-radius:4px;
+  background:repeating-linear-gradient(-45deg,transparent 0 12px,rgba(255,255,255,.12) 12px 14px), var(--grad-cta);
+  font-family:var(--hud);text-transform:uppercase;letter-spacing:.14em}
+.btn:not(.primary):not(.ghost){background:linear-gradient(180deg,rgba(34,240,255,.06),rgba(34,240,255,.02));border-color:rgba(34,240,255,.28)}
+.btn:not(.primary):not(.ghost):hover{border-color:var(--neon-c);box-shadow:0 0 18px -6px var(--glow-2)}
+
+/* chrome */
+.nav-bar{border-bottom:1px solid rgba(34,240,255,.22);box-shadow:var(--glass-hi), 0 1px 0 rgba(34,240,255,.08), 0 10px 30px -20px var(--glow-2)}
+.nav-bar:after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,var(--neon-c) 20%,var(--neon-m) 50%,var(--neon-l) 80%,transparent);opacity:.7}
+.brand .mark{border-radius:8px}
+.sheet,.land-card{border-radius:14px}
+.sheet{background-image:var(--hud-corners)}
+.toast{border-radius:6px;font-family:var(--hud);letter-spacing:.06em}
+
+/* ---- the pitch: a hologram, with a sweep that passes over it ---- */
+.pitch-card{border-radius:12px}
+.turf:before{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:repeating-linear-gradient(180deg,rgba(34,240,255,0) 0 3px,rgba(34,240,255,.05) 3px 4px)}
+.turf .sweep{position:absolute;left:0;right:0;top:-25%;height:25%;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(34,240,255,.12) 80%,rgba(200,255,61,.35) 99%,transparent);
+  animation:pitch-sweep 6s cubic-bezier(.5,0,.5,1) infinite}
+@keyframes pitch-sweep{0%{transform:translateY(0)}60%,100%{transform:translateY(520%)}}
+.pl-card{border-radius:5px}
+
+/* ---- landing: boot sequence and a radar ring round the logo ---- */
+.boot{margin:0 auto 14px;max-width:340px;text-align:left;font:500 11.5px/1.75 var(--hud);letter-spacing:.06em;color:var(--ink-3)}
+.boot div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.boot b{color:var(--neon-l);font-weight:700}
+.boot .cur{display:inline-block;width:7px;height:12px;margin-left:3px;vertical-align:-1px;background:var(--neon-c);animation:blink 1s steps(2,end) infinite}
+.land-logo{position:relative;border-radius:50%}
+.land-logo:before{content:'';position:absolute;inset:-9px;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 0deg,rgba(34,240,255,.0) 0 70%,rgba(34,240,255,.55) 98%,var(--neon-c));
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));animation:spin 3.2s linear infinite}
+.land-logo:after{content:'';position:absolute;inset:-16px;border-radius:50%;border:1px dashed rgba(255,61,203,.35);pointer-events:none;animation:spin 14s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.land-title{text-shadow:-2px 0 rgba(255,61,203,.6), 2px 0 rgba(34,240,255,.6), 0 0 18px rgba(34,240,255,.5)}
+
+@media(prefers-reduced-motion:reduce){
+  .backdrop .beam,.turf .sweep{display:none}
+}
+
 @media(max-width:1180px){
   .team-pill{padding:0 5px;max-width:none}
   .team-pill #teamLabel{display:none}
@@ -728,6 +850,8 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
   .sheet{width:100%;max-height:90vh;border-radius:28px 28px 0 0;padding:20px 16px calc(24px + var(--safe-b))}
   .sheet .grid.g4{grid-template-columns:repeat(2,minmax(0,1fr))}
   .page-head h1{font-size:27px}
+  .eyebrow{font-size:10.5px;letter-spacing:.14em}
+  .segs button{font-size:11.5px;letter-spacing:.08em}
   .title-line{width:140px}
   .segs{width:100%;margin-bottom:16px}
   .segs[data-tab="players"]{padding-right:44px;-webkit-mask-image:linear-gradient(90deg,#000 80%,transparent);mask-image:linear-gradient(90deg,#000 80%,transparent)}
