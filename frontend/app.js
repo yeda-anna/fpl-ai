@@ -12,6 +12,7 @@ const S = {
   teamId: '', teamName: '',
   horizon: 5,
   overrides: store.get('fplai_minutes', {}),   // {playerId: minutes} - your own numbers
+  made: store.get('fplai_made', {}),           // {teamId: [[outId, inId], ...]} - transfers made in the FPL app, not public yet
   entry: null, meta: null, loaded: {},
   fresh: true,         // the next read of your team bypasses the server's cache (every page load starts true)
   ready: null,         // the first, fresh read of a saved team; team views wait for it
@@ -35,7 +36,10 @@ async function api(path, opts){
 const post = (path, body) => api(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
 const ovParam = () => Object.entries(S.overrides).map(([k,v])=>k+':'+v).join(',');
 const entryUrl = id => `/api/entry/${id}?horizon=${S.horizon}${ovQuery()}${S.fresh ? '&fresh=1' : ''}`;
-const ovQuery = () => { const o = ovParam(); return o ? '&overrides='+encodeURIComponent(o) : ''; };
+const madeParam = () => (S.made[S.teamId] || []).map(([o,i])=>o+'-'+i).join(',');
+const ovQuery = () => { const o = ovParam(), m = madeParam(); return (o ? '&overrides='+encodeURIComponent(o) : '') + (m ? '&made='+m : ''); };
+/* Your minute edits and the transfers you've told us about, on a request body. */
+const withEdits = b => { const o = ovParam(), m = madeParam(); if(o) b.overrides = o; if(m) b.made = m; return b; };
 
 /* ---------------- house humour ----------------
    British dry wit and Indian dark humour in the waiting and on the landing screen.
@@ -233,6 +237,7 @@ async function viewSquad(t){
           ? 'Made for GW'+e.next_gw+': '+e.pending_transfers.map(t=>esc((t.out||'?')+' → '+(t.in||'?'))).join(', ')
           : av.length ? 'Chips now: '+av.map(c=>CH[c]).join(' · ') : 'No chips this week')}
       </div>
+      ${madeCard(e)}
       <div class="grid g23 mb">
         <div class="card">
           <h3>Best XI for GW${e.next_gw} <span class="r">${e.formation} · ${num(e.xi_xpts)} xPts</span></h3>
@@ -256,11 +261,59 @@ async function viewSquad(t){
           </tbody></table></div>
         </div>
       </div>`;
+    wireMade(e);
     if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; FX.burst(innerWidth/2, 180, 120); }
   }catch(err){
     t.innerHTML = errBox(err);
     if(cur.tab === 'home' && cur.seg === 'squad') el('view-sub').textContent = 'Couldn’t read the scoreline right now.';
   }
+}
+
+/* Transfers made in the FPL app. FPL keeps a transfer for the coming gameweek private
+   until that deadline passes, so the public data we read can't see it: the manager
+   tells us here, it's kept on this device, and every team view counts it. */
+function madeCard(e){
+  const made = S.made[S.teamId] || [], pend = e.pending_transfers || [];
+  const row = t => `<li><span class="nm">${esc(t.out||'?')}</span> ${Magic.beamArrow()} <span class="nm">${esc(t.in||'?')}</span>
+    ${t.manual ? `<button class="btn sm" data-unmade="${t.out_id}-${t.in_id}" aria-label="Remove ${esc((t.out||'')+' to '+(t.in||''))}">Remove</button>` : '<span class="dim">from FPL</span>'}</li>`;
+  const stale = made.filter(([o,i])=>!pend.some(t=>t.manual && t.out_id===o && t.in_id===i)).length;
+  return `<div class="card mb made">
+    <h3>Transfers made for GW${e.next_gw} <span class="r">${pend.length ? pend.length+' counted' : 'none yet'}</span></h3>
+    <div class="legend" style="margin-top:0">Made a transfer in the FPL app? FPL keeps it private until the deadline, so add it here and every view will count it. It’s kept on this device and drops out once the deadline passes.</div>
+    ${pend.length ? `<ul class="made-list">${pend.map(row).join('')}</ul>` : ''}
+    ${stale ? `<div class="legend">${stale} saved transfer${stale>1?'s':''} no longer fit${stale>1?'':'s'} your squad and ${stale>1?'were':'was'} skipped. <button class="btn sm" id="madeClear">Clear saved</button></div>` : ''}
+    <div class="controls made-add">
+      <label class="fld">Out<select id="madeOut"><option value="">Player sold…</option>
+        ${e.squad.slice().sort((a,b)=>a.position-b.position||a.web_name.localeCompare(b.web_name)).map(p=>`<option value="${p.id}" data-pos="${p.position}">${esc(p.web_name)} · ${POS[p.position]}</option>`).join('')}</select></label>
+      <label class="fld">In<select id="madeIn" disabled><option value="">Player bought…</option></select></label>
+      <button class="btn primary" id="madeAdd" disabled>Add transfer</button>
+    </div></div>`;
+}
+function wireMade(e){
+  const save = list => { if(list.length) S.made[S.teamId] = list; else delete S.made[S.teamId];
+    store.set('fplai_made', S.made); invalidate(); rerender(); };
+  const mine = () => (S.made[S.teamId] || []).slice();
+  document.querySelectorAll('[data-unmade]').forEach(b=>b.onclick = ()=>{
+    const [o,i] = b.dataset.unmade.split('-').map(Number);
+    save(mine().filter(([a,c])=>!(a===o && c===i)));
+  });
+  if(el('madeClear')) el('madeClear').onclick = ()=>save([]);
+  const out = el('madeOut'), inn = el('madeIn'), add = el('madeAdd');
+  if(!out) return;
+  const owned = new Set(e.squad.map(p=>p.id));
+  out.onchange = async ()=>{
+    const opt = out.selectedOptions[0]; add.disabled = true;
+    if(!out.value){ inn.disabled = true; inn.innerHTML = '<option value="">Player bought…</option>'; return; }
+    inn.disabled = true; inn.innerHTML = '<option value="">Loading…</option>';
+    try{
+      const d = await api(`/api/players?horizon=${S.horizon}&position=${opt.dataset.pos}&sort=ownership&limit=800`);
+      const list = d.players.filter(p=>!owned.has(p.id)).sort((a,b)=>a.web_name.localeCompare(b.web_name));
+      inn.innerHTML = '<option value="">Player bought…</option>' + list.map(p=>`<option value="${p.id}">${esc(p.web_name)} · ${esc(p.team_short)} · £${num(p.price,1)}m</option>`).join('');
+      inn.disabled = false;
+    }catch(err){ inn.innerHTML = '<option value="">Couldn’t load players</option>'; }
+  };
+  inn.onchange = ()=>{ add.disabled = !(out.value && inn.value); };
+  add.onclick = ()=>{ if(out.value && inn.value) save(mine().concat([[+out.value, +inn.value]])); };
 }
 
 /* ---------------- Home: this week's picks (no team needed) ---------------- */
@@ -520,7 +573,7 @@ async function viewSolver(t){
     if(el('sWC').value) body.wildcard_gw = +el('sWC').value;
     if(el('sFH').value) body.free_hit_gw = +el('sFH').value;
     if(el('sFT').value) body.free_transfers = +el('sFT').value;
-    const ov = ovParam(); if(ov) body.overrides = ov;
+    withEdits(body);
     const key = JSON.stringify(body);
     el('adv').open = false;
     if(SV.key === key && SV.r){ draw(); return; }
@@ -600,7 +653,7 @@ async function viewChips(t){
   await teamReady();
   t.innerHTML = loading('Scoring every chip in every gameweek — about half a minute, so long enough to brew');
   try{
-    const body = {team_id:+S.teamId, horizon:S.horizon}; const ov = ovParam(); if(ov) body.overrides = ov;
+    const body = withEdits({team_id:+S.teamId, horizon:S.horizon});
     const r = await post('/api/chips', body);
     const top = r.best_plans[0];
     t.innerHTML = `
@@ -657,7 +710,7 @@ async function viewCopilot(t){
     const body = entry.querySelector('.qa-body');
     try{
       const b = {question:q, horizon:S.horizon}; if(S.teamId) b.team_id = +S.teamId;
-      const ov = ovParam(); if(ov) b.overrides = ov;
+      withEdits(b);
       const r = await post('/api/copilot', b);
       const needsTeam = !r.has_team && ['hit','transfer','rate','chip','bench'].includes(r.intent);
       body.innerHTML = `<div class="grid g23">
@@ -1015,7 +1068,7 @@ function go(tabId, segId){
   if(tabChanged) window.scrollTo({top:0, behavior: FX.reduced ? 'auto' : 'smooth'});
 }
 function render(tab, seg){
-  const key = [S.horizon, S.teamId, ovParam()].join('|'), id = tab+'/'+seg;
+  const key = [S.horizon, S.teamId, ovParam(), madeParam()].join('|'), id = tab+'/'+seg;
   if(S.loaded[id] === key) return;
   S.loaded[id] = key;
   const s = tabOf(tab).segs.find(x=>x.id===seg);

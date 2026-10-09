@@ -46,5 +46,39 @@ class PendingTests(unittest.TestCase):
         self.assertEqual(SQUAD, before)
 
 
+class FakeEngine:
+    players = {4: {"element_type": 4, "now_cost": 78}, 99: {"element_type": 4, "now_cost": 60},
+               98: {"element_type": 3, "now_cost": 55}}
+
+
+class MadeTests(unittest.TestCase):
+    """Transfers the manager enters by hand: FPL hides them until the deadline."""
+
+    def test_parse_made(self):
+        self.assertEqual(main.parse_made("417-306, 12-99,bad,1-x,"), [(417, 306), (12, 99)])
+        self.assertEqual(main.parse_made(None), [])
+
+    def test_a_made_transfer_swaps_the_player_and_moves_the_bank(self):
+        squad = [dict(p) for p in SQUAD]
+        squad[3]["purchase_price"] = 74                 # bought at 7.4, now 7.8: sells for 7.6
+        made = main.made_transfers(FakeEngine(), squad, [(4, 99)], 8)
+        self.assertEqual(made[0]["event"], 9)
+        self.assertEqual(made[0]["element_out_cost"], 76)
+        new, bank, applied = main.apply_pending_transfers(squad, 0.5, made, 8)
+        self.assertEqual(new[3]["id"], 99)
+        self.assertEqual(bank, 2.1)                     # 0.5 + 7.6 - 6.0
+        self.assertTrue(applied[0]["manual"])
+
+    def test_a_swap_across_positions_or_unknown_player_is_ignored(self):
+        self.assertEqual(main.made_transfers(FakeEngine(), SQUAD, [(4, 98), (4, 12345)], 8), [])
+
+    def test_once_the_picks_carry_it_the_made_transfer_drops_out(self):
+        after = [dict(p) for p in SQUAD]
+        after[3] = {"id": 99, "purchase_price": 60}     # the deadline passed: 4 is gone, 99 is in
+        made = main.made_transfers(FakeEngine(), after, [(4, 99)], 9)
+        new, bank, applied = main.apply_pending_transfers(after, 1.0, made, 9)
+        self.assertEqual((new, bank, applied), (after, 1.0, []))
+
+
 if __name__ == "__main__":
     unittest.main()

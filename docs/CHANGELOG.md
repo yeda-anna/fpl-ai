@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-09 — Tell the app about a transfer FPL hasn't published yet
+
+- The previous fix didn't help: FPL keeps a transfer for the coming gameweek
+  **private** — only the manager, logged in, can see it — until the deadline
+  passes, so neither the picks nor the public transfers list carry it.
+- Home → My squad now has a **Transfers made for GW…** card: pick the player
+  sold and the player bought (same position) and every team view — squad, best
+  XI, bank, free transfers, the solver, chips, Grade and Ask — plans from the
+  updated squad. The transfers are kept on the device per team
+  (`fplai_made`), sent as `made=out-in,…`, can be removed, and drop out on their
+  own once the deadline passes and FPL's picks carry them.
+
 ## 2026-10-09 — Transfers show up the moment you make them
 
 - A transfer made on the FPL site or app for the coming gameweek now shows in

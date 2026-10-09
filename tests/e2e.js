@@ -108,6 +108,25 @@ async function phone(browser){
   ok('phone: home fits width', await noOverflow(page), lastOverflow.join(', '));
   ok('phone: a meteor shower crosses the sky behind every page', (await page.$$('#skyMeteors .mg-meteor')).length >= 12);
   await page.screenshot({ path: `${OUT}/m-02-home.png` });
+  {
+    // a transfer made in the FPL app (private until the deadline) can be entered by hand and counts everywhere
+    const outId = await page.$eval('#madeOut option[value]:not([value=""])', o => o.value);
+    await page.selectOption('#madeOut', outId);
+    await page.waitForSelector('#madeIn:not([disabled])', { timeout: 8000 });
+    const inId = await page.$eval('#madeIn option[value]:not([value=""])', o => o.value);
+    await page.selectOption('#madeIn', inId); await page.click('#madeAdd');
+    await page.waitForSelector('#v-home-squad .made-list [data-unmade]', { timeout: 15000 });
+    const saved = await page.evaluate(t => JSON.parse(localStorage.getItem('fplai_made'))[t], TEAM);
+    const squadIds = await page.evaluate(t => fetch(`/api/entry/${t}?horizon=5&made=${JSON.parse(localStorage.getItem('fplai_made'))[t].map(p => p.join('-')).join(',')}`)
+      .then(r => r.json()).then(j => j.squad.map(p => p.id)), TEAM);
+    ok('phone: a transfer made in the FPL app can be added by hand', JSON.stringify(saved) === JSON.stringify([[+outId, +inId]])
+       && squadIds.includes(+inId) && !squadIds.includes(+outId), JSON.stringify(saved));
+    ok('phone: the made-transfers card fits width', await noOverflow(page), lastOverflow.join(', '));
+    await page.screenshot({ path: `${OUT}/m-02b-made.png`, fullPage: false });
+    await page.click('#v-home-squad .made-list [data-unmade]');
+    await page.waitForFunction(() => !document.querySelector('#v-home-squad .made-list [data-unmade]') && document.querySelector('#madeOut'), null, { timeout: 15000 });
+    ok('phone: a hand-entered transfer can be removed', await page.evaluate(t => !(JSON.parse(localStorage.getItem('fplai_made') || '{}')[t]), TEAM));
+  }
 
   // ---- every tab and every sub-page renders, with no error and nothing wider than the phone ----
   const tabs = await page.$$eval('#dock button[data-tab]', bs => bs.map(b => b.dataset.tab));
