@@ -1,11 +1,11 @@
-# CLAUDE.md — Footy
+# CLAUDE.md — Papa Ranjeet
 
 Instructions for Claude Code (and any other coding agent) working in this
 repository. Read this first; the `docs/` folder has the detail.
 
 ## What this is
 
-Footy is a Fantasy Premier League planner. A FastAPI backend pulls the
+Papa Ranjeet is a Fantasy Premier League planner. A FastAPI backend pulls the
 official FPL API, projects expected points (xPts) for every player, and runs a
 mixed-integer solver over transfers, captaincy and chips. A no-build vanilla-JS
 single-page app renders it in a neon, sci-fi look — it opens with a short
@@ -29,7 +29,7 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 105 checks, phone 390×844 + desktop 1440×900 + reduced motion
+npm --prefix tests test        # 107 checks, phone 390×844 + desktop 1440×900 + reduced motion
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the neon palette
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
@@ -140,7 +140,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
   the app (`FX.hold(Intro.reveal)`). Keep it under five seconds.
 
 **Brand and content**
-- Name: **Footy**. Tagline: "Football’s a funny old game. Might as well do the
+- Name: **Papa Ranjeet**. Tagline: "Football’s a funny old game. Might as well do the
   maths." Logo: the drone-portrait image the owner supplied, used as it is —
   not regenerated or restyled. `scripts/digitize.py <image>` writes
   `portrait.webp` (the film), `logo.webp` (a square face crop, the `#logo`

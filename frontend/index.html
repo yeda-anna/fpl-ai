@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Footy">
-<meta name="description" content="Footy — a Fantasy Premier League planner: expected points, a multi-week transfer solver, chips, mini-leagues and more.">
-<title>Footy · FPL planner</title>
+<meta name="apple-mobile-web-app-title" content="Papa Ranjeet">
+<meta name="description" content="Papa Ranjeet — a Fantasy Premier League planner: expected points, a multi-week transfer solver, chips, mini-leagues and more.">
+<title>Papa Ranjeet · FPL planner</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="icon" type="image/png" href="/static/icon-192.png">
@@ -46,7 +46,7 @@
     <canvas class="in-stars" id="inDrones"></canvas>
     <div class="in-stage">
       <div class="in-mark" id="inMark"><img class="in-photo" src="/static/portrait.webp" alt="" decoding="async"></div>
-      <div class="in-title mg-hyper" id="inTitle" data-text="Footy">Footy</div>
+      <div class="in-title mg-hyper" id="inTitle" data-text="Papa Ranjeet">Papa Ranjeet</div>
       <div class="in-line"><span id="inType"></span><span class="cur"></span></div>
     </div>
     <div class="in-flash"></div>
@@ -57,7 +57,7 @@
   <button class="in-skip" id="inSkip" type="button">Skip intro <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5v13l8-6.5zM12 5.5v13l8-6.5z" fill="currentColor"/></svg></button>
 </div>
 
-<!-- the night sky: neon wires with a pulse of light running along each (anime.js), and a moving grid floor -->
+<!-- the night sky: neon wires with a pulse of light running along each (anime.js), a meteor shower and a moving grid floor -->
 <div class="backdrop" aria-hidden="true">
   <div class="retro"><div class="retro-plane"><div class="retro-grid"></div></div></div>
   <svg class="sky" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -71,6 +71,7 @@
     <path class="wire l" d="M-5 92 C 24 84, 46 100, 70 88 S 96 82, 105 90"/>
     <path class="pulse l" d="M-5 92 C 24 84, 46 100, 70 88 S 96 82, 105 90"/>
   </svg>
+  <div class="sky-meteors" id="skyMeteors"></div>
   <div class="dots"></div>
   <div class="beam"></div>
   <div class="grain"></div>
@@ -78,9 +79,9 @@
 
 <header class="nav-bar">
   <div class="nav-in">
-    <div class="brand" title="Footy — home">
+    <div class="brand" title="Papa Ranjeet — home">
       <div class="mark"><svg class="neon-logo" viewBox="0 0 100 100" aria-hidden="true"><use href="#logo"/></svg></div>
-      <b class="mg-hyper" id="brandName">Footy</b>
+      <b class="mg-hyper" id="brandName">Papa Ranjeet</b>
     </div>
     <nav class="links" id="nav" aria-label="Main"></nav>
     <div class="nav-right">
@@ -153,7 +154,7 @@
       <div data-type="▸ SOLVER CORE ............... ">▸ SOLVER CORE ............... <b>ARMED</b></div>
       <div data-type="▸ AWAITING MANAGER ID">▸ AWAITING MANAGER ID<span class="cur"></span></div>
     </div>
-    <h1 class="land-title mg-hyper" id="landTitle">Footy</h1>
+    <h1 class="land-title mg-hyper" id="landTitle">Papa Ranjeet</h1>
     <p class="tagline">Football’s a funny old game. Might as well do the maths.</p>
     <p class="land-quip" id="landQuip"></p>
     <div class="land-field">

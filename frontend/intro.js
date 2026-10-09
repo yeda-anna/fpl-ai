@@ -1,4 +1,4 @@
-/* Footy — the opening film. Plain JS, no build step.
+/* Papa Ranjeet — the opening film. Plain JS, no build step.
 
    A few seconds of titles on every launch while the app loads underneath:
    letterbox bars close in over a grid floor where a couple of thousand drones
@@ -157,7 +157,7 @@ const Intro = (() => {
     if(built) return true;
     if(!T || !T.getProject) return false;
     try{
-      project = T.getProject('Footy · opening film', {state:projectState()});
+      project = T.getProject('Papa Ranjeet · opening film', {state:projectState()});
       sheet = project.sheet('Film');
       const t = T.types, num = (v, r) => t.number(v, r ? {range:r} : undefined);
       const O = {};

@@ -1,4 +1,4 @@
-/* Footy — frontend. Plain JS, no build step. Animation lives in motion.js (FX),
+/* Papa Ranjeet — frontend. Plain JS, no build step. Animation lives in motion.js (FX),
    the Magic UI effects in magic.js (Magic) and the opening film in intro.js (Intro). */
 'use strict';
 
@@ -1129,7 +1129,7 @@ function openMenu(){
   const root = el('sheet-root');
   root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Menu">
     <button class="btn sm x" id="closeSheet">Close ✕</button>
-    <h2 class="menu-h">Footy</h2>
+    <h2 class="menu-h">Papa Ranjeet</h2>
     <p class="menu-sub">${S.teamId ? 'Team <b>'+esc(S.teamName || S.teamId)+'</b> is saved on this device.' : 'No team saved on this device.'}</p>
     <div class="menu-actions">
       <button class="btn" id="mTeam">${icon('players')}<span>${S.teamId ? 'Change team' : 'Add team'}</span></button>

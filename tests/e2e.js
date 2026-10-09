@@ -1,4 +1,4 @@
-// End-to-end checks for Footy on a phone (390x844, touch) and a desktop
+// End-to-end checks for Papa Ranjeet on a phone (390x844, touch) and a desktop
 // (1440x900) viewport. Start the app first, then:  npm --prefix tests test
 //   BASE_URL=http://127.0.0.1:9000/ npm --prefix tests test   (another server)
 //   TEAM_ID=1234567 npm --prefix tests test                    (a real team on live)
@@ -49,7 +49,7 @@ async function phone(browser){
 
   // ---- the opening film plays on launch (Theatre.js), and Skip ends it ----
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  ok('phone: the page is named Footy', /^Footy\b/.test(await page.title()), await page.title());
+  ok('phone: the page is named Papa Ranjeet', /^Papa Ranjeet\b/.test(await page.title()), await page.title());
   ok('phone: animation libraries load from /static/vendor (GSAP, anime.js, Motion, Theatre.js, AutoAnimate)', await page.evaluate(() =>
     !!(window.gsap && window.DrawSVGPlugin && window.MotionPathPlugin && window.anime && window.Motion && window.Motion.animate && window.Motion.inView
        && window.Theatre && window.Theatre.core && typeof window.autoAnimate === 'function'
@@ -106,6 +106,7 @@ async function phone(browser){
     ok('phone: the verdict is the same line on the way back', (await page.textContent('#view-sub')).trim() === sub);
   }
   ok('phone: home fits width', await noOverflow(page), lastOverflow.join(', '));
+  ok('phone: a meteor shower crosses the sky behind every page', (await page.$$('#skyMeteors .mg-meteor')).length >= 12);
   await page.screenshot({ path: `${OUT}/m-02-home.png` });
 
   // ---- every tab and every sub-page renders, with no error and nothing wider than the phone ----
@@ -266,6 +267,7 @@ async function reducedMotion(browser){
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: 'networkidle' });
   ok('reduced motion: no opening film', !(await page.isVisible('#intro')));
+  ok('reduced motion: no meteor shower', (await page.$$('.mg-meteor')).length === 0);
   await page.fill('#landId', TEAM); await page.click('#landGo');
   await page.waitForSelector('#v-home-squad .tile', { timeout: 30000 });
   const st = await page.evaluate(() => ({ minOpacity: Math.min(...[...document.querySelectorAll('#v-home-squad .tile, #v-home-squad .card')].map(e => +getComputedStyle(e).opacity)),

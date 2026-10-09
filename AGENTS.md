@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents working on **Footy**, a Fantasy Premier
+Guidance for AI coding agents working on **Papa Ranjeet**, a Fantasy Premier
 League planner (FastAPI + PuLP backend, no-build vanilla-JS frontend).
 
 The full instructions live in [`CLAUDE.md`](CLAUDE.md). The essentials:
