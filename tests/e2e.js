@@ -57,9 +57,10 @@ async function phone(browser){
   {
     const tc0 = await page.textContent('#inTc'); await page.waitForTimeout(450); const tc1 = await page.textContent('#inTc');
     ok('phone: the opening film plays on launch, its timecode running', await page.isVisible('#intro') && tc0 !== tc1, `${tc0} → ${tc1}`);
-    ok('phone: the film flies the drone portrait, and the logo is made of drones', await page.evaluate(() =>
+    ok('phone: the film flies the drones traced from the logo portrait, and the logo is that portrait', await page.evaluate(() =>
       typeof PORTRAIT !== 'undefined' && PORTRAIT.d.length / 4 > 300 && /^\d+ drones$/i.test(document.getElementById('inCount').textContent.trim())
-      && document.querySelectorAll('#logo circle').length > 100), await page.textContent('#inCount'));
+      && /logo\.webp$/.test(document.querySelector('#logo image').getAttribute('href'))
+      && document.querySelector('#inMark .in-photo').complete), await page.textContent('#inCount'));
     await page.waitForTimeout(1800);
     await page.screenshot({ path: `${OUT}/m-00-film.png` });
     await page.click('#inSkip');

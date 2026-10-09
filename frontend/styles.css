@@ -109,11 +109,10 @@ button{font:inherit}
 }
 
 /* ============================ neon logo ============================ */
-/* A portrait made of drones: a few hundred lights in the neon colours (cyan
-   outline, magenta features, white skin, violet hair, lime piping), digitized
-   from a photo by scripts/digitize.py into the <symbol id="logo"> in
-   index.html. Every logo is a <use> of it; here it glows. The opening film
-   flies the full set of drones (portrait.js) into the same picture. */
+/* The drone portrait (logo.webp, cut from portrait.webp by scripts/digitize.py),
+   in the <symbol id="logo"> in index.html. Every logo is a <use> of it, clipped
+   to its slot's shape; here it glows. The opening film flies the drones traced
+   from the same picture (portrait.js) into place and dissolves into it. */
 .neon-logo{display:block;overflow:visible;filter:drop-shadow(0 0 1.5px rgba(34,240,255,.8)) drop-shadow(0 0 5px rgba(255,61,203,.4))}
 
 /* ============================ top bar ============================ */
@@ -142,7 +141,7 @@ button{font:inherit}
 .team-pill:hover{background:var(--glass-3);border-color:rgba(34,240,255,.4);box-shadow:0 0 18px -6px var(--glow-2)}
 .avatar{width:32px;height:32px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:12.5px;font-weight:800;color:var(--on-accent);
   background:var(--grad-cta);box-shadow:0 0 12px -2px var(--glow-2)}
-.avatar svg{width:22px;height:22px}
+.avatar svg{width:100%;height:100%;border-radius:50%;overflow:hidden}
 .team-pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .icon-btn{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;cursor:pointer;flex:none;
   background:var(--glass-2);border:1px solid var(--glass-line);box-shadow:var(--glass-hi);color:var(--ink-2);transition:.2s var(--ease)}
@@ -687,7 +686,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
 .boot b{color:var(--neon-l);font-weight:700}
 .boot .cur{display:inline-block;width:7px;height:12px;margin-left:3px;vertical-align:-1px;background:var(--neon-c);animation:blink 1s steps(2,end) infinite}
 .land-logo{position:relative;border-radius:50%}
-.land-logo > svg{position:relative;z-index:2}
+.land-logo > svg{position:relative;z-index:2;border-radius:50%;overflow:hidden}
 .land-logo .mg-ripple{inset:-56px;z-index:0}
 .land-orbit{position:absolute;inset:-16px;z-index:1;pointer-events:none}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -815,7 +814,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
 /* ============================ the opening film ============================ */
 /* Theatre.js (intro.js) writes the custom properties below on every frame. */
 .intro{position:fixed;inset:0;z-index:300;overflow:hidden;background:#030210;cursor:pointer;touch-action:none;overscroll-behavior:contain;
-  --bars:0;--hud-a:0;--floor:0;--floor-a:0;--flash:0;--title-a:0;--track:.55;--line-a:0;
+  --bars:0;--hud-a:0;--floor:0;--floor-a:0;--flash:0;--photo:0;--title-a:0;--track:.55;--line-a:0;
   --zoom:1.25;--cam-y:5;--hole:0;--p:0}
 .intro[hidden],.no-intro .intro{display:none}
 .intro-on .intro{animation:in-failsafe .01s 15s forwards}
@@ -833,7 +832,12 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
 .in-stage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,2vh,20px);
   padding:0 16px 8vh;transform:translateY(calc(var(--cam-y) * 1vh)) scale(var(--zoom));transform-origin:50% 44%}
 /* the drones are drawn on the canvas into this box (intro.js reads its place); the box itself is empty */
-.in-mark{position:relative;width:min(92vw,600px,72vh);aspect-ratio:1000/752}
+.in-mark{position:relative;width:min(92vw,600px,72vh);aspect-ratio:1446/1088}
+.in-photo{display:block;width:100%;height:100%;opacity:var(--photo);pointer-events:none;
+  /* feather the picture's black edges into the night, so it has no frame */
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
+  -webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
+  mask-composite:intersect}
 .in-title{font:900 clamp(30px,9.4vw,74px)/1.05 var(--display);letter-spacing:calc(var(--track) * 1em);margin-right:calc(var(--track) * -1em);
   text-transform:uppercase;text-align:center;white-space:nowrap;color:var(--ink);opacity:var(--title-a);
   text-shadow:-2px 0 rgba(255,61,203,.65),2px 0 rgba(34,240,255,.65),0 0 26px rgba(34,240,255,.55)}

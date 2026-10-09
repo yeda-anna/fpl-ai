@@ -57,12 +57,13 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators), anime.js (sky pulses, icon drawing, flicker), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
 | `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Meteors, Ripple, OrbitingCircles, BorderBeam, ShimmerButton, AnimatedBeam, RetroGrid |
 | `frontend/intro.js` | `Intro`: the opening film, a Theatre.js sequence (keyframes in `KEYS`) played on launch: a drone swarm drawn on a canvas |
-| `frontend/portrait.js` | `PORTRAIT`: every drone's place in the logo portrait — generated, don't edit |
+| `frontend/portrait.js` | `PORTRAIT`: the film's drones, traced from the lights in the portrait — generated, don't edit |
+| `frontend/portrait.webp`, `logo.webp`, `icon-*.png` | The drone-portrait image the owner supplied, its square face crop (the logo) and the home-screen icons — generated |
 | `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, Theatre.js core 0.7, AutoAnimate 0.10 — vendored, see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `scripts/calibrate.py` | Projection sanity check |
 | `scripts/check_contrast.py` | WCAG AA check for the palette |
-| `scripts/digitize.py`, `scripts/render_icons.js` | Turn a photo into drones: `portrait.js`, the `#logo` symbol, `icon.svg`; then the PNG icons |
+| `scripts/digitize.py` | From the supplied image: `portrait.webp`, `logo.webp`, the PNG icons and `portrait.js` |
 | `docs/` | Architecture, model, solver, API, design, data, testing, deployment |
 | `.claude/agents/` | Specialist sub-agents for this repo |
 | `.claude/skills/` | Step-by-step procedures (run, test, calibrate, deploy, design, add a feature) |
@@ -140,13 +141,12 @@ suite at **0 failures** — see `docs/TESTING.md`.
 
 **Brand and content**
 - Name: **Footy**. Tagline: "Football’s a funny old game. Might as well do the
-  maths." Logo: a portrait made of drones — a few hundred lights in the neon
-  colours (cyan outline, magenta features, white skin, violet hair, lime
-  piping), digitized from a photo the owner supplied with `scripts/digitize.py`.
-  Never edit the generated files (`portrait.js`, the `#logo` symbol,
-  `icon.svg`, `icon-*.png`) by hand: rerun the script on the photo. The photo
-  itself isn't committed. Don't put any other real person's likeness in the app
-  without asking.
+  maths." Logo: the drone-portrait image the owner supplied, used as it is —
+  not regenerated or restyled. `scripts/digitize.py <image>` writes
+  `portrait.webp` (the film), `logo.webp` (a square face crop, the `#logo`
+  symbol), the PNG icons and `portrait.js` (the film's drones, traced from the
+  image's own lights). Never edit those by hand; rerun the script. Don't put any
+  other real person's likeness in the app without asking.
 - Tone: light British humour and Indian dark humour on the landing screen and
   under the loader ("putting the kettle on", "Sharma ji’s son finished this ages
   ago"), and the log entry typed in the opening film ("Matchday GW8.

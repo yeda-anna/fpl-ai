@@ -82,14 +82,17 @@ Every launch opens with a few seconds of titles while the app loads underneath
 | 0 – 0.6 s | letterbox bars close in; REC light, the drone count and timecode | `Bars`, `Hud` |
 | 0 – 0.9 s | a retro grid floor (Magic UI Retro Grid) where the drones wait in rows | `Floor` |
 | 0.4 – 2.6 s | the drones lift off in a wave (back rows last), swoop up and fly to their places | `Swarm.gather` |
-| 2.25 – 2.65 s | they light up in their colours with a flash; then they hover | `Swarm.ignite/glow/hover`, `Flash` |
+| 2.25 – 2.65 s | they light up in the portrait's colours with a flash; then they hover | `Swarm.ignite/glow/hover`, `Flash` |
+| 2.55 – 3.2 s | the drones dim as the portrait itself (`portrait.webp`) comes up beneath them | `Swarm.photo` |
 | 2.7 – 3.6 s | the name decodes (HyperText) as its letters track in | `Title` |
 | 3.25 – 4.05 s | the log entry types itself: "Matchday GW8. Morale: questionable." | `Line` |
 | 4.3 – 4.9 s | the camera pushes into the portrait and the film irises open onto the app | `Camera`, `Iris` |
 
-- The drones are `PORTRAIT` (`portrait.js`, generated): a canvas draws each as a
+- The drones are `PORTRAIT` (`portrait.js`, generated): every light in the
+  portrait, with its colour from a 32-colour palette. A canvas draws each as a
   glowing sprite, flying a curve from its slot on the pad to its place in the
-  portrait (the empty `#inMark` box), eased per drone from `Swarm.gather`.
+  portrait (the `#inMark` box, which holds the picture), eased per drone from
+  `Swarm.gather`. The picture's edges are feathered so it has no frame.
 - The keyframes are numbers in `KEYS` (`intro.js`): `[seconds, value, easing to
   the next]`. They're turned into Theatre's project state at load — the JSON that
   Theatre Studio would export — so a change to the film is a change to `KEYS`.
@@ -226,18 +229,15 @@ strings). The e2e suite scans for this.
 
 ## Logo
 
-A **portrait made of drones**, as at a drone show: a few hundred lights in the
-neon colours — cyan round the silhouette, magenta on the features (brows, eyes,
-moustache, smile), white on the lit skin, violet through the hair, lime on the
-shirt's piping. `scripts/digitize.py` makes it from a photo: it cuts the person
-out, finds the features as spots darker than the light around them (so shadow
-doesn't count) and places drones as blue noise, denser where a layer matters.
-It writes the film's set (`portrait.js`, ~880 drones), the `<symbol id="logo">`
-in `index.html` (~260 bolder drones, cropped to the head) and `icon.svg`;
-`scripts/render_icons.js` renders `icon-180.png` (iOS home screen) and
-`icon-192/512.png` (the manifest). Every logo in the app is a `<use>` of the
-symbol, with a soft neon glow (`.neon-logo`). Don't edit the generated files by
-hand; the source photo isn't committed.
+The **drone portrait** the owner supplied — a face made of points of light in
+magenta, violet and blue — used as it is. `scripts/digitize.py <image>` writes
+`portrait.webp` (the whole picture, for the film), `logo.webp` (a square crop
+round the face), `icon-180.png` (iOS home screen), `icon-192/512.png` (the
+manifest and favicon) and `portrait.js` (the film's ~2,600 drones, traced from
+the picture's own lights). The `<symbol id="logo">` in `index.html` holds
+`logo.webp`; every logo in the app is a `<use>` of it, clipped to its slot (a
+rounded square in the top bar, a circle on the landing card and the avatar),
+with a soft neon glow (`.neon-logo`). Don't edit the generated files by hand.
 
 ## Voice
 

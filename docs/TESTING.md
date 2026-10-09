@@ -23,7 +23,8 @@ What it covers:
 - **The opening film:** the page is named Footy; GSAP, both plugins,
   anime.js, Motion, Theatre.js and AutoAnimate load from `/static/vendor`, with
   `FX`, `Magic` and `Intro`; the film plays on launch with its timecode running
-  and flies the drone portrait (`PORTRAIT`), and the logo is made of drones;
+  and flies the drones traced from the portrait (`PORTRAIT`), whose picture has
+  loaded, and the logo is the portrait (`logo.webp`);
   **Skip** ends it, it plays again on a fresh launch and gets out of the way by
   itself, the menu turns it off (and then the app opens straight away), it runs
   to its end on desktop, and there is none under reduced motion.

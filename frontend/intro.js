@@ -1,18 +1,19 @@
 /* Footy — the opening film. Plain JS, no build step.
 
    A few seconds of titles on every launch while the app loads underneath:
-   letterbox bars close in over a grid floor where a few hundred drones wait in
-   rows. They lift off in a wave, swoop up and fly into place, and light up as a
-   portrait in neon (the logo, digitized from a photo by scripts/digitize.py
-   into portrait.js). The name decodes, the log types its entry, then the
-   camera pushes in and the film irises open onto the app.
+   letterbox bars close in over a grid floor where a couple of thousand drones
+   wait in rows. They lift off in a wave, swoop up and fly into place, light up
+   in the colours of the logo portrait (traced from its own lights by
+   scripts/digitize.py into portrait.js) and dissolve into the picture itself
+   (portrait.webp). The name decodes, the log types its entry, then the camera
+   pushes in and the film irises open onto the app.
 
    It is a Theatre.js sequence (vendor/theatre-core.min.js, global Theatre.core):
    every moving part is a sheet object, every move a keyframe in KEYS below,
    eased with cubic Béziers. KEYS is turned into Theatre's project state at
    load, so changing the film is editing numbers here. (Theatre Studio, the
    visual editor, is a development tool and is not shipped.) The drones are
-   drawn on a canvas from Swarm.gather / ignite / glow / hover.
+   drawn on a canvas from Swarm.gather / ignite / glow / hover / photo.
 
    Tap anywhere, press Esc / Enter / Space, or "Skip intro" to jump to the end.
    No film when the visitor prefers reduced motion, turned it off in the menu,
@@ -36,7 +37,8 @@ const Intro = (() => {
     Swarm:  {gather:[[.4, 0, 'linear'], [2.6, 1]],           // 0 all on the pad … 1 all in place (each drone eases its own flight)
              ignite:[[2.25, 0, 'out'], [2.65, 1]],          // flight white → their own colours
              glow:  [[2.5, 0, 'out'], [2.66, 1, 'out'], [3.5, .5]],
-             hover: [[2.5, 0, 'out'], [3.1, 1]]},
+             hover: [[2.5, 0, 'out'], [3.1, 1]],
+             photo: [[2.55, 0, 'inOut'], [3.2, 1]]},             // the drones hand over to the picture itself
     Flash:  {a:     [[2.52, 0, 'out'], [2.62, .45, 'out'], [3.05, 0]]},
     Title:  {a:     [[2.7, 0, 'out'], [2.9, 1]],
              reveal:[[2.7, 0, 'linear'], [3.35, 1]],
@@ -84,11 +86,8 @@ const Intro = (() => {
 
   /* the swarm: every drone in PORTRAIT (portrait.js) as a light on a canvas. They wait in
      rows on the launch pad, lift off back row last, swoop up and fly to their place in the
-     portrait, then take their colours. The camera (the same zoom as the stage) applies to
-     where they're going, so they fly into the push-in at the end. */
-  const COLOR = {outline:'#22F0FF', feature:'#FF3DCB', light:'#F6F4FF', hair:'#8E78FF', trim:'#C8FF3D', shirt:'#5A46C8'};
-  const SIZE = {outline:1, feature:.96, light:.92, hair:.8, trim:1, shirt:.62};
-  const BRIGHT = {outline:1, feature:.78, light:.95, hair:1, trim:.9, shirt:.7};   // dense layers dimmer, so they don't burn into blobs
+     portrait, then take their colours from it. The camera (the same zoom as the stage)
+     applies to where they're going, so they fly into the push-in at the end. */
   const FLIGHT = '#CFF9FF';
   function swarm(canvas, mark){
     const ctx = canvas && canvas.getContext && canvas.getContext('2d'), P = typeof PORTRAIT !== 'undefined' ? PORTRAIT : null;   // portrait.js (a top-level const, not on window)
@@ -99,8 +98,8 @@ const Intro = (() => {
     const slot = Array.from({length:n}, (_, i)=>i);
     for(let i=n-1;i>0;i--){ const k = Math.floor(rnd() * (i + 1)); const t = slot[i]; slot[i] = slot[k]; slot[k] = t; }
     for(let i=0;i<n;i++){
-      const L = P.layers[P.d[i*4+2]], r = Math.floor(slot[i] / cols), c = slot[i] % cols, pz = (r + .5) / rows;
-      D.push({tx:P.d[i*4] / P.w, ty:P.d[i*4+1] / P.h, w:P.d[i*4+3] / 9, L, size:SIZE[L],
+      const r = Math.floor(slot[i] / cols), c = slot[i] % cols, pz = (r + .5) / rows, b = P.d[i*4+3] / 9;
+      D.push({tx:P.d[i*4] / P.w, ty:P.d[i*4+1] / P.h, w:b, c:P.d[i*4+2], size:.62 + b * .5,
               px:(c + .5) / cols - .5, pz, delay:.04 + pz * .26 + rnd() * .1, swing:(rnd() - .5) * .5, ph:rnd() * 6.283});
     }
     const sprites = {};
@@ -113,7 +112,7 @@ const Intro = (() => {
       g.fillStyle = gr; g.fillRect(0, 0, s, s);
       return c;
     }
-    Object.keys(COLOR).forEach(k=>{ sprites[k] = sprite(COLOR[k]); }); sprites.flight = sprite(FLIGHT);
+    P.pal.forEach((col, i)=>{ sprites[i] = sprite(col); }); sprites.flight = sprite(FLIGHT);
     function size(){
       dpr = Math.min(2, devicePixelRatio || 1); w = canvas.clientWidth; h = canvas.clientHeight;
       canvas.width = w * dpr; canvas.height = h * dpr;
@@ -127,7 +126,7 @@ const Intro = (() => {
       raf = requestAnimationFrame(frame);
       if(!box || !box.w) return;
       const t = now / 1000, ox = w / 2, oy = h * .44, z = V.zoom, cy = V.camY * h / 100;
-      const unit = box.w / P.w * 4, horizon = h * .62, near = h * 1.02;
+      const unit = box.w / P.w * 3.1, horizon = h * .62, near = h * 1.02;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = 'lighter';
       for(const d of D){
@@ -143,9 +142,9 @@ const Intro = (() => {
         const u = 1 - f, x = u*u*sx + 2*u*f*mx + f*f*tx, y = u*u*sy + 2*u*f*my + f*f*ty + bob * f;
         const base = (f > 0 ? unit * d.size * (1 + V.glow * .45) : unit * .55 * k) * (f > 0 ? (.75 + .25 * f) * Math.sqrt(z) : 1);
         const r = base * 2.6, lit = f >= 1 ? V.ignite : Math.max(0, V.ignite - (1 - f) * 4);
-        const alpha = V.a * (f > 0 ? .55 + .45 * Math.min(1, f * 3) : .5) * BRIGHT[d.L];
+        const alpha = V.a * (f > 0 ? .55 + .45 * Math.min(1, f * 3) : .5) * (.55 + .45 * d.w);
         if(lit < 1){ ctx.globalAlpha = alpha * (1 - lit); ctx.drawImage(sprites.flight, x - r, y - r, r * 2, r * 2); }
-        if(lit > 0){ ctx.globalAlpha = alpha * lit * (.85 + .15 * d.w); ctx.drawImage(sprites[d.L], x - r, y - r, r * 2, r * 2); }
+        if(lit > 0){ ctx.globalAlpha = alpha * lit; ctx.drawImage(sprites[d.c], x - r, y - r, r * 2, r * 2); }
       }
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     }
@@ -174,7 +173,10 @@ const Intro = (() => {
       O.Bars.onValuesChange(v=>set('--bars', v.h));
       O.Hud.onValuesChange(v=>set('--hud-a', v.a));
       O.Floor.onValuesChange(v=>{ set('--floor', v.rise); set('--floor-a', v.a); });
-      O.Swarm.onValuesChange(v=>{ V.gather = v.gather; V.ignite = v.ignite; V.glow = v.glow; V.hover = v.hover; });
+      O.Swarm.onValuesChange(v=>{
+        V.gather = v.gather; V.ignite = v.ignite; V.glow = v.glow; V.hover = v.hover;
+        V.a = 1 - .72 * v.photo; set('--photo', v.photo);           // the drones dim as the picture comes up beneath them
+      });
       O.Flash.onValuesChange(v=>set('--flash', v.a));
       O.Title.onValuesChange(v=>{
         set('--title-a', v.a); set('--track', v.track);

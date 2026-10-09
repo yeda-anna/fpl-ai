@@ -96,10 +96,10 @@ three neons — lime for "do this", cyan for lines and information, magenta for 
 ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG AA
 (`python3 scripts/check_contrast.py`).
 
-- **An opening film** on every launch, a few seconds long and skippable: a few
-  hundred drones wait in rows on a neon grid floor, lift off in a wave, swarm
-  and lock into place as the logo — a portrait in drones — then light up in
-  neon. The name decodes, the log types "Matchday GW8. Morale: questionable.",
+- **An opening film** on every launch, a few seconds long and skippable: a
+  couple of thousand drones wait in rows on a neon grid floor, lift off in a
+  wave, swarm and lock into place as the logo portrait, light up in its colours
+  and dissolve into the picture itself. The name decodes, the log types "Matchday GW8. Morale: questionable.",
   and the camera pushes in as the film irises open onto the app, which has
   loaded underneath. Keyframed with
   [Theatre.js](https://www.theatrejs.com/docs/latest); it can be turned off in
