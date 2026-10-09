@@ -1,4 +1,4 @@
-/* Captain’s Log — Magic UI, without React.
+/* Footy — Magic UI, without React.
 
    Magic UI (https://magicui.design, MIT — vendor/magicui-LICENSE.md) is a React +
    Tailwind collection, so the effects we use are re-built here in plain JS, with

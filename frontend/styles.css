@@ -1,6 +1,6 @@
 /* =====================================================================
-   Captain’s Log — neon
-   One look: a stadium at night, seen from orbit. Near-black violet (60%),
+   Footy — neon
+   One look: a stadium at night, lit by drones. Near-black violet (60%),
    dark glass (30%), neon lime, cyan and magenta (10%). Neon is light, so it
    lives on strokes, edges and the things you can press, never as a wash
    behind running text. Motion comes from GSAP, anime.js and Motion
@@ -109,18 +109,11 @@ button{font:inherit}
 }
 
 /* ============================ neon logo ============================ */
-/* A football with a planet's ring round it, drawn as a neon sign: magenta
-   ball, cyan ring, a lime star. The back of the ring breaks where it passes
-   behind the ball; the front crosses over it. GSAP draws the strokes in on
-   the landing screen and Theatre.js in the opening film; here they glow. */
-.neon-logo{display:block;overflow:visible}
-.neon-logo path,.neon-logo circle{fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.neon-logo .ring{stroke:var(--neon-c)}
-.neon-logo .ball{stroke:var(--neon-m)}
-.neon-logo .star{stroke:var(--neon-l);stroke-width:1.4}
-.neon-logo{filter:drop-shadow(0 0 3px rgba(34,240,255,.7)) drop-shadow(0 0 7px rgba(255,61,203,.45))}
-@keyframes twinkle{0%,100%{opacity:1;transform:scale(1) rotate(0)}45%{opacity:.35;transform:scale(.55) rotate(45deg)}60%{opacity:1;transform:scale(1.12) rotate(90deg)}}
-.neon-logo .star{transform-box:fill-box;transform-origin:50% 50%;animation:twinkle 3.2s ease-in-out infinite}
+/* The drone portrait (logo.webp, cut from portrait.webp by scripts/digitize.py),
+   in the <symbol id="logo"> in index.html. Every logo is a <use> of it, clipped
+   to its slot's shape; here it glows. The opening film flies the drones traced
+   from the same picture (portrait.js) into place and dissolves into it. */
+.neon-logo{display:block;overflow:visible;filter:drop-shadow(0 0 1.5px rgba(34,240,255,.8)) drop-shadow(0 0 5px rgba(255,61,203,.4))}
 
 /* ============================ top bar ============================ */
 .nav-bar{position:sticky;top:0;z-index:50;background:var(--chrome);border-bottom:1px solid var(--glass-line);
@@ -130,7 +123,8 @@ button{font:inherit}
 .brand .mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:none;
   background:radial-gradient(circle at 50% 35%,rgba(34,240,255,.12),rgba(255,61,203,.06) 60%,transparent),var(--solid);
   border:1px solid rgba(34,240,255,.35);box-shadow:0 0 18px -6px var(--glow-2), inset 0 0 12px -6px var(--glow)}
-.brand .mark svg{width:30px;height:30px}
+.brand .mark{overflow:hidden}
+.brand .mark svg{width:38px;height:38px}
 .brand b{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;
   text-shadow:0 0 12px rgba(34,240,255,.35)}
 .links{display:flex;gap:4px;flex:1;min-width:0;justify-content:center}
@@ -147,7 +141,7 @@ button{font:inherit}
 .team-pill:hover{background:var(--glass-3);border-color:rgba(34,240,255,.4);box-shadow:0 0 18px -6px var(--glow-2)}
 .avatar{width:32px;height:32px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:12.5px;font-weight:800;color:var(--on-accent);
   background:var(--grad-cta);box-shadow:0 0 12px -2px var(--glow-2)}
-.avatar svg{width:22px;height:22px}
+.avatar svg{width:100%;height:100%;border-radius:50%;overflow:hidden}
 .team-pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .icon-btn{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;cursor:pointer;flex:none;
   background:var(--glass-2);border:1px solid var(--glass-line);box-shadow:var(--glass-hi);color:var(--ink-2);transition:.2s var(--ease)}
@@ -470,9 +464,9 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
   background:linear-gradient(135deg,rgba(34,240,255,.7),transparent 35%,transparent 65%,rgba(255,61,203,.7));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
   mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
-.land-logo{width:64px;height:64px;margin:-58px auto 10px;border-radius:20px;display:grid;place-items:center;background:var(--solid);
+.land-logo{width:96px;height:96px;margin:-82px auto 12px;border-radius:20px;display:grid;place-items:center;background:var(--solid);
   border:1px solid rgba(34,240,255,.45);box-shadow:0 0 30px -6px var(--glow-2), inset 0 0 16px -8px var(--glow)}
-.land-logo svg{width:50px;height:50px}
+.land-logo svg{width:88px;height:88px}
 .land-title{font-family:var(--display);font-size:30px;font-weight:900;letter-spacing:-.03em;margin:0;
   text-shadow:0 0 14px rgba(34,240,255,.55), 0 0 36px rgba(255,61,203,.3)}
 .land-card .tagline{color:var(--ink-2);margin:6px 0 4px;font-size:15px}
@@ -692,9 +686,9 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
 .boot b{color:var(--neon-l);font-weight:700}
 .boot .cur{display:inline-block;width:7px;height:12px;margin-left:3px;vertical-align:-1px;background:var(--neon-c);animation:blink 1s steps(2,end) infinite}
 .land-logo{position:relative;border-radius:50%}
-.land-logo > svg{position:relative;z-index:2}
-.land-logo .mg-ripple{inset:-60px;z-index:0}
-.land-orbit{position:absolute;inset:-22px;z-index:1;pointer-events:none}
+.land-logo > svg{position:relative;z-index:2;border-radius:50%;overflow:hidden}
+.land-logo .mg-ripple{inset:-56px;z-index:0}
+.land-orbit{position:absolute;inset:-16px;z-index:1;pointer-events:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .land-title{text-shadow:-2px 0 rgba(255,61,203,.6), 2px 0 rgba(34,240,255,.6), 0 0 18px rgba(34,240,255,.5)}
 
@@ -820,7 +814,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
 /* ============================ the opening film ============================ */
 /* Theatre.js (intro.js) writes the custom properties below on every frame. */
 .intro{position:fixed;inset:0;z-index:300;overflow:hidden;background:#030210;cursor:pointer;touch-action:none;overscroll-behavior:contain;
-  --bars:0;--hud-a:0;--floor:0;--floor-a:0;--logo-s:.55;--glow:0;--flash:0;--rip-a:0;--rip-s:.55;--title-a:0;--track:.55;--line-a:0;
+  --bars:0;--hud-a:0;--floor:0;--floor-a:0;--flash:0;--photo:0;--title-a:0;--track:.55;--line-a:0;
   --zoom:1.25;--cam-y:5;--hole:0;--p:0}
 .intro[hidden],.no-intro .intro{display:none}
 .intro-on .intro{animation:in-failsafe .01s 15s forwards}
@@ -837,12 +831,13 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
   animation-duration:.8s}
 .in-stage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,2vh,20px);
   padding:0 16px 8vh;transform:translateY(calc(var(--cam-y) * 1vh)) scale(var(--zoom));transform-origin:50% 44%}
-.in-mark{position:relative;width:min(50vmin,270px);aspect-ratio:1;display:grid;place-items:center}
-.in-logo{position:relative;z-index:1;width:100%;height:100%;transform:scale(var(--logo-s));
-  filter:drop-shadow(0 0 calc(1px + var(--glow) * 4px) rgba(34,240,255,.9)) drop-shadow(0 0 calc(3px + var(--glow) * 14px) rgba(255,61,203,.6))}
-.in-logo path{stroke-width:1.2;stroke-dasharray:1 1;stroke-dashoffset:1}
-.in-logo .star{animation:none}
-.in-mark .mg-ripple{inset:-62%;opacity:var(--rip-a);transform:scale(var(--rip-s))}
+/* the drones are drawn on the canvas into this box (intro.js reads its place); the box itself is empty */
+.in-mark{position:relative;width:min(92vw,600px,72vh);aspect-ratio:1446/1088}
+.in-photo{display:block;width:100%;height:100%;opacity:var(--photo);pointer-events:none;
+  /* feather the picture's black edges into the night, so it has no frame */
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
+  -webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
+  mask-composite:intersect}
 .in-title{font:900 clamp(30px,9.4vw,74px)/1.05 var(--display);letter-spacing:calc(var(--track) * 1em);margin-right:calc(var(--track) * -1em);
   text-transform:uppercase;text-align:center;white-space:nowrap;color:var(--ink);opacity:var(--title-a);
   text-shadow:-2px 0 rgba(255,61,203,.65),2px 0 rgba(34,240,255,.65),0 0 26px rgba(34,240,255,.55)}
@@ -856,7 +851,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
 .in-bars i:last-child{bottom:0;box-shadow:0 -1px 0 rgba(34,240,255,.28)}
 .in-hud{position:absolute;z-index:3;left:16px;right:16px;top:calc(var(--safe-t) + var(--bars) * 10vh + 12px);display:flex;justify-content:space-between;
   font:600 11px/1 var(--hud);letter-spacing:.18em;color:var(--ink-2);opacity:var(--hud-a);font-variant-numeric:tabular-nums}
-.in-rec{display:flex;align-items:center;gap:7px}
+.in-rec{display:flex;align-items:center;gap:7px;text-transform:uppercase}
 .in-rec:before{content:'';width:8px;height:8px;border-radius:50%;background:var(--neon-m);box-shadow:0 0 10px var(--neon-m);animation:blink 1s steps(2,end) infinite}
 .in-prog{position:absolute;z-index:3;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.07)}
 .in-prog i{display:block;height:100%;transform-origin:0 50%;transform:scaleX(var(--p));
@@ -917,7 +912,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
   .nav-in{height:58px;padding:0 14px;gap:10px}
   .brand{flex:1;min-width:0}
   .brand b{font-size:17px}
-  .mark{width:34px;height:34px;border-radius:11px}.mark svg{width:28px;height:28px}
+  .mark{width:34px;height:34px;border-radius:11px}.mark svg{width:32px;height:32px}
   .team-pill{height:38px;max-width:150px;padding:0 12px 0 4px;font-size:13px}
   .avatar{width:30px;height:30px}
   .icon-btn{width:38px;height:38px;border-radius:12px}

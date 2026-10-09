@@ -26,7 +26,7 @@ import xpts
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
 
-app = FastAPI(title="Captain’s Log", version="1.3.0")
+app = FastAPI(title="Footy", version="1.4.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 # Compress the page, the scripts (about 470 KB of animation libraries before gzip) and the JSON.
 app.add_middleware(GZipMiddleware, minimum_size=1024)

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-09 — Footy, and a logo made of drones
+
+- **A new name: Footy.** New tagline: “Football’s a funny old game. Might as
+  well do the maths.” The page title, home-screen name and icons follow it, and
+  the readout above each title is `SYS//…` again. Saved teams and settings
+  carry over.
+- **The logo is the drone portrait** supplied by the owner, used as it is: a
+  face made of points of light, cropped round the face for the app and the
+  home-screen icons.
+- **The opening film is a drone show:** about 2,600 drones, traced from the
+  portrait's own lights, wait in rows on a neon grid floor, lift off in a wave,
+  swarm and lock into place, light up in its colours and dissolve into the
+  picture itself. The name decodes, the log types “Matchday GW8.”
+  and a line of dark humour, and the camera pushes in as the film opens onto
+  the app. Still Theatre.js, still under five seconds, still skippable.
+- e2e: 105 checks.
+
 ## 2026-10-08 — Captain’s Log: a new name, an opening film, and four more ways to move
 
 - **A new name and logo.** Mug’s Game FC is now **Captain’s Log** — your FPL

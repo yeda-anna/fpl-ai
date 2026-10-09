@@ -60,7 +60,7 @@ changing a single page or flow. It lives in the "HUD" block of `styles.css`.
 | --- | --- |
 | **Target-lock corners** on `.card`, `.tile`, `.plan`, `.path`, `.sheet` | `--hud-corners`: eight thin linear gradients painted as the top background layer, coloured by `--bk` (cyan; lime on hover; dark on a lime fill) |
 | **Readouts** | `--hud` (system monospace stack) in uppercase with letter-spacing for labels, card titles, tabs, the switcher, table heads, tags and buttons. Body copy and numbers in tiles stay in the main face |
-| **Eyebrow** | `#view-eyebrow` above the title: `LOG//<TAB>/<SUB> · GW<n>` (the captain's log), set by `syncHead()`, with a blinking lime status light and a glint sweeping across (Magic UI Animated Shiny Text) |
+| **Eyebrow** | `#view-eyebrow` above the title: `SYS//<TAB>/<SUB> · GW<n>`, set by `syncHead()`, with a blinking lime status light and a glint sweeping across (Magic UI Animated Shiny Text) |
 | **Decoding titles** | the page title scrambles and resolves left to right when it changes (Magic UI HyperText) |
 | **Screen texture** | `body:after` CRT scanlines; `.backdrop .dots` dot grid; `.backdrop .beam` a slow scan beam |
 | **Hologram pitch** | `.turf:before` scanlines and `.turf .sweep`, a light band running down the turf |
@@ -79,15 +79,20 @@ Every launch opens with a few seconds of titles while the app loads underneath
 
 | Time | What happens | Theatre object |
 | --- | --- | --- |
-| 0 – 0.6 s | letterbox bars close in; REC light and timecode | `Bars`, `Hud` |
-| 0 – 2.3 s | hyperspace: star streaks that slow to a drift (canvas) | `Warp` |
-| 0.85 – 2.2 s | a retro grid floor rises and scrolls towards you (Magic UI Retro Grid) | `Floor` |
-| 0.7 – 2.1 s | the logo draws itself, overshoots into place and ignites with a flash | `Logo`, `Flash` |
-| 1.95 – 4.4 s | rings breathe out round it (Magic UI Ripple) | `Ripple` |
-| 2.0 – 3.1 s | the name decodes (HyperText) as its letters track in | `Title` |
-| 2.8 – 3.75 s | the captain's log entry types itself: "Stardate GW8. Morale: questionable." | `Line` |
-| 4.0 – 4.6 s | the camera flies into the ball and the film irises open onto the app | `Camera`, `Iris` |
+| 0 – 0.6 s | letterbox bars close in; REC light, the drone count and timecode | `Bars`, `Hud` |
+| 0 – 0.9 s | a retro grid floor (Magic UI Retro Grid) where the drones wait in rows | `Floor` |
+| 0.4 – 2.6 s | the drones lift off in a wave (back rows last), swoop up and fly to their places | `Swarm.gather` |
+| 2.25 – 2.65 s | they light up in the portrait's colours with a flash; then they hover | `Swarm.ignite/glow/hover`, `Flash` |
+| 2.55 – 3.2 s | the drones dim as the portrait itself (`portrait.webp`) comes up beneath them | `Swarm.photo` |
+| 2.7 – 3.6 s | the name decodes (HyperText) as its letters track in | `Title` |
+| 3.25 – 4.05 s | the log entry types itself: "Matchday GW8. Morale: questionable." | `Line` |
+| 4.3 – 4.9 s | the camera pushes into the portrait and the film irises open onto the app | `Camera`, `Iris` |
 
+- The drones are `PORTRAIT` (`portrait.js`, generated): every light in the
+  portrait, with its colour from a 32-colour palette. A canvas draws each as a
+  glowing sprite, flying a curve from its slot on the pad to its place in the
+  portrait (the `#inMark` box, which holds the picture), eased per drone from
+  `Swarm.gather`. The picture's edges are feathered so it has no frame.
 - The keyframes are numbers in `KEYS` (`intro.js`): `[seconds, value, easing to
   the next]`. They're turned into Theatre's project state at load — the JSON that
   Theatre Studio would export — so a change to the film is a change to `KEYS`.
@@ -224,24 +229,23 @@ strings). The e2e suite scans for this.
 
 ## Logo
 
-A football with a planet's ring round it — the captain's ship's log meets the
-ball — drawn as a **neon sign**: magenta ball with its pentagon, cyan ring, lime
-star. The back of the ring breaks where it passes behind the ball and the front
-crosses over it; the ball's outline breaks where the ring crosses. Stroke-only
-inline SVG (`.neon-logo`: `.ring`, `.ball`, `.star`) in the top bar, on the
-landing card and in the film, plus a `#logo` symbol (same paths, literal
-colours) for `<use>`. The star twinkles on a CSS loop; GSAP draws the landing
-copy in and Theatre.js draws the film's. `frontend/icon.svg` is the app icon
-(the same mark on a night tile); `icon-180.png` (iOS home screen) and
-`icon-192/512.png` (the manifest) are rendered from it.
+The **drone portrait** the owner supplied — a face made of points of light in
+magenta, violet and blue — used as it is. `scripts/digitize.py <image>` writes
+`portrait.webp` (the whole picture, for the film), `logo.webp` (a square crop
+round the face), `icon-180.png` (iOS home screen), `icon-192/512.png` (the
+manifest and favicon) and `portrait.js` (the film's ~2,600 drones, traced from
+the picture's own lights). The `<symbol id="logo">` in `index.html` holds
+`logo.webp`; every logo in the app is a `<use>` of it, clipped to its slot (a
+rounded square in the top bar, a circle on the landing card and the avatar),
+with a soft neon glow (`.neon-logo`). Don't edit the generated files by hand.
 
 ## Voice
 
-- Name: **Captain's Log** — the FPL captain, and a ship's log. Tagline: "Your
-  rank is lost in space. Might as well do the maths."
+- Name: **Footy**. Tagline: "Football’s a funny old game. Might as well do the
+  maths."
 - Light British humour and Indian dark humour on the landing screen, under the
   loader ("putting the kettle on", "Sharma ji’s son finished this ages ago") and
-  in the film's log entry ("Stardate GW8. Morale: questionable.").
+  in the film's log entry ("Matchday GW8. Morale: questionable.").
   The lines live in `QUIPS` in `app.js`, aimed at the manager's own luck, never
   at a religion, caste, region, community, body or real person.
 - **The week's verdict.** On Home the title is the team's own name from FPL, and

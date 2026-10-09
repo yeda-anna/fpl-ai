@@ -7,12 +7,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Captain’s Log">
-<meta name="description" content="Captain’s Log — a Fantasy Premier League planner: expected points, a multi-week transfer solver, chips, mini-leagues and more.">
-<title>Captain’s Log · FPL planner</title>
+<meta name="apple-mobile-web-app-title" content="Footy">
+<meta name="description" content="Footy — a Fantasy Premier League planner: expected points, a multi-week transfer solver, chips, mini-leagues and more.">
+<title>Footy · FPL planner</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="stylesheet" href="/static/styles.css">
-<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<link rel="icon" type="image/png" href="/static/icon-192.png">
+<link rel="preload" as="image" href="/static/portrait.webp">
 <link rel="apple-touch-icon" href="/static/icon-180.png">
 <!-- Before the first paint: skip the opening film when the visitor turned it off, prefers
      reduced motion, or the app is reloading itself (a new build, back/forward restore). -->
@@ -20,7 +21,7 @@
 </head>
 <body>
 
-<!-- shared SVG: gradients, and the logo as a symbol for <use> -->
+<!-- shared SVG: gradients, and the logo — the drone portrait (logo.webp, from scripts/digitize.py) — as a symbol for <use> -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <linearGradient id="neonStroke" x1="0" y1="0" x2="1" y2="0">
@@ -34,39 +35,23 @@
       <stop offset="0" stop-color="#FF3DCB" stop-opacity="0"/><stop offset=".35" stop-color="#FF3DCB"/>
       <stop offset=".75" stop-color="#22F0FF"/><stop offset="1" stop-color="#C8FF3D"/></linearGradient>
   </defs>
-  <symbol id="logo" viewBox="0 0 32 32">
-    <g fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2.94 21.35A13.9 4.3 -20 0 1 8.33 15.4M21.1 10.75A13.9 4.3 -20 0 1 29.06 11.85" stroke="#22F0FF"/>
-      <path d="M11.29 21.07A6.5 6.5 0 1 1 22.49 17M21.23 20.47A6.5 6.5 0 0 1 14.48 22.92M16 14.15L18.33 15.84L17.44 18.58L14.56 18.58L13.67 15.84Z" stroke="#FF3DCB"/>
-      <path d="M29.06 11.85A13.9 4.3 -20 0 1 2.94 21.35" stroke="#22F0FF"/>
-      <path d="M26.4 2.8Q26.9 5.4 29 5.4Q26.9 5.4 26.4 8Q25.9 5.4 23.8 5.4Q25.9 5.4 26.4 2.8Z" stroke="#C8FF3D"/>
-    </g>
-  </symbol>
+  <symbol id="logo" viewBox="0 0 100 100"><image href="/static/logo.webp" width="100" height="100" preserveAspectRatio="xMidYMid slice"/></symbol>
 </svg>
 
 <!-- The opening film: a few seconds of titles while the app loads underneath.
      Keyframed with Theatre.js (intro.js); tap anywhere or "Skip" to jump to the end. -->
 <div class="intro" id="intro">
   <div class="in-scene" aria-hidden="true">
-    <canvas class="in-stars" id="inStars"></canvas>
     <div class="in-floor"><div class="retro"><div class="retro-plane"><div class="retro-grid"></div></div></div></div>
+    <canvas class="in-stars" id="inDrones"></canvas>
     <div class="in-stage">
-      <div class="in-mark">
-        <div class="in-ripple mg-ripple" id="inRipple"></div>
-        <svg class="neon-logo in-logo" viewBox="0 0 32 32">
-          <path class="ring" pathLength="1" d="M2.94 21.35A13.9 4.3 -20 0 1 8.33 15.4"/><path class="ring" pathLength="1" d="M21.1 10.75A13.9 4.3 -20 0 1 29.06 11.85"/>
-          <path class="ball" pathLength="1" d="M11.29 21.07A6.5 6.5 0 1 1 22.49 17"/><path class="ball" pathLength="1" d="M21.23 20.47A6.5 6.5 0 0 1 14.48 22.92"/>
-          <path class="ball" pathLength="1" d="M16 14.15L18.33 15.84L17.44 18.58L14.56 18.58L13.67 15.84Z"/>
-          <path class="ring" pathLength="1" d="M29.06 11.85A13.9 4.3 -20 0 1 2.94 21.35"/>
-          <path class="star" pathLength="1" d="M26.4 2.8Q26.9 5.4 29 5.4Q26.9 5.4 26.4 8Q25.9 5.4 23.8 5.4Q25.9 5.4 26.4 2.8Z"/>
-        </svg>
-      </div>
-      <div class="in-title mg-hyper" id="inTitle" data-text="Captain’s Log">Captain’s Log</div>
+      <div class="in-mark" id="inMark"><img class="in-photo" src="/static/portrait.webp" alt="" decoding="async"></div>
+      <div class="in-title mg-hyper" id="inTitle" data-text="Footy">Footy</div>
       <div class="in-line"><span id="inType"></span><span class="cur"></span></div>
     </div>
     <div class="in-flash"></div>
     <div class="in-bars"><i></i><i></i></div>
-    <div class="in-hud"><span class="in-rec">REC</span><span class="in-tc" id="inTc">00:00:00</span></div>
+    <div class="in-hud"><span class="in-rec">REC <span id="inCount"></span></span><span class="in-tc" id="inTc">00:00:00</span></div>
     <div class="in-prog"><i></i></div>
   </div>
   <button class="in-skip" id="inSkip" type="button">Skip intro <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5v13l8-6.5zM12 5.5v13l8-6.5z" fill="currentColor"/></svg></button>
@@ -93,14 +78,9 @@
 
 <header class="nav-bar">
   <div class="nav-in">
-    <div class="brand" title="Captain’s Log — home">
-      <div class="mark"><svg class="neon-logo" viewBox="0 0 32 32" aria-hidden="true">
-        <path class="ring" d="M2.94 21.35A13.9 4.3 -20 0 1 8.33 15.4"/><path class="ring" d="M21.1 10.75A13.9 4.3 -20 0 1 29.06 11.85"/>
-        <path class="ball" d="M11.29 21.07A6.5 6.5 0 1 1 22.49 17M21.23 20.47A6.5 6.5 0 0 1 14.48 22.92"/><path class="ball" d="M16 14.15L18.33 15.84L17.44 18.58L14.56 18.58L13.67 15.84Z"/>
-        <path class="ring" d="M29.06 11.85A13.9 4.3 -20 0 1 2.94 21.35"/>
-        <path class="star" d="M26.4 2.8Q26.9 5.4 29 5.4Q26.9 5.4 26.4 8Q25.9 5.4 23.8 5.4Q25.9 5.4 26.4 2.8Z"/>
-      </svg></div>
-      <b class="mg-hyper" id="brandName">Captain’s Log</b>
+    <div class="brand" title="Footy — home">
+      <div class="mark"><svg class="neon-logo" viewBox="0 0 100 100" aria-hidden="true"><use href="#logo"/></svg></div>
+      <b class="mg-hyper" id="brandName">Footy</b>
     </div>
     <nav class="links" id="nav" aria-label="Main"></nav>
     <div class="nav-right">
@@ -117,7 +97,7 @@
 <main class="page">
   <div class="page-head">
     <div>
-      <div class="eyebrow mg-shiny" id="view-eyebrow">LOG//HOME</div>
+      <div class="eyebrow mg-shiny" id="view-eyebrow">SYS//HOME</div>
       <h1 id="view-title" class="mg-hyper">Home</h1>
       <svg class="title-line" id="title-line" viewBox="0 0 180 14" aria-hidden="true"><path d="M2 8 C 26 2, 46 13, 70 7 S 112 2, 136 8 S 168 12, 178 6"/></svg>
       <p id="view-sub">Your squad, projected forward.</p>
@@ -165,13 +145,7 @@
     <div class="land-logo">
       <div class="mg-ripple" id="landRipple" aria-hidden="true"></div>
       <div class="land-orbit" id="landOrbit" aria-hidden="true"></div>
-      <svg class="neon-logo" viewBox="0 0 32 32" aria-hidden="true">
-        <path class="ring" d="M2.94 21.35A13.9 4.3 -20 0 1 8.33 15.4"/><path class="ring" d="M21.1 10.75A13.9 4.3 -20 0 1 29.06 11.85"/>
-        <path class="ball" d="M11.29 21.07A6.5 6.5 0 1 1 22.49 17"/><path class="ball" d="M21.23 20.47A6.5 6.5 0 0 1 14.48 22.92"/>
-        <path class="ball" d="M16 14.15L18.33 15.84L17.44 18.58L14.56 18.58L13.67 15.84Z"/>
-        <path class="ring" d="M29.06 11.85A13.9 4.3 -20 0 1 2.94 21.35"/>
-        <path class="star" d="M26.4 2.8Q26.9 5.4 29 5.4Q26.9 5.4 26.4 8Q25.9 5.4 23.8 5.4Q25.9 5.4 26.4 2.8Z"/>
-      </svg>
+      <svg class="neon-logo" viewBox="0 0 100 100" aria-hidden="true"><use href="#logo"/></svg>
     </div>
     <div class="boot" id="boot" aria-hidden="true">
       <div data-type="▸ LINK FPL MAINFRAME ........ ">▸ LINK FPL MAINFRAME ........ <b>OK</b></div>
@@ -179,8 +153,8 @@
       <div data-type="▸ SOLVER CORE ............... ">▸ SOLVER CORE ............... <b>ARMED</b></div>
       <div data-type="▸ AWAITING MANAGER ID">▸ AWAITING MANAGER ID<span class="cur"></span></div>
     </div>
-    <h1 class="land-title mg-hyper" id="landTitle">Captain’s Log</h1>
-    <p class="tagline">Your rank is lost in space. Might as well do the maths.</p>
+    <h1 class="land-title mg-hyper" id="landTitle">Footy</h1>
+    <p class="tagline">Football’s a funny old game. Might as well do the maths.</p>
     <p class="land-quip" id="landQuip"></p>
     <div class="land-field">
       <label for="landId">Your FPL Team ID</label>
@@ -212,6 +186,7 @@
 <script src="/static/vendor/auto-animate.min.js"></script>
 <script src="/static/magic.js"></script>
 <script src="/static/motion.js"></script>
+<script src="/static/portrait.js"></script>
 <script src="/static/intro.js"></script>
 <script src="/static/app.js"></script>
 </body>

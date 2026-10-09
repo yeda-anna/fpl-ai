@@ -1,4 +1,4 @@
-/* Captain’s Log — motion (the FX layer). Plain JS, no build step.
+/* Footy — motion (the FX layer). Plain JS, no build step.
 
    Five libraries, each doing what it's best at (all vendored in /static/vendor):
    - GSAP (+ DrawSVGPlugin, MotionPathPlugin): the landing timeline, drawing the
@@ -74,10 +74,10 @@ const FX = (() => {
     intro.fromTo(card, {y:44, opacity:0}, {y:0, opacity:1, duration:.8, ease:'expo.out', clearProps:'transform,opacity'}, 0);
     if(canDraw){
       intro.fromTo(q('.scene .ln'), {drawSVG:'0%'}, {drawSVG:'100%', duration:1.1, stagger:.12}, .05)
-           .fromTo(q('.scene .goal, .scene .net'), {drawSVG:'0%'}, {drawSVG:'100%', duration:.6, stagger:.08}, .55)
-           .fromTo(q('.land-logo .neon-logo path'), {drawSVG:'0%'}, {drawSVG:'100%', duration:.9, stagger:.07}, .25);
+           .fromTo(q('.scene .goal, .scene .net'), {drawSVG:'0%'}, {drawSVG:'100%', duration:.6, stagger:.08}, .55);
     }
     intro.fromTo(q('.scene .spot'), {scale:0, transformOrigin:'50% 50%'}, {scale:1, duration:.4, ease:'back.out(3)'}, .9);
+    // the drone portrait powers up: flickers on like a neon sign (anime.js)
     if(canA) A.animate(root.querySelector('.land-logo .neon-logo'), {opacity:[0, 1, .3, 1, .55, 1], duration:900, ease:'linear', delay:350});
     landTls.push(intro);
 

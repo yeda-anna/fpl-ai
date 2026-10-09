@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass. 104 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass. 105 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -20,9 +20,11 @@ the first argument to `node tests/e2e.js` to put them elsewhere.
 
 What it covers:
 
-- **The opening film:** the page is named Captain's Log; GSAP, both plugins,
+- **The opening film:** the page is named Footy; GSAP, both plugins,
   anime.js, Motion, Theatre.js and AutoAnimate load from `/static/vendor`, with
-  `FX`, `Magic` and `Intro`; the film plays on launch with its timecode running,
+  `FX`, `Magic` and `Intro`; the film plays on launch with its timecode running
+  and flies the drones traced from the portrait (`PORTRAIT`), whose picture has
+  loaded, and the logo is the portrait (`logo.webp`);
   **Skip** ends it, it plays again on a fresh launch and gets out of the way by
   itself, the menu turns it off (and then the app opens straight away), it runs
   to its end on desktop, and there is none under reduced motion.

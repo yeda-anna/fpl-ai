@@ -1,16 +1,19 @@
-/* Captain’s Log — the opening film. Plain JS, no build step.
+/* Footy — the opening film. Plain JS, no build step.
 
    A few seconds of titles on every launch while the app loads underneath:
-   letterbox bars close in, we drop out of hyperspace over a scrolling grid
-   floor, the logo — a football with a planet's ring — draws itself and
-   ignites, the name decodes, the captain's log types its entry, then the
-   camera flies into the ball and the film irises open onto the app.
+   letterbox bars close in over a grid floor where a couple of thousand drones
+   wait in rows. They lift off in a wave, swoop up and fly into place, light up
+   in the colours of the logo portrait (traced from its own lights by
+   scripts/digitize.py into portrait.js) and dissolve into the picture itself
+   (portrait.webp). The name decodes, the log types its entry, then the camera
+   pushes in and the film irises open onto the app.
 
    It is a Theatre.js sequence (vendor/theatre-core.min.js, global Theatre.core):
    every moving part is a sheet object, every move a keyframe in KEYS below,
    eased with cubic Béziers. KEYS is turned into Theatre's project state at
    load, so changing the film is editing numbers here. (Theatre Studio, the
-   visual editor, is a development tool and is not shipped.)
+   visual editor, is a development tool and is not shipped.) The drones are
+   drawn on a canvas from Swarm.gather / ignite / glow / hover / photo.
 
    Tap anywhere, press Esc / Enter / Space, or "Skip intro" to jump to the end.
    No film when the visitor prefers reduced motion, turned it off in the menu,
@@ -20,33 +23,31 @@
 const Intro = (() => {
   const root = document.getElementById('intro');
   const T = window.Theatre && window.Theatre.core;
-  const LEN = 4.6, OUTRO = 4.0, FPS = 24;
+  const LEN = 4.9, OUTRO = 4.3, FPS = 24;
 
   /* cubic-bezier easings for the curve that leaves a keyframe */
   const EASE = {linear:[0, 0, 1, 1], in:[.55, 0, 1, .45], out:[0, .55, .45, 1], inOut:[.65, 0, .35, 1],
                 expoOut:[.16, 1, .3, 1], back:[.34, 1.56, .64, 1]};
   /* object → prop → [[seconds, value, easing to the next keyframe], …] */
   const KEYS = {
-    Bars:   {h:     [[0, 0, 'expoOut'], [.6, 1], [OUTRO, 1, 'inOut'], [4.45, 0]]},
-    Hud:    {a:     [[.3, 0, 'out'], [.7, 1], [OUTRO, 1, 'in'], [4.3, 0]]},
-    Warp:   {speed: [[0, 1], [1.05, 1, 'out'], [2.3, .05], [OUTRO, .05, 'in'], [LEN, 1]],
-             a:     [[0, 0, 'out'], [.35, 1], [4.2, 1, 'in'], [LEN, .3]]},
-    Floor:  {rise:  [[.85, 0, 'expoOut'], [2.2, 1]],
-             a:     [[.85, 0, 'out'], [1.6, .9]]},
-    Logo:   {draw:  [[.7, 0, 'inOut'], [1.95, 1]],
-             scale: [[.7, .55, 'back'], [2.1, 1]],
-             glow:  [[1.8, 0, 'out'], [2.15, 1]]},
-    Flash:  {a:     [[1.86, 0, 'out'], [1.97, .65, 'out'], [2.45, 0]]},
-    Ripple: {a:     [[1.95, 0, 'out'], [2.25, 1], [3.95, 1, 'in'], [4.4, 0]],
-             scale: [[1.95, .55, 'expoOut'], [2.9, 1]]},
-    Title:  {a:     [[2, 0, 'out'], [2.2, 1]],
-             reveal:[[2, 0, 'linear'], [2.85, 1]],
-             track: [[2, .55, 'expoOut'], [3.1, .05]]},
-    Line:   {a:     [[2.8, 0, 'out'], [2.92, 1]],
-             type:  [[2.95, 0, 'linear'], [3.75, 1]]},
-    Camera: {zoom:  [[0, 1.25, 'out'], [2.4, 1, 'inOut'], [OUTRO, 1.06, 'in'], [LEN, 2.4]],
-             y:     [[0, 5, 'out'], [2.4, 0]]},
-    Iris:   {hole:  [[4.05, 0, 'in'], [LEN, 1]]}
+    Bars:   {h:     [[0, 0, 'expoOut'], [.6, 1], [OUTRO, 1, 'inOut'], [4.75, 0]]},
+    Hud:    {a:     [[.2, 0, 'out'], [.6, 1], [OUTRO, 1, 'in'], [4.6, 0]]},
+    Floor:  {rise:  [[0, .55, 'expoOut'], [.9, 1]],
+             a:     [[0, 0, 'out'], [.5, .9], [2.8, .9, 'inOut'], [3.8, .35]]},
+    Swarm:  {gather:[[.4, 0, 'linear'], [2.6, 1]],           // 0 all on the pad … 1 all in place (each drone eases its own flight)
+             ignite:[[2.25, 0, 'out'], [2.65, 1]],          // flight white → their own colours
+             glow:  [[2.5, 0, 'out'], [2.66, 1, 'out'], [3.5, .5]],
+             hover: [[2.5, 0, 'out'], [3.1, 1]],
+             photo: [[2.55, 0, 'inOut'], [3.2, 1]]},             // the drones hand over to the picture itself
+    Flash:  {a:     [[2.52, 0, 'out'], [2.62, .45, 'out'], [3.05, 0]]},
+    Title:  {a:     [[2.7, 0, 'out'], [2.9, 1]],
+             reveal:[[2.7, 0, 'linear'], [3.35, 1]],
+             track: [[2.7, .55, 'expoOut'], [3.6, .12]]},
+    Line:   {a:     [[3.25, 0, 'out'], [3.35, 1]],
+             type:  [[3.35, 0, 'linear'], [4.05, 1]]},
+    Camera: {zoom:  [[0, 1.12, 'out'], [2.6, 1, 'inOut'], [OUTRO, 1.04, 'in'], [LEN, 2.6]],
+             y:     [[0, 3, 'out'], [2.6, 0]]},
+    Iris:   {hole:  [[4.35, 0, 'in'], [LEN, 1]]}
   };
 
   /* KEYS → the project state Theatre expects (what Studio would export) */
@@ -76,47 +77,87 @@ const Intro = (() => {
   }
 
   /* ---- state ---- */
-  let runId = 0, project = null, sheet = null, live = false, built = false, stars = null, line = '', lineSrc = null, typed = -1;
+  let runId = 0, project = null, sheet = null, live = false, built = false, drones = null, line = '', lineSrc = null, typed = -1;
   let revealDone, revealP = new Promise(r=>{ revealDone = r; });
   let finishDone, doneP = new Promise(r=>{ finishDone = r; });
   const enabled = () => !!root && !document.documentElement.classList.contains('no-intro');
   const set = (k, v) => root.style.setProperty(k, String(Math.round(v * 1000) / 1000));
   const $ = id => document.getElementById(id);
 
-  /* the starfield: hyperspace streaks when Warp.speed is high, drifting stars when low */
-  function starfield(canvas){
-    const ctx = canvas.getContext && canvas.getContext('2d');
-    if(!ctx) return null;
-    const S = [], N = innerWidth < 640 ? 150 : 260, cols = ['#F6F4FF', '#22F0FF', '#22F0FF', '#FF3DCB', '#C8FF3D'];
-    let w = 0, h = 0, dpr = 1, raf = 0, speed = 1, alpha = 0;
-    const seed = (s, far)=>{ s.x = Math.random()*2 - 1; s.y = Math.random()*2 - 1; s.z = far ? 1 : Math.random()*.95 + .05; s.pz = s.z; s.c = cols[Math.floor(Math.random()*cols.length)]; };
-    for(let i=0;i<N;i++){ const s = {}; seed(s); S.push(s); }
-    const size = ()=>{ dpr = Math.min(2, devicePixelRatio || 1); w = canvas.clientWidth; h = canvas.clientHeight; canvas.width = w*dpr; canvas.height = h*dpr; };
-    const frame = ()=>{
+  /* the swarm: every drone in PORTRAIT (portrait.js) as a light on a canvas. They wait in
+     rows on the launch pad, lift off back row last, swoop up and fly to their place in the
+     portrait, then take their colours from it. The camera (the same zoom as the stage)
+     applies to where they're going, so they fly into the push-in at the end. */
+  const FLIGHT = '#CFF9FF';
+  function swarm(canvas, mark){
+    const ctx = canvas && canvas.getContext && canvas.getContext('2d'), P = typeof PORTRAIT !== 'undefined' ? PORTRAIT : null;   // portrait.js (a top-level const, not on window)
+    if(!ctx || !P || !mark) return null;
+    const n = P.d.length / 4, D = [];
+    let seed = 11; const rnd = ()=>((seed = (seed * 16807) % 2147483647) / 2147483647);   // the same film every time
+    const cols = Math.ceil(Math.sqrt(n * 2.4)), rows = Math.ceil(n / cols);
+    const slot = Array.from({length:n}, (_, i)=>i);
+    for(let i=n-1;i>0;i--){ const k = Math.floor(rnd() * (i + 1)); const t = slot[i]; slot[i] = slot[k]; slot[k] = t; }
+    for(let i=0;i<n;i++){
+      const r = Math.floor(slot[i] / cols), c = slot[i] % cols, pz = (r + .5) / rows, b = P.d[i*4+3] / 9;
+      D.push({tx:P.d[i*4] / P.w, ty:P.d[i*4+1] / P.h, w:b, c:P.d[i*4+2], size:.62 + b * .5,
+              px:(c + .5) / cols - .5, pz, delay:.04 + pz * .26 + rnd() * .1, swing:(rnd() - .5) * .5, ph:rnd() * 6.283});
+    }
+    const sprites = {};
+    let w = 0, h = 0, dpr = 1, raf = 0, box = null;
+    const V = {gather:0, ignite:0, glow:0, hover:0, zoom:1, camY:0, a:1};
+    function sprite(col){
+      const c = document.createElement('canvas'), s = 64; c.width = c.height = s;
+      const g = c.getContext('2d'), gr = g.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2);
+      gr.addColorStop(0, '#FFFFFF'); gr.addColorStop(.14, col); gr.addColorStop(.32, col + '88'); gr.addColorStop(1, col + '00');
+      g.fillStyle = gr; g.fillRect(0, 0, s, s);
+      return c;
+    }
+    P.pal.forEach((col, i)=>{ sprites[i] = sprite(col); }); sprites.flight = sprite(FLIGHT);
+    function size(){
+      dpr = Math.min(2, devicePixelRatio || 1); w = canvas.clientWidth; h = canvas.clientHeight;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      // where the portrait goes, in the stage's own (untransformed) layout
+      let x = 0, y = 0, el = mark;
+      while(el && el !== root){ x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
+      box = {x, y, w:mark.offsetWidth, h:mark.offsetHeight};
+    }
+    const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+    function frame(now){
       raf = requestAnimationFrame(frame);
-      const cx = w/2, cy = h*.44, f = Math.max(w, h)*.55;
+      if(!box || !box.w) return;
+      const t = now / 1000, ox = w / 2, oy = h * .44, z = V.zoom, cy = V.camY * h / 100;
+      const unit = box.w / P.w * 3.1, horizon = h * .62, near = h * 1.02;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
-      ctx.globalAlpha = alpha; ctx.lineCap = 'round';
-      for(const s of S){
-        s.pz = s.z; s.z -= .0025 + speed*.05;
-        if(s.z <= .02){ seed(s, true); continue; }
-        const x = cx + s.x/s.z*f, y = cy + s.y/s.z*f, px = cx + s.x/s.pz*f, py = cy + s.y/s.pz*f;
-        if(x < -50 || x > w + 50 || y < -50 || y > h + 50){ seed(s, true); continue; }
-        const d = 1 - s.z;
-        ctx.strokeStyle = s.c; ctx.lineWidth = .4 + d*2.2;
-        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x + .01, y); ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter';
+      for(const d of D){
+        // on the pad
+        const k = 1 / (1 + d.pz * 2.6), sx = ox + d.px * w * 1.5 * k, sy = horizon + (near - horizon) * k;
+        // in the portrait, through the camera
+        let tx = box.x + d.tx * box.w, ty = box.y + d.ty * box.h;
+        tx = ox + (tx - ox) * z; ty = oy + (ty - oy) * z + cy;
+        const f = ease(Math.min(1, Math.max(0, (V.gather - d.delay) / .6)));
+        const bob = V.hover * Math.sin(t * 2.1 + d.ph) * .9 * z;
+        // a swoop: up off the pad first, then across
+        const mx = sx + (tx - sx) * .35 + d.swing * w * .25, my = Math.min(sy, ty) - h * (.18 + .12 * (1 - d.pz));
+        const u = 1 - f, x = u*u*sx + 2*u*f*mx + f*f*tx, y = u*u*sy + 2*u*f*my + f*f*ty + bob * f;
+        const base = (f > 0 ? unit * d.size * (1 + V.glow * .45) : unit * .55 * k) * (f > 0 ? (.75 + .25 * f) * Math.sqrt(z) : 1);
+        const r = base * 2.6, lit = f >= 1 ? V.ignite : Math.max(0, V.ignite - (1 - f) * 4);
+        const alpha = V.a * (f > 0 ? .55 + .45 * Math.min(1, f * 3) : .5) * (.55 + .45 * d.w);
+        if(lit < 1){ ctx.globalAlpha = alpha * (1 - lit); ctx.drawImage(sprites.flight, x - r, y - r, r * 2, r * 2); }
+        if(lit > 0){ ctx.globalAlpha = alpha * lit; ctx.drawImage(sprites[d.c], x - r, y - r, r * 2, r * 2); }
       }
-    };
-    return {start(){ size(); addEventListener('resize', size); if(!raf) frame(); },
-            stop(){ cancelAnimationFrame(raf); raf = 0; removeEventListener('resize', size); },
-            set(sp, a){ speed = sp; alpha = a; }};
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+    return {count:n, V,
+            start(){ size(); addEventListener('resize', size); if(!raf) raf = requestAnimationFrame(frame); },
+            stop(){ cancelAnimationFrame(raf); raf = 0; removeEventListener('resize', size); }};
   }
 
   function build(){
     if(built) return true;
     if(!T || !T.getProject) return false;
     try{
-      project = T.getProject('Captain’s Log · opening film', {state:projectState()});
+      project = T.getProject('Footy · opening film', {state:projectState()});
       sheet = project.sheet('Film');
       const t = T.types, num = (v, r) => t.number(v, r ? {range:r} : undefined);
       const O = {};
@@ -125,19 +166,18 @@ const Intro = (() => {
         Object.keys(KEYS[obj]).forEach(p=>{ props[p] = num(KEYS[obj][p][0][1]); });
         O[obj] = sheet.object(obj, props);
       });
-      const title = $('inTitle'), typeEl = $('inType'), logo = root.querySelectorAll('.in-logo path');
-      stars = starfield($('inStars'));
-      const warp = {speed:1, a:0};
+      const title = $('inTitle'), typeEl = $('inType');
+      drones = swarm($('inDrones'), $('inMark'));
+      if(drones && $('inCount')) $('inCount').textContent = drones.count + ' drones';
+      const V = drones ? drones.V : {};
       O.Bars.onValuesChange(v=>set('--bars', v.h));
       O.Hud.onValuesChange(v=>set('--hud-a', v.a));
-      O.Warp.onValuesChange(v=>{ warp.speed = v.speed; warp.a = v.a; if(stars) stars.set(v.speed, v.a); });
       O.Floor.onValuesChange(v=>{ set('--floor', v.rise); set('--floor-a', v.a); });
-      O.Logo.onValuesChange(v=>{
-        logo.forEach(p=>{ p.style.strokeDashoffset = String(1 - v.draw); });
-        set('--logo-s', v.scale); set('--glow', v.glow);
+      O.Swarm.onValuesChange(v=>{
+        V.gather = v.gather; V.ignite = v.ignite; V.glow = v.glow; V.hover = v.hover;
+        V.a = 1 - .72 * v.photo; set('--photo', v.photo);           // the drones dim as the picture comes up beneath them
       });
       O.Flash.onValuesChange(v=>set('--flash', v.a));
-      O.Ripple.onValuesChange(v=>{ set('--rip-a', v.a); set('--rip-s', v.scale); });
       O.Title.onValuesChange(v=>{
         set('--title-a', v.a); set('--track', v.track);
         title.setAttribute('data-scramble', typeof Magic !== 'undefined' ? Magic.scramble(title.dataset.text, v.reveal) : title.dataset.text);
@@ -147,12 +187,12 @@ const Intro = (() => {
         set('--line-a', v.a);
         if(!line && v.a > 0){        // written as late as possible, so it can name the gameweek
           try{ line = (typeof lineSrc === 'function' ? lineSrc() : lineSrc) || ''; }catch(e){ line = ''; }
-          line = line || 'Stardate unknown. Plotting a course anyway.';
+          line = line || 'Matchday unknown. Kicking off anyway.';
         }
         const k = Math.round(v.type * line.length);
         if(k !== typed){ typed = k; typeEl.textContent = line.slice(0, k); }
       });
-      O.Camera.onValuesChange(v=>{ set('--zoom', v.zoom); set('--cam-y', v.y); });
+      O.Camera.onValuesChange(v=>{ set('--zoom', v.zoom); set('--cam-y', v.y); V.zoom = v.zoom; V.camY = v.y; });
       O.Iris.onValuesChange(v=>{ set('--hole', v.hole); root.classList.toggle('hole', v.hole > 0); });
       // the playhead drives the timecode and the scrubber, like a video player
       const tc = $('inTc');
@@ -173,7 +213,7 @@ const Intro = (() => {
   function finish(){
     if(!live) return;
     live = false;
-    if(stars) stars.stop();
+    if(drones) drones.stop();
     if(sheet) try{ sheet.sequence.pause(); }catch(e){}
     root.hidden = true;
     document.documentElement.classList.remove('intro-on');
@@ -189,7 +229,7 @@ const Intro = (() => {
   }
   function onKey(e){ if(e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); skip(); } }
 
-  /* opts.line: the captain's log entry typed under the name ("Stardate GW8. Morale: questionable.") */
+  /* opts.line: the log entry typed under the name ("Matchday GW8. Morale: questionable.") */
   function play(opts){
     opts = opts || {};
     if(live) return doneP;
@@ -205,7 +245,7 @@ const Intro = (() => {
     root.hidden = false; root.classList.remove('hole');
     document.documentElement.classList.add('intro-on');
     addEventListener('keydown', onKey);
-    if(stars) stars.start();
+    if(drones) drones.start();
     // Theatre plays nothing until the project has read its state, so wait for that (a tick)
     project.ready.then(()=>{
       if(!live || run !== runId) return;

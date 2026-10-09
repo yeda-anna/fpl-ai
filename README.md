@@ -1,6 +1,6 @@
-# Captain’s Log 🪐⚽
+# Footy ⚽🛸
 
-Your rank is lost in space. Might as well do the maths.
+Football’s a funny old game. Might as well do the maths.
 
 A Fantasy Premier League planner: expected points for every player, a
 multi-gameweek transfer solver, chip planning, team rating, mini-league
@@ -96,11 +96,12 @@ three neons — lime for "do this", cyan for lines and information, magenta for 
 ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG AA
 (`python3 scripts/check_contrast.py`).
 
-- **An opening film** on every launch, a few seconds long and skippable: we drop
-  out of hyperspace over a grid floor, the logo — a football with a planet's
-  ring — draws itself and ignites, the name decodes, the captain's log types
-  "Stardate GW8. Morale: questionable.", then the camera flies into the ball and
-  the film irises open onto the app, which has loaded underneath. Keyframed with
+- **An opening film** on every launch, a few seconds long and skippable: a
+  couple of thousand drones wait in rows on a neon grid floor, lift off in a
+  wave, swarm and lock into place as the logo portrait, light up in its colours
+  and dissolve into the picture itself. The name decodes, the log types "Matchday GW8. Morale: questionable.",
+  and the camera pushes in as the film irises open onto the app, which has
+  loaded underneath. Keyframed with
   [Theatre.js](https://www.theatrejs.com/docs/latest); it can be turned off in
   the menu and never plays under reduced motion.
 - **Landing:** the first visit on a device asks for your FPL Team ID over a neon
@@ -113,7 +114,7 @@ ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG A
 - **Your name up in lights:** Home is titled with your team's name from FPL, and
   My squad opens with a dark football roast of your last gameweek's score.
 - **A sci-fi HUD** over the neon: target-lock corners on every panel, monospace
-  readouts, a `LOG//PLAN/TRANSFERS · GW8` locator above each title, faint
+  readouts, a `SYS//PLAN/TRANSFERS · GW8` locator above each title, faint
   scanlines and a scan beam, a hologram pitch, and a boot sequence on the
   landing screen.
 - **Motion**, vendored (no CDN), each library with its own job:
@@ -129,14 +130,14 @@ ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG A
   button, animated beams from player out to player in, the retro grid floor —
   are rebuilt in plain JS and CSS. `prefers-reduced-motion` turns all of it off.
 
-The full system — tokens, motion, navigation, breakpoints, the ringed-ball logo
+The full system — tokens, motion, navigation, breakpoints, the drone-portrait logo
 and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Tests
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 104 headless checks, phone + desktop + reduced motion
+    npm --prefix tests test            # 105 headless checks, phone + desktop + reduced motion
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).

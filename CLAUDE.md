@@ -1,15 +1,15 @@
-# CLAUDE.md — Captain's Log
+# CLAUDE.md — Footy
 
 Instructions for Claude Code (and any other coding agent) working in this
 repository. Read this first; the `docs/` folder has the detail.
 
 ## What this is
 
-Captain's Log is a Fantasy Premier League planner. A FastAPI backend pulls the
+Footy is a Fantasy Premier League planner. A FastAPI backend pulls the
 official FPL API, projects expected points (xPts) for every player, and runs a
 mixed-integer solver over transfers, captaincy and chips. A no-build vanilla-JS
 single-page app renders it in a neon, sci-fi look — it opens with a short
-Theatre.js film, and moves with GSAP, anime.js, Motion, AutoAnimate and effects
+Theatre.js film of drones flying into the logo, and moves with GSAP, anime.js, Motion, AutoAnimate and effects
 rebuilt from Magic UI — with five tabs and a mobile app shell.
 
 Live: https://fpl-ai-production-966c.up.railway.app · Repo: yeda-anna/fpl-ai
@@ -29,7 +29,7 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 104 checks, phone 390×844 + desktop 1440×900 + reduced motion
+npm --prefix tests test        # 105 checks, phone 390×844 + desktop 1440×900 + reduced motion
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the neon palette
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
@@ -56,11 +56,14 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
 | `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators), anime.js (sky pulses, icon drawing, flicker), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
 | `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Meteors, Ripple, OrbitingCircles, BorderBeam, ShimmerButton, AnimatedBeam, RetroGrid |
-| `frontend/intro.js` | `Intro`: the opening film, a Theatre.js sequence (keyframes in `KEYS`) played on launch |
+| `frontend/intro.js` | `Intro`: the opening film, a Theatre.js sequence (keyframes in `KEYS`) played on launch: a drone swarm drawn on a canvas |
+| `frontend/portrait.js` | `PORTRAIT`: the film's drones, traced from the lights in the portrait — generated, don't edit |
+| `frontend/portrait.webp`, `logo.webp`, `icon-*.png` | The drone-portrait image the owner supplied, its square face crop (the logo) and the home-screen icons — generated |
 | `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, Theatre.js core 0.7, AutoAnimate 0.10 — vendored, see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `scripts/calibrate.py` | Projection sanity check |
 | `scripts/check_contrast.py` | WCAG AA check for the palette |
+| `scripts/digitize.py` | From the supplied image: `portrait.webp`, `logo.webp`, the PNG icons and `portrait.js` |
 | `docs/` | Architecture, model, solver, API, design, data, testing, deployment |
 | `.claude/agents/` | Specialist sub-agents for this repo |
 | `.claude/skills/` | Step-by-step procedures (run, test, calibrate, deploy, design, add a feature) |
@@ -103,7 +106,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
   fill uses `--on-accent`, never white. Every text token must pass AA — run
   `python3 scripts/check_contrast.py`.
 - **The HUD layer** (sci-fi console: corner brackets, mono readouts, the
-  `LOG//…` eyebrow, scanlines, the hologram pitch, the landing boot lines) sits
+  `SYS//…` eyebrow, scanlines, the hologram pitch, the landing boot lines) sits
   on top of the neon — see "The HUD layer" in `docs/DESIGN.md`. New panels get
   the corners by joining the `.card,.tile,.plan,.path,.sheet` selector, not with
   new hex values.
@@ -137,14 +140,16 @@ suite at **0 failures** — see `docs/TESTING.md`.
   the app (`FX.hold(Intro.reveal)`). Keep it under five seconds.
 
 **Brand and content**
-- Name: **Captain's Log** (the FPL captain, and a ship's log — the sci-fi look).
-  Tagline: "Your rank is lost in space. Might as well do the maths." Logo: a
-  football with a planet's ring round it, drawn as a neon sign (magenta ball,
-  cyan ring, lime star); the back of the ring breaks behind the ball. App icons:
-  `frontend/icon.svg` plus `icon-180/192/512.png` rendered from it.
+- Name: **Footy**. Tagline: "Football’s a funny old game. Might as well do the
+  maths." Logo: the drone-portrait image the owner supplied, used as it is —
+  not regenerated or restyled. `scripts/digitize.py <image>` writes
+  `portrait.webp` (the film), `logo.webp` (a square face crop, the `#logo`
+  symbol), the PNG icons and `portrait.js` (the film's drones, traced from the
+  image's own lights). Never edit those by hand; rerun the script. Don't put any
+  other real person's likeness in the app without asking.
 - Tone: light British humour and Indian dark humour on the landing screen and
   under the loader ("putting the kettle on", "Sharma ji’s son finished this ages
-  ago"), and the captain's log entry typed in the opening film ("Stardate GW8.
+  ago"), and the log entry typed in the opening film ("Matchday GW8.
   Morale: questionable."). Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —
   never at a religion, caste, region, community, body or real person. **Never**
   in errors or anything a manager acts on.

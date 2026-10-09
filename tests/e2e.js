@@ -1,4 +1,4 @@
-// End-to-end checks for Captain's Log on a phone (390x844, touch) and a desktop
+// End-to-end checks for Footy on a phone (390x844, touch) and a desktop
 // (1440x900) viewport. Start the app first, then:  npm --prefix tests test
 //   BASE_URL=http://127.0.0.1:9000/ npm --prefix tests test   (another server)
 //   TEAM_ID=1234567 npm --prefix tests test                    (a real team on live)
@@ -49,7 +49,7 @@ async function phone(browser){
 
   // ---- the opening film plays on launch (Theatre.js), and Skip ends it ----
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  ok('phone: the page is named Captain’s Log', /Captain’s Log/.test(await page.title()), await page.title());
+  ok('phone: the page is named Footy', /^Footy\b/.test(await page.title()), await page.title());
   ok('phone: animation libraries load from /static/vendor (GSAP, anime.js, Motion, Theatre.js, AutoAnimate)', await page.evaluate(() =>
     !!(window.gsap && window.DrawSVGPlugin && window.MotionPathPlugin && window.anime && window.Motion && window.Motion.animate && window.Motion.inView
        && window.Theatre && window.Theatre.core && typeof window.autoAnimate === 'function'
@@ -57,6 +57,10 @@ async function phone(browser){
   {
     const tc0 = await page.textContent('#inTc'); await page.waitForTimeout(450); const tc1 = await page.textContent('#inTc');
     ok('phone: the opening film plays on launch, its timecode running', await page.isVisible('#intro') && tc0 !== tc1, `${tc0} → ${tc1}`);
+    ok('phone: the film flies the drones traced from the logo portrait, and the logo is that portrait', await page.evaluate(() =>
+      typeof PORTRAIT !== 'undefined' && PORTRAIT.d.length / 4 > 300 && /^\d+ drones$/i.test(document.getElementById('inCount').textContent.trim())
+      && /logo\.webp$/.test(document.querySelector('#logo image').getAttribute('href'))
+      && document.querySelector('#inMark .in-photo').complete), await page.textContent('#inCount'));
     await page.waitForTimeout(1800);
     await page.screenshot({ path: `${OUT}/m-00-film.png` });
     await page.click('#inSkip');

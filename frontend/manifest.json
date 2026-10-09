@@ -1,6 +1,6 @@
 {
-  "name": "Captain’s Log — FPL planner",
-  "short_name": "Captain’s Log",
+  "name": "Footy — FPL planner",
+  "short_name": "Footy",
   "description": "Expected points, a multi-week transfer solver, chips and mini-leagues for Fantasy Premier League.",
   "start_url": "/",
   "scope": "/",
@@ -9,12 +9,6 @@
   "background_color": "#030210",
   "theme_color": "#030210",
   "icons": [
-    {
-      "src": "/static/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
     {
       "src": "/static/icon-192.png",
       "sizes": "192x192",

@@ -1,7 +1,7 @@
 {
-  "name": "captains-log-tests",
+  "name": "footy-tests",
   "private": true,
-  "description": "End-to-end checks for Captain's Log (Playwright, headless Chromium).",
+  "description": "End-to-end checks for Footy (Playwright, headless Chromium).",
   "scripts": {
     "postinstall": "playwright install chromium",
     "test": "node e2e.js"
