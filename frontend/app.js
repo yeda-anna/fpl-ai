@@ -60,14 +60,16 @@ const QUIPS = {
     'This app does the maths. You bring the confidence.',
     'Rank in the millions? Don’t worry, beta. It’s a stable position.'
   ],
-  // the log entry typed in the opening film, after "Matchday GW8."
+  // the opening film's tagline: one line, in the manner of a 70s Hindi-film villain, at the manager's
+  // expense. Written for this app — not quotes from any film or actor.
   intro: [
-    'Morale: questionable.',
-    'Captain: undecided. Again.',
-    'Rank: lost in space. Searching.',
-    'Free transfers: one. Ideas: eleven.',
-    'Sharma ji’s son already has a green arrow.',
-    'Bench: fully fit. Starters: not.'
+    'Free transfer? Yahan kuch bhi free nahi milta.',
+    'Tera captain blank karega. Likh ke le le.',
+    'Hit lega? Le le. Points main le jaaunga.',
+    'Deadline nikal gayi. Ab pachhtaane se kya hoga?',
+    'Wildcard khel le. Ab tujhe koi nahi bacha sakta.',
+    'Bench pe 15 points? Mujhe pata tha.',
+    'Is gameweek tera rank mera hai.'
   ]
 };
 const lastQuip = {};
@@ -1173,8 +1175,8 @@ document.querySelector('.brand').addEventListener('click', ()=>{
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !el('landing').hidden && S.teamId) closeLanding(); });
 
 /* ---------------- boot ---------------- */
-/* the log entry typed in the opening film, written once the gameweek is known */
-const introLine = () => (S.meta ? 'Matchday GW' + S.meta.next_gw + '. ' : 'Matchday unknown. ') + quip('intro');
+/* the tagline typed in the opening film */
+const introLine = () => '“' + quip('intro') + '”';
 if(hasFilm()){ try{ Intro.play({line:introLine}); }catch(e){ /* the app never waits on the film */ } FX.hold(Intro.reveal); }
 buildChrome();
 FX.start();

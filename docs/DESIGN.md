@@ -81,12 +81,12 @@ Every launch opens with a few seconds of titles while the app loads underneath
 | --- | --- | --- |
 | 0 – 0.6 s | letterbox bars close in; REC light, the drone count and timecode | `Bars`, `Hud` |
 | 0 – 0.9 s | a retro grid floor (Magic UI Retro Grid) where the drones wait in rows | `Floor` |
-| 0.4 – 2.6 s | the drones lift off in a wave (back rows last), swoop up and fly to their places | `Swarm.gather` |
-| 2.25 – 2.65 s | they light up in the portrait's colours with a flash; then they hover | `Swarm.ignite/glow/hover`, `Flash` |
-| 2.55 – 3.2 s | the drones dim as the portrait itself (`portrait.webp`) comes up beneath them | `Swarm.photo` |
-| 2.7 – 3.6 s | the name decodes (HyperText) as its letters track in | `Title` |
-| 3.25 – 4.05 s | the log entry types itself: "Matchday GW8. Morale: questionable." | `Line` |
-| 4.3 – 4.9 s | the camera pushes into the portrait and the film irises open onto the app | `Camera`, `Iris` |
+| 0.4 – 3.0 s | the drones lift off in a wave (back rows last), swoop up and fly to their places | `Swarm.gather` |
+| 2.65 – 3.05 s | they light up in the portrait's colours with a flash; then they hover | `Swarm.ignite/glow/hover`, `Flash` |
+| 2.95 – 3.65 s | the drones dim as the portrait itself (`portrait.webp`) comes up beneath them | `Swarm.photo` |
+| 3.1 – 4.0 s | the name decodes (HyperText) as its letters track in | `Title` |
+| 3.75 – 4.85 s | the tagline types itself — a villain's one-liner, a different one each launch (`QUIPS.intro`): "Free transfer? Yahan kuch bhi free nahi milta." | `Line` |
+| 5.4 – 6.0 s | the camera pushes into the portrait and the film irises open onto the app | `Camera`, `Iris` |
 
 - The drones are `PORTRAIT` (`portrait.js`, generated): every light in the
   portrait, with its colour from a 32-colour palette. A canvas draws each as a
@@ -245,7 +245,9 @@ with a soft neon glow (`.neon-logo`). Don't edit the generated files by hand.
   maths."
 - Light British humour and Indian dark humour on the landing screen, under the
   loader ("putting the kettle on", "Sharma ji’s son finished this ages ago") and
-  in the film's log entry ("Matchday GW8. Morale: questionable.").
+  in the film's tagline, a one-liner in the manner of a 70s Hindi-film villain
+  ("Hit lega? Le le. Points main le jaaunga."). They're written for the app,
+  not quotes from any actor or film.
   The lines live in `QUIPS` in `app.js`, aimed at the manager's own luck, never
   at a religion, caste, region, community, body or real person.
 - **The week's verdict.** On Home the title is the team's own name from FPL, and

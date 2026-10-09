@@ -5,8 +5,9 @@
    wait in rows. They lift off in a wave, swoop up and fly into place, light up
    in the colours of the logo portrait (traced from its own lights by
    scripts/digitize.py into portrait.js) and dissolve into the picture itself
-   (portrait.webp). The name decodes, the log types its entry, then the camera
-   pushes in and the film irises open onto the app.
+   (portrait.webp). The name decodes, the tagline — a villain's one-liner —
+   types itself, then the camera pushes in and the film irises open onto the
+   app. Six seconds in all.
 
    It is a Theatre.js sequence (vendor/theatre-core.min.js, global Theatre.core):
    every moving part is a sheet object, every move a keyframe in KEYS below,
@@ -23,31 +24,31 @@
 const Intro = (() => {
   const root = document.getElementById('intro');
   const T = window.Theatre && window.Theatre.core;
-  const LEN = 4.9, OUTRO = 4.3, FPS = 24;
+  const LEN = 6, OUTRO = 5.4, FPS = 24;
 
   /* cubic-bezier easings for the curve that leaves a keyframe */
   const EASE = {linear:[0, 0, 1, 1], in:[.55, 0, 1, .45], out:[0, .55, .45, 1], inOut:[.65, 0, .35, 1],
                 expoOut:[.16, 1, .3, 1], back:[.34, 1.56, .64, 1]};
   /* object → prop → [[seconds, value, easing to the next keyframe], …] */
   const KEYS = {
-    Bars:   {h:     [[0, 0, 'expoOut'], [.6, 1], [OUTRO, 1, 'inOut'], [4.75, 0]]},
-    Hud:    {a:     [[.2, 0, 'out'], [.6, 1], [OUTRO, 1, 'in'], [4.6, 0]]},
+    Bars:   {h:     [[0, 0, 'expoOut'], [.6, 1], [OUTRO, 1, 'inOut'], [5.85, 0]]},
+    Hud:    {a:     [[.2, 0, 'out'], [.6, 1], [OUTRO, 1, 'in'], [5.7, 0]]},
     Floor:  {rise:  [[0, .55, 'expoOut'], [.9, 1]],
-             a:     [[0, 0, 'out'], [.5, .9], [2.8, .9, 'inOut'], [3.8, .35]]},
-    Swarm:  {gather:[[.4, 0, 'linear'], [2.6, 1]],           // 0 all on the pad … 1 all in place (each drone eases its own flight)
-             ignite:[[2.25, 0, 'out'], [2.65, 1]],          // flight white → their own colours
-             glow:  [[2.5, 0, 'out'], [2.66, 1, 'out'], [3.5, .5]],
-             hover: [[2.5, 0, 'out'], [3.1, 1]],
-             photo: [[2.55, 0, 'inOut'], [3.2, 1]]},             // the drones hand over to the picture itself
-    Flash:  {a:     [[2.52, 0, 'out'], [2.62, .45, 'out'], [3.05, 0]]},
-    Title:  {a:     [[2.7, 0, 'out'], [2.9, 1]],
-             reveal:[[2.7, 0, 'linear'], [3.35, 1]],
-             track: [[2.7, .55, 'expoOut'], [3.6, .12]]},
-    Line:   {a:     [[3.25, 0, 'out'], [3.35, 1]],
-             type:  [[3.35, 0, 'linear'], [4.05, 1]]},
-    Camera: {zoom:  [[0, 1.12, 'out'], [2.6, 1, 'inOut'], [OUTRO, 1.04, 'in'], [LEN, 2.6]],
-             y:     [[0, 3, 'out'], [2.6, 0]]},
-    Iris:   {hole:  [[4.35, 0, 'in'], [LEN, 1]]}
+             a:     [[0, 0, 'out'], [.5, .9], [3.2, .9, 'inOut'], [4.2, .35]]},
+    Swarm:  {gather:[[.4, 0, 'linear'], [3.0, 1]],           // 0 all on the pad … 1 all in place (each drone eases its own flight)
+             ignite:[[2.65, 0, 'out'], [3.05, 1]],          // flight white → their own colours
+             glow:  [[2.9, 0, 'out'], [3.06, 1, 'out'], [3.9, .5]],
+             hover: [[2.9, 0, 'out'], [3.5, 1]],
+             photo: [[2.95, 0, 'inOut'], [3.65, 1]]},             // the drones hand over to the picture itself
+    Flash:  {a:     [[2.92, 0, 'out'], [3.02, .45, 'out'], [3.45, 0]]},
+    Title:  {a:     [[3.1, 0, 'out'], [3.3, 1]],
+             reveal:[[3.1, 0, 'linear'], [3.8, 1]],
+             track: [[3.1, .55, 'expoOut'], [4.0, .12]]},
+    Line:   {a:     [[3.75, 0, 'out'], [3.85, 1]],            // the tagline: a villain's one-liner
+             type:  [[3.9, 0, 'linear'], [4.85, 1]]},
+    Camera: {zoom:  [[0, 1.12, 'out'], [3.0, 1, 'inOut'], [OUTRO, 1.05, 'in'], [LEN, 2.6]],
+             y:     [[0, 3, 'out'], [3.0, 0]]},
+    Iris:   {hole:  [[5.45, 0, 'in'], [LEN, 1]]}
   };
 
   /* KEYS → the project state Theatre expects (what Studio would export) */
@@ -187,7 +188,7 @@ const Intro = (() => {
         set('--line-a', v.a);
         if(!line && v.a > 0){        // written as late as possible, so it can name the gameweek
           try{ line = (typeof lineSrc === 'function' ? lineSrc() : lineSrc) || ''; }catch(e){ line = ''; }
-          line = line || 'Matchday unknown. Kicking off anyway.';
+          line = line || '“Free transfer? Yahan kuch bhi free nahi milta.”';
         }
         const k = Math.round(v.type * line.length);
         if(k !== typed){ typed = k; typeEl.textContent = line.slice(0, k); }
@@ -229,7 +230,7 @@ const Intro = (() => {
   }
   function onKey(e){ if(e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); skip(); } }
 
-  /* opts.line: the log entry typed under the name ("Matchday GW8. Morale: questionable.") */
+  /* opts.line: the tagline typed under the name, a villain's one-liner (QUIPS.intro in app.js) */
   function play(opts){
     opts = opts || {};
     if(live) return doneP;
