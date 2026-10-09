@@ -1,4 +1,4 @@
-/* Footy — Magic UI, without React.
+/* Papa Ranjeet — Magic UI, without React.
 
    Magic UI (https://magicui.design, MIT — vendor/magicui-LICENSE.md) is a React +
    Tailwind collection, so the effects we use are re-built here in plain JS, with
@@ -69,7 +69,8 @@ const Magic = (() => {
     });
   }
 
-  /* Meteors: `n` streaks of light, each on its own random path and pace. */
+  /* Meteors: `n` streaks of light, each on its own random path and pace.
+     opts.spread: start them all over the sky, not just along the top (a shower). */
   function meteors(box, n, opts){
     if(!box || reduced) return;
     opts = opts || {};
@@ -79,8 +80,9 @@ const Magic = (() => {
       const m = document.createElement('span');
       m.className = 'mg-meteor' + (i % 3 === 1 ? ' m' : i % 3 === 2 ? ' l' : '');
       m.style.setProperty('--angle', -((2*angle) % 360) + 'deg');   // Magic UI turns the head twice (rotate + transform); this is the net heading
-      m.style.left = Math.floor(Math.random() * w * 1.2) + 'px';
-      m.style.animationDelay = (Math.random()*4 + .2).toFixed(2) + 's';
+      m.style.left = Math.floor(Math.random() * w * 1.25) + 'px';
+      if(opts.spread) m.style.top = (Math.random() * 75 - 12).toFixed(1) + '%';
+      m.style.animationDelay = (Math.random() * (opts.spread ? 9 : 4) + .2).toFixed(2) + 's';
       m.style.animationDuration = Math.floor(Math.random()*6 + 4) + 's';
       box.appendChild(m);
     }

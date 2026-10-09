@@ -1,5 +1,5 @@
 /* =====================================================================
-   Footy — neon
+   Papa Ranjeet — neon
    One look: a stadium at night, lit by drones. Near-black violet (60%),
    dark glass (30%), neon lime, cyan and magenta (10%). Neon is light, so it
    lives on strokes, edges and the things you can press, never as a wash
@@ -94,6 +94,7 @@ button{font:inherit}
 .backdrop > .retro{left:-10%;right:-10%;top:auto;bottom:0;height:48%;opacity:.42;
   -webkit-mask-image:linear-gradient(0deg,#000 10%,transparent 88%);mask-image:linear-gradient(0deg,#000 10%,transparent 88%)}
 .sky{position:absolute;inset:0;width:100%;height:100%}
+.sky-meteors{position:absolute;inset:0;overflow:hidden;pointer-events:none}    /* the shower (Magic UI Meteors, motion.js) */
 .sky path{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round}
 .sky .glow{stroke-width:9;opacity:.06}
 .sky .wire{stroke-width:1.4;opacity:.28}

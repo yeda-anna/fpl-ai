@@ -121,7 +121,7 @@ following the originals (MIT, `frontend/vendor/magicui-LICENSE.md`).
 | --- | --- |
 | HyperText | page titles when they change, the film's title, the name in the top bar on hover |
 | Typing Animation | the landing boot lines; the film's log entry |
-| Meteors | the landing sky |
+| Meteors | a shower across the night sky behind every page (18 on a phone, up to 36 on a wide screen, started all over the sky), and more over the landing pitch |
 | Ripple, Orbiting Circles | round the landing logo; the film's logo |
 | Border Beam | every loading card, the chosen plan in Plan → Transfers |
 | Shimmer Button | "Let's go" and "Suggest transfers" (the spark races while the solver works) |
@@ -241,7 +241,7 @@ with a soft neon glow (`.neon-logo`). Don't edit the generated files by hand.
 
 ## Voice
 
-- Name: **Footy**. Tagline: "Football’s a funny old game. Might as well do the
+- Name: **Papa Ranjeet**. Tagline: "Football’s a funny old game. Might as well do the
   maths."
 - Light British humour and Indian dark humour on the landing screen, under the
   loader ("putting the kettle on", "Sharma ji’s son finished this ages ago") and

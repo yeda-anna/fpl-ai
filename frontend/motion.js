@@ -1,4 +1,4 @@
-/* Footy — motion (the FX layer). Plain JS, no build step.
+/* Papa Ranjeet — motion (the FX layer). Plain JS, no build step.
 
    Five libraries, each doing what it's best at (all vendored in /static/vendor):
    - GSAP (+ DrawSVGPlugin, MotionPathPlugin): the landing timeline, drawing the
@@ -64,7 +64,7 @@ const FX = (() => {
   function landingIn(root){
     landTls.forEach(t=>t.kill()); landTls = [];
     if(typeof Magic !== 'undefined'){
-      Magic.meteors(root.querySelector('#landSky'), innerWidth < 640 ? 7 : 12);
+      Magic.meteors(root.querySelector('#landSky'), innerWidth < 640 ? 14 : 22);
       Magic.hyperText(root.querySelector('.land-title'), {duration:1000});
     }
     bootType(root);
@@ -324,6 +324,16 @@ const FX = (() => {
     else { raf = 0; ctx.clearRect(0, 0, canvas.width, canvas.height); }
   }
 
-  function start(){ sky(); presses(); pointerGlow(); scrollProgress(); window.addEventListener('resize', relayout); }
+  /* ---- a meteor shower across the night sky, behind every page (Magic UI Meteors) ---- */
+  function shower(){
+    const box = document.getElementById('skyMeteors');
+    if(!box || typeof Magic === 'undefined') return;
+    const fill = ()=>Magic.meteors(box, innerWidth < 640 ? 18 : innerWidth < 1100 ? 26 : 36, {spread:true});
+    fill();
+    let w = innerWidth, t = 0;
+    window.addEventListener('resize', ()=>{ clearTimeout(t); t = setTimeout(()=>{ if(Math.abs(innerWidth - w) > 120){ w = innerWidth; fill(); } }, 400); });
+  }
+
+  function start(){ sky(); shower(); presses(); pointerGlow(); scrollProgress(); window.addEventListener('resize', relayout); }
   return {reduced, start, landingIn, landingOut, navigated, relayout, observe, hold, listIn, auto, shake, burst};
 })();

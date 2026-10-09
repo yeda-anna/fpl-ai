@@ -1,4 +1,4 @@
-# Footy ⚽🛸
+# Papa Ranjeet ⚽🛸
 
 Football’s a funny old game. Might as well do the maths.
 
@@ -137,7 +137,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 105 headless checks, phone + desktop + reduced motion
+    npm --prefix tests test            # 107 headless checks, phone + desktop + reduced motion
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).

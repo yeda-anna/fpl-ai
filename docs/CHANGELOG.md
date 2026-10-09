@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-09 — Papa Ranjeet, and a meteor shower
+
+- The app is now called **Papa Ranjeet**: the page title, home-screen name,
+  top bar, landing screen, menu and the opening film's title. Saved teams and
+  settings carry over.
+- **A meteor shower** (Magic UI Meteors) now falls across the night sky behind
+  every page — 18 streaks on a phone, up to 36 on a wide screen — in cyan,
+  magenta and lime, and the landing sky has twice as many. Reduced motion turns
+  it off.
+- e2e: 107 checks.
+
+## 2026-10-09 — Papa Ranjeet
+
+- The app is now called **Papa Ranjeet**: the page title, home-screen name,
+  top bar, landing screen, menu and the opening film's title. Nothing else
+  changes — saved teams and settings carry over.
+
 ## 2026-10-09 — Footy, and a logo made of drones
 
 - **A new name: Footy.** New tagline: “Football’s a funny old game. Might as

@@ -1,6 +1,6 @@
 # Architecture
 
-Footy is two pieces in one process: a FastAPI backend that does all the
+Papa Ranjeet is two pieces in one process: a FastAPI backend that does all the
 maths, and a static single-page app it serves from `/`.
 
 ```mermaid

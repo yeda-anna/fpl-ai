@@ -1,7 +1,7 @@
 {
-  "name": "footy-tests",
+  "name": "papa-ranjeet-tests",
   "private": true,
-  "description": "End-to-end checks for Footy (Playwright, headless Chromium).",
+  "description": "End-to-end checks for Papa Ranjeet (Playwright, headless Chromium).",
   "scripts": {
     "postinstall": "playwright install chromium",
     "test": "node e2e.js"
