@@ -6,7 +6,7 @@ import os
 import re
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -129,6 +129,31 @@ def estimate_free_transfers(team_id: int, current_gw: int) -> int:
     return replay_free_transfers(history, current_gw, solver_mod.MAX_FREE_TRANSFERS)
 
 
+def apply_pending_transfers(squad: List[Dict[str, Any]], bank: float, transfers: List[Dict[str, Any]],
+                            current_gw: int) -> Tuple[List[Dict[str, Any]], float, List[Dict[str, Any]]]:
+    """Bring the squad up to date with transfers made since the last deadline.
+
+    FPL's picks for the current gameweek are the team as it stood at that deadline;
+    a transfer made now is for the next gameweek and only shows in the public
+    transfers list until that deadline passes. Each one swaps the player out for
+    the player in (keeping his slot), and the bank moves by the sale price minus
+    the purchase price. Returns the new squad, bank and the transfers applied.
+    """
+    squad = [dict(p) for p in squad]
+    pending = sorted((t for t in transfers or [] if (t.get("event") or 0) > current_gw),
+                     key=lambda t: t.get("time") or "")
+    applied = []
+    for t in pending:
+        out_id, in_id = t.get("element_out"), t.get("element_in")
+        slot = next((i for i, p in enumerate(squad) if p["id"] == out_id), None)
+        if slot is None or any(p["id"] == in_id for p in squad):
+            continue
+        squad[slot] = {"id": in_id, "purchase_price": t.get("element_in_cost")}
+        bank += ((t.get("element_out_cost") or 0) - (t.get("element_in_cost") or 0)) / 10.0
+        applied.append(t)
+    return squad, round(bank, 1), applied
+
+
 def load_team(team_id: int, horizon: int, overrides: Optional[Dict[int, float]] = None):
     e = engine()
     rows = rows_with(horizon, overrides)
@@ -142,18 +167,24 @@ def load_team(team_id: int, horizon: int, overrides: Optional[Dict[int, float]] 
         picks = fpl_api.entry_picks(team_id, gw)
     except Exception:
         raise HTTPException(404, "No squad found for team %d in GW%d." % (team_id, gw))
-    squad_rows, current_squad = [], []
-    for p in picks["picks"]:
-        row = index.get(p["element"])
-        if not row:
-            continue
-        squad_rows.append(row)
-        current_squad.append({"id": p["element"], "purchase_price": p.get("purchase_price")})
+    current_squad = [{"id": p["element"], "purchase_price": p.get("purchase_price")} for p in picks["picks"]]
     bank = picks.get("entry_history", {}).get("bank", 0) / 10.0
+    try:
+        transfers = fpl_api.entry_transfers(team_id)
+    except Exception:
+        transfers = []
+    current_squad, bank, pending = apply_pending_transfers(current_squad, bank, transfers, gw)
+    current_squad = [p for p in current_squad if p["id"] in index]
+    squad_rows = [index[p["id"]] for p in current_squad]
     try:
         history = fpl_api.entry_history(team_id)
     except Exception:
         history = {}
+    # transfers already made for the coming gameweek use up its free transfers (not under a Wildcard / Free Hit)
+    ft = estimate_free_transfers(team_id, gw)
+    chip_next = {c["name"] for c in history.get("chips", []) if (c.get("event") or 0) > gw}
+    if pending and not chip_next & {"wildcard", "freehit"}:
+        ft = max(0, ft - len(pending))
     chips_history = [{"name": c["name"], "event": c["event"]} for c in history.get("chips", [])]
     chips_used = ["%s (GW%d)" % (c["name"], c["event"]) for c in chips_history]
     horizon_gws = list(range(e.next_gw, min(38, e.next_gw + horizon - 1) + 1))
@@ -165,7 +196,7 @@ def load_team(team_id: int, horizon: int, overrides: Optional[Dict[int, float]] 
         "squad_rows": squad_rows, "current_squad": current_squad,
         "bank": bank, "chips_used": chips_used, "chips_history": chips_history,
         "chips_available": chips_available, "history": history,
-        "free_transfers": estimate_free_transfers(team_id, gw),
+        "free_transfers": ft, "pending_transfers": pending,
     }
 
 
@@ -296,6 +327,9 @@ def team(team_id: int, horizon: int = Query(5, ge=1, le=10), overrides: Optional
         "next_gw": ctx["engine"].next_gw,
         "bank": ctx["bank"],
         "free_transfers": ctx["free_transfers"],
+        "pending_transfers": [{"gw": t.get("event"), "out": _name(ctx["engine"], t.get("element_out")),
+                               "in": _name(ctx["engine"], t.get("element_in")), "time": t.get("time")}
+                              for t in ctx["pending_transfers"]],
         "chips_used": ctx["chips_used"],
         "chips_available": ctx["chips_available"],
         "formation": split["formation"],

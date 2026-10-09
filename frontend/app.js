@@ -229,7 +229,9 @@ async function viewSquad(t){
         ${tile('GW'+e.gw+' score', last ? last.points : '–',
                vsAvg==null ? 'Average not out yet' : `<span class="${vsAvg>=0?'up':'down'}">${sign(vsAvg,0)}</span> vs the ${lastGw.average}-point average`)}
         ${tile('Squad value', '£'+num(e.entry.value,1)+'m', '£'+num(e.bank,1)+'m in the bank')}
-        ${tile('Free transfers', e.free_transfers, av.length ? 'Chips now: '+av.map(c=>CH[c]).join(' · ') : 'No chips this week')}
+        ${tile('Free transfers', e.free_transfers, (e.pending_transfers||[]).length
+          ? 'Made for GW'+e.next_gw+': '+e.pending_transfers.map(t=>esc((t.out||'?')+' → '+(t.in||'?'))).join(', ')
+          : av.length ? 'Chips now: '+av.map(c=>CH[c]).join(' · ') : 'No chips this week')}
       </div>
       <div class="grid g23 mb">
         <div class="card">
