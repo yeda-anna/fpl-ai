@@ -1,4 +1,4 @@
-/* Captain’s Log — frontend. Plain JS, no build step. Animation lives in motion.js (FX),
+/* Footy — frontend. Plain JS, no build step. Animation lives in motion.js (FX),
    the Magic UI effects in magic.js (Magic) and the opening film in intro.js (Intro). */
 'use strict';
 
@@ -60,7 +60,7 @@ const QUIPS = {
     'This app does the maths. You bring the confidence.',
     'Rank in the millions? Don’t worry, beta. It’s a stable position.'
   ],
-  // the captain's log entry typed in the opening film, after "Stardate GW8."
+  // the log entry typed in the opening film, after "Matchday GW8."
   intro: [
     'Morale: questionable.',
     'Captain: undecided. Again.',
@@ -635,7 +635,7 @@ async function viewCopilot(t){
         ${S.teamId?'Answering for team <b>'+esc(S.teamId)+'</b>.':'Add a Team ID for answers about your own squad.'}</div>
     </div>
     <div id="ans" class="qa-log" aria-live="polite"></div>`;
-  /* The captain's log: every answer is an entry, newest on top. AutoAnimate slides
+  /* The log: every answer is an entry, newest on top. AutoAnimate slides
      the older ones down; they fold to the question and the answer (tap to unfold).
      The reasons under a new answer drop in one by one (Magic UI Animated List). */
   const log = el('ans'), entries = () => Array.prototype.filter.call(log.children, x=>!('__aa_del' in x));
@@ -1025,7 +1025,7 @@ function syncHead(animate){
   const verdict = t.id === 'home' && seg.id === 'squad' && S.teamId;
   const title = el('view-title'), was = title.textContent;
   title.textContent = t.id === 'home' && S.teamId ? (S.teamName || 'Team '+S.teamId) : t.title;
-  el('view-eyebrow').textContent = 'LOG//' + t.label + (t.segs.length > 1 ? '/' + seg.label : '') + (S.meta ? ' · GW' + S.meta.next_gw : '');
+  el('view-eyebrow').textContent = 'SYS//' + t.label + (t.segs.length > 1 ? '/' + seg.label : '') + (S.meta ? ' · GW' + S.meta.next_gw : '');
   if(was !== title.textContent) Magic.hyperText(title, {duration:700});
   const sub = el('view-sub');
   sub.textContent = verdict ? (S.squadSub || seg.waiting) : seg.sub;
@@ -1129,7 +1129,7 @@ function openMenu(){
   const root = el('sheet-root');
   root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Menu">
     <button class="btn sm x" id="closeSheet">Close ✕</button>
-    <h2 class="menu-h">Captain’s Log</h2>
+    <h2 class="menu-h">Footy</h2>
     <p class="menu-sub">${S.teamId ? 'Team <b>'+esc(S.teamName || S.teamId)+'</b> is saved on this device.' : 'No team saved on this device.'}</p>
     <div class="menu-actions">
       <button class="btn" id="mTeam">${icon('players')}<span>${S.teamId ? 'Change team' : 'Add team'}</span></button>
@@ -1173,8 +1173,8 @@ document.querySelector('.brand').addEventListener('click', ()=>{
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !el('landing').hidden && S.teamId) closeLanding(); });
 
 /* ---------------- boot ---------------- */
-/* the captain's log entry typed in the opening film, written once the gameweek is known */
-const introLine = () => (S.meta ? 'Stardate GW' + S.meta.next_gw + '. ' : 'Stardate unknown. ') + quip('intro');
+/* the log entry typed in the opening film, written once the gameweek is known */
+const introLine = () => (S.meta ? 'Matchday GW' + S.meta.next_gw + '. ' : 'Matchday unknown. ') + quip('intro');
 if(hasFilm()){ try{ Intro.play({line:introLine}); }catch(e){ /* the app never waits on the film */ } FX.hold(Intro.reveal); }
 buildChrome();
 FX.start();
