@@ -137,7 +137,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
   "Skip intro"), can be turned off in the menu (`fplai_intro`), and never runs
   under reduced motion. The app loads underneath and must never wait on it:
   `Intro` is optional, and entrances are held only until the film opens onto
-  the app (`FX.hold(Intro.reveal)`). Keep it under five seconds.
+  the app (`FX.hold(Intro.reveal)`). Keep it to six seconds.
 
 **Brand and content**
 - Name: **Papa Ranjeet**. Tagline: "Football’s a funny old game. Might as well do the
@@ -149,8 +149,9 @@ suite at **0 failures** — see `docs/TESTING.md`.
   other real person's likeness in the app without asking.
 - Tone: light British humour and Indian dark humour on the landing screen and
   under the loader ("putting the kettle on", "Sharma ji’s son finished this ages
-  ago"), and the log entry typed in the opening film ("Matchday GW8.
-  Morale: questionable."). Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —
+  ago"), and the opening film's tagline — a one-liner in the manner of a 70s
+  Hindi-film villain ("Free transfer? Yahan kuch bhi free nahi milta.") —
+  written for the app, never presented as a real actor's or film's dialogue. Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —
   never at a religion, caste, region, community, body or real person. **Never**
   in errors or anything a manager acts on.
 - **One roast, by request:** Home's title is the team's own name from FPL, and

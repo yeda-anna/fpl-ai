@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-09 — A six-second film with a villain's tagline
+
+- The opening film now runs **six seconds**: the drones take longer over their
+  flight, and the name and tagline have time to land before the camera pushes in.
+- **The tagline is a one-liner in the manner of a 70s Hindi-film villain**, a
+  different one each launch — “Free transfer? Yahan kuch bhi free nahi
+  milta.”, “Hit lega? Le le. Points main le jaaunga.”, “Wildcard khel le. Ab
+  tujhe koi nahi bacha sakta.” They're written for the app (`QUIPS.intro`),
+  not quotes from any actor or film.
+
 ## 2026-10-09 — Papa Ranjeet, and a meteor shower
 
 - The app is now called **Papa Ranjeet**: the page title, home-screen name,
