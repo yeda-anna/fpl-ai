@@ -324,11 +324,19 @@ const FX = (() => {
     else { raf = 0; ctx.clearRect(0, 0, canvas.width, canvas.height); }
   }
 
-  /* ---- a meteor shower across the night sky, behind every page (Magic UI Meteors) ---- */
+  /* ---- a meteor shower across the night sky, behind every page (Magic UI Meteors). Each one
+         falls to the grid floor and strikes it: a flash, a shockwave across the floor, sparks and
+         a cooling crater (Magic.impact), and the floor itself flares for a moment. ---- */
   function shower(){
-    const box = document.getElementById('skyMeteors');
+    const box = document.getElementById('skyMeteors'), floor = document.querySelector('.backdrop > .retro');
     if(!box || typeof Magic === 'undefined') return;
-    const fill = ()=>Magic.meteors(box, innerWidth < 640 ? 18 : innerWidth < 1100 ? 26 : 36, {spread:true});
+    let flare = 0;
+    const hit = (x, y, col)=>{
+      if(document.hidden) return;
+      Magic.impact(box, x, y, col);
+      if(floor && !flare){ floor.classList.add('struck'); flare = setTimeout(()=>{ floor.classList.remove('struck'); flare = 0; }, 260); }
+    };
+    const fill = ()=>Magic.meteors(box, innerWidth < 640 ? 18 : innerWidth < 1100 ? 26 : 36, {spread:true, land:[.62, .97], onImpact:hit});
     fill();
     let w = innerWidth, t = 0;
     window.addEventListener('resize', ()=>{ clearTimeout(t); t = setTimeout(()=>{ if(Math.abs(innerWidth - w) > 120){ w = innerWidth; fill(); } }, 400); });

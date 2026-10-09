@@ -193,7 +193,7 @@ async function phone(browser){
   await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }), page.click('#mRefresh')]);
   ok('phone: Refresh app reloads, and the saved team skips the landing screen', !(await page.isVisible('#landing')) && !/add team/i.test(await page.textContent('#teamLabel')));
   ok('phone: the opening film plays again on a fresh launch, then gets out of the way by itself', await page.isVisible('#intro')
-     && await page.waitForSelector('#intro', { state: 'hidden', timeout: 10000 }).then(() => true, () => false));
+     && await page.waitForSelector('#intro', { state: 'hidden', timeout: 17000 }).then(() => true, () => false));
   ok('phone: old addresses still work (#solver → #plan/transfers)', await page.goto(BASE + '#solver', { waitUntil: 'networkidle' }).then(() => page.evaluate(() => location.hash)) === '#plan/transfers');
   await page.click('#inSkip').catch(() => {}); await page.waitForSelector('#intro', { state: 'hidden', timeout: 3000 }).catch(() => {});
   await page.click('#menuBtn'); await page.waitForSelector('#mForget');
@@ -226,7 +226,7 @@ async function desktop(browser){
   await page.goto(BASE, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1900);
   await page.screenshot({ path: `${OUT}/d-00-film.png` });
-  ok('desktop: the opening film runs to its end and opens onto the app', await page.waitForSelector('#intro', { state: 'hidden', timeout: 10000 }).then(() => true, () => false));
+  ok('desktop: the opening film runs to its end and opens onto the app', await page.waitForSelector('#intro', { state: 'hidden', timeout: 17000 }).then(() => true, () => false));
   ok('desktop: first visit opens the landing screen', await page.isVisible('#landing'));
   await page.waitForTimeout(1800);
   await page.screenshot({ path: `${OUT}/d-01-landing.png` });

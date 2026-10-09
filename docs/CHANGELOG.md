@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-09 — The tagline holds, and the meteors land
+
+- In the opening film the tagline now **stays on screen for six seconds** after
+  it has typed, over the hovering drone portrait, before the camera pushes in
+  (about 11½ seconds in all; still skippable at any moment).
+- **Meteors strike the ground.** Every meteor in the shower now falls all the
+  way to the grid floor and hits it: a white-hot flash, two shockwaves rolling
+  out flat across the floor, sparks thrown up and a glowing crater that cools
+  over a couple of seconds, while the floor flares where it's struck. Each
+  meteor pauses between falls, so the sky stays busy without turning to noise.
+
 ## 2026-10-09 — A six-second film with a villain's tagline
 
 - The opening film now runs **six seconds**: the drones take longer over their

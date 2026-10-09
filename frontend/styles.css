@@ -741,6 +741,30 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
 .mg-meteor.l{background:var(--neon-l);box-shadow:0 0 10px 1px var(--neon-l)}
 .mg-meteor.l:before{background:linear-gradient(90deg,var(--neon-l),transparent)}
 @keyframes mg-meteor{0%{transform:rotate(var(--angle)) translateX(0);opacity:1}70%{opacity:1}100%{transform:rotate(var(--angle)) translateX(-560px);opacity:0}}
+/* meteors that land: full brightness all the way down to the floor */
+.mg-meteor.land{animation-name:mg-meteor-land;animation-timing-function:linear}
+@keyframes mg-meteor-land{0%,45%{transform:rotate(var(--angle)) translateX(0);opacity:0}48%{opacity:1}99%{opacity:1}
+  100%{transform:rotate(var(--angle)) translateX(calc(var(--dist) * -1));opacity:0}}
+/* the impact: a flash, two shockwaves rolling out flat across the floor, sparks, a crater that cools */
+.mg-impact{position:absolute;width:0;height:0;pointer-events:none;--ic:var(--neon-c)}
+.mg-impact.m{--ic:var(--neon-m)}.mg-impact.l{--ic:var(--neon-l)}
+.mg-impact i{position:absolute;left:0;top:0;border-radius:50%}
+.mg-impact .flash{width:80px;height:80px;margin:-40px 0 0 -40px;background:radial-gradient(circle,#fff,var(--ic) 30%,transparent 70%);
+  animation:imp-flash .45s ease-out forwards}
+.mg-impact .wave{width:170px;height:170px;margin:-85px 0 0 -85px;border:2px solid var(--ic);box-shadow:0 0 14px var(--ic),inset 0 0 10px var(--ic);
+  transform:scale(.05,.015);opacity:0;animation:imp-wave 1.1s cubic-bezier(.16,1,.3,1) forwards}
+.mg-impact .wave.w2{animation-delay:.14s;animation-duration:1.4s;border-width:1px}
+.mg-impact .crater{width:46px;height:13px;margin:-6px 0 0 -23px;background:radial-gradient(ellipse,#fff 0,var(--ic) 35%,transparent 72%);
+  filter:blur(1px);animation:imp-crater 2s ease-out forwards}
+.mg-impact .sp{width:4px;height:4px;margin:-2px 0 0 -2px;background:#fff;box-shadow:0 0 6px 1px var(--ic);
+  animation:imp-spark var(--sd) cubic-bezier(.2,.7,.4,1) forwards}
+@keyframes imp-flash{0%{transform:scale(.2);opacity:1}100%{transform:scale(1.6);opacity:0}}
+@keyframes imp-wave{0%{transform:scale(.05,.015);opacity:1}100%{transform:scale(1.5,.42);opacity:0}}
+@keyframes imp-crater{0%{opacity:1;transform:scale(.6)}20%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:scale(1.3)}}
+@keyframes imp-spark{0%{transform:translate(0,0);opacity:1}100%{transform:translate(var(--sx),calc(var(--sy) + 26px));opacity:0}}
+/* the floor flares where it's struck */
+.backdrop > .retro{transition:opacity .5s ease-out,filter .5s ease-out}
+.backdrop > .retro.struck{opacity:.62;filter:brightness(1.6);transition-duration:.06s}
 
 /* Ripple: rings breathing out from the centre */
 .mg-ripple{position:absolute;pointer-events:none;
@@ -818,7 +842,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
   --bars:0;--hud-a:0;--floor:0;--floor-a:0;--flash:0;--photo:0;--title-a:0;--track:.55;--line-a:0;
   --zoom:1.25;--cam-y:5;--hole:0;--p:0}
 .intro[hidden],.no-intro .intro{display:none}
-.intro-on .intro{animation:in-failsafe .01s 15s forwards}
+.intro-on .intro{animation:in-failsafe .01s 20s forwards}
 @keyframes in-failsafe{to{visibility:hidden;pointer-events:none}}
 .intro.hole{
   -webkit-mask-image:radial-gradient(circle at 50% 44%,transparent calc(var(--hole) * 150vmax),#000 calc(var(--hole) * 150vmax + 1.5px));
@@ -871,7 +895,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--neon-c)}
 .btn[aria-pressed="true"]{border-color:var(--neon-l);color:var(--accent-ink);box-shadow:0 0 16px -6px var(--glow-l)}
 
 @media(prefers-reduced-motion:reduce){
-  .backdrop .beam,.turf .sweep,.mg-meteor,.mg-beam{display:none}
+  .backdrop .beam,.turf .sweep,.mg-meteor,.mg-beam,.mg-impact{display:none}
 }
 
 @media(max-width:1180px){

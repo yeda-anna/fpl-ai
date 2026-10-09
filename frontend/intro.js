@@ -6,8 +6,8 @@
    in the colours of the logo portrait (traced from its own lights by
    scripts/digitize.py into portrait.js) and dissolve into the picture itself
    (portrait.webp). The name decodes, the tagline — a villain's one-liner —
-   types itself, then the camera pushes in and the film irises open onto the
-   app. Six seconds in all.
+   types itself and holds for six seconds while the drones hover, then the
+   camera pushes in and the film irises open onto the app. About 11½ seconds.
 
    It is a Theatre.js sequence (vendor/theatre-core.min.js, global Theatre.core):
    every moving part is a sheet object, every move a keyframe in KEYS below,
@@ -24,15 +24,15 @@
 const Intro = (() => {
   const root = document.getElementById('intro');
   const T = window.Theatre && window.Theatre.core;
-  const LEN = 6, OUTRO = 5.4, FPS = 24;
+  const LEN = 11.45, OUTRO = 10.85, FPS = 24;   // the tagline finishes at 4.85 s and holds six seconds
 
   /* cubic-bezier easings for the curve that leaves a keyframe */
   const EASE = {linear:[0, 0, 1, 1], in:[.55, 0, 1, .45], out:[0, .55, .45, 1], inOut:[.65, 0, .35, 1],
                 expoOut:[.16, 1, .3, 1], back:[.34, 1.56, .64, 1]};
   /* object → prop → [[seconds, value, easing to the next keyframe], …] */
   const KEYS = {
-    Bars:   {h:     [[0, 0, 'expoOut'], [.6, 1], [OUTRO, 1, 'inOut'], [5.85, 0]]},
-    Hud:    {a:     [[.2, 0, 'out'], [.6, 1], [OUTRO, 1, 'in'], [5.7, 0]]},
+    Bars:   {h:     [[0, 0, 'expoOut'], [.6, 1], [OUTRO, 1, 'inOut'], [11.3, 0]]},
+    Hud:    {a:     [[.2, 0, 'out'], [.6, 1], [OUTRO, 1, 'in'], [11.15, 0]]},
     Floor:  {rise:  [[0, .55, 'expoOut'], [.9, 1]],
              a:     [[0, 0, 'out'], [.5, .9], [3.2, .9, 'inOut'], [4.2, .35]]},
     Swarm:  {gather:[[.4, 0, 'linear'], [3.0, 1]],           // 0 all on the pad … 1 all in place (each drone eases its own flight)
@@ -48,7 +48,7 @@ const Intro = (() => {
              type:  [[3.9, 0, 'linear'], [4.85, 1]]},
     Camera: {zoom:  [[0, 1.12, 'out'], [3.0, 1, 'inOut'], [OUTRO, 1.05, 'in'], [LEN, 2.6]],
              y:     [[0, 3, 'out'], [3.0, 0]]},
-    Iris:   {hole:  [[5.45, 0, 'in'], [LEN, 1]]}
+    Iris:   {hole:  [[10.9, 0, 'in'], [LEN, 1]]}
   };
 
   /* KEYS → the project state Theatre expects (what Studio would export) */
