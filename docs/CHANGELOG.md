@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-09 — Transfers show up the moment you make them
+
+- A transfer made on the FPL site or app for the coming gameweek now shows in
+  your squad on the next refresh. FPL only moves it into your "picks" when the
+  deadline passes, so the app now also reads your transfers list and applies the
+  ones made since the last deadline: the player swaps in, the bank moves by the
+  sale and purchase prices, and the free transfers go down (not under a Wildcard
+  or Free Hit). Home → My squad names them under Free transfers
+  ("Made for GW9: Out → In"), and the solver plans from the updated squad.
+
 ## 2026-10-09 — The tagline holds, and the meteors land
 
 - In the opening film the tagline now **stays on screen for six seconds** after

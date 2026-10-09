@@ -31,6 +31,7 @@ mode works for anything you've already loaded (a team, a league).
 npm --prefix tests ci          # once: installs Playwright
 npm --prefix tests test        # 107 checks, phone 390×844 + desktop 1440×900 + reduced motion
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
+./.venv/bin/python tests/test_pending_transfers.py # transfers since the deadline, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the neon palette
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next

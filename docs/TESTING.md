@@ -57,6 +57,16 @@ What it covers:
 - No console errors and no failed requests (besides the deliberate unknown
   team).
 
+## Transfers since the last deadline (no server needed)
+
+```bash
+./.venv/bin/python tests/test_pending_transfers.py
+```
+
+A transfer made for the coming gameweek replaces the player in his slot and moves
+the bank; transfers already in the picks are ignored; chained transfers apply in
+order.
+
 ## Free-transfer rules (no server needed)
 
 ```bash
