@@ -137,7 +137,8 @@ suite at **0 failures** — see `docs/TESTING.md`.
   "Skip intro"), can be turned off in the menu (`fplai_intro`), and never runs
   under reduced motion. The app loads underneath and must never wait on it:
   `Intro` is optional, and entrances are held only until the film opens onto
-  the app (`FX.hold(Intro.reveal)`). Keep it to six seconds.
+  the app (`FX.hold(Intro.reveal)`). About 11½ seconds: the tagline is typed by
+  4.85 s and holds for six seconds before the push-in.
 
 **Brand and content**
 - Name: **Papa Ranjeet**. Tagline: "Football’s a funny old game. Might as well do the

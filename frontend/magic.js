@@ -70,7 +70,9 @@ const Magic = (() => {
   }
 
   /* Meteors: `n` streaks of light, each on its own random path and pace.
-     opts.spread: start them all over the sky, not just along the top (a shower). */
+     opts.spread: start them all over the sky, not just along the top (a shower).
+     opts.land [lo, hi]: each one falls until it strikes the ground somewhere between those
+     shares of the box's height, and opts.onImpact(x, y, colour) fires as it hits. */
   function meteors(box, n, opts){
     if(!box || reduced) return;
     opts = opts || {};
@@ -84,8 +86,38 @@ const Magic = (() => {
       if(opts.spread) m.style.top = (Math.random() * 75 - 12).toFixed(1) + '%';
       m.style.animationDelay = (Math.random() * (opts.spread ? 9 : 4) + .2).toFixed(2) + 's';
       m.style.animationDuration = Math.floor(Math.random()*6 + 4) + 's';
+      if(opts.land){
+        const h = box.clientHeight || innerHeight, a = -((2*angle) % 360) * Math.PI / 180;
+        const dx = -Math.cos(a), dy = -Math.sin(a);                         // the direction of travel (translateX(-d), turned)
+        const y1 = h * (opts.land[0] + Math.random() * (opts.land[1] - opts.land[0]));
+        const y0 = Math.random() * h * .45 - h * .12, dist = Math.max(120, (y1 - y0) / dy);
+        const x0 = Math.random() * (box.clientWidth || innerWidth) * 1.1 - dx * dist * .5;
+        m.classList.add('land');
+        m.style.top = y0.toFixed(0) + 'px'; m.style.left = x0.toFixed(0) + 'px';
+        m.style.setProperty('--dist', dist.toFixed(0) + 'px');
+        m.style.animationDuration = (dist / (220 + Math.random() * 200) / .55).toFixed(2) + 's';   // falls in the last 55% of each cycle, a pause before
+        const col = m.classList.contains('m') ? 'm' : m.classList.contains('l') ? 'l' : 'c';
+        if(opts.onImpact) m.addEventListener('animationiteration', ()=>opts.onImpact(x0 + dx * dist, y0 + dy * dist, col));
+      }
       box.appendChild(m);
     }
+  }
+
+  /* Impact: where a meteor strikes the ground — a flash, a shockwave rolling out across the
+     floor (flattened, in perspective), sparks thrown up and a glowing crater that cools. */
+  function impact(box, x, y, col){
+    if(!box || reduced) return;
+    const s = document.createElement('span');
+    s.className = 'mg-impact ' + (col || 'c');
+    s.style.left = x.toFixed(0) + 'px'; s.style.top = y.toFixed(0) + 'px';
+    let sparks = '';
+    for(let i=0;i<7;i++){
+      const ang = -20 - Math.random() * 140, d = 18 + Math.random() * 34;
+      sparks += `<i class="sp" style="--sx:${(Math.cos(ang*Math.PI/180)*d).toFixed(0)}px;--sy:${(Math.sin(ang*Math.PI/180)*d).toFixed(0)}px;--sd:${(.45 + Math.random()*.4).toFixed(2)}s"></i>`;
+    }
+    s.innerHTML = '<i class="crater"></i><i class="wave"></i><i class="wave w2"></i><i class="flash"></i>' + sparks;
+    box.appendChild(s);
+    setTimeout(()=>s.remove(), 2200);
   }
 
   /* Ripple: `n` concentric rings breathing out from the middle of `box`. */
@@ -136,5 +168,5 @@ const Magic = (() => {
   /* RetroGrid: markup for a perspective grid floor (the CSS does the rest). */
   const retroGrid = () => '<div class="retro"><div class="retro-plane"><div class="retro-grid"></div></div></div>';
 
-  return {reduced, scramble, hyperText, typing, meteors, ripple, orbit, borderBeam, shimmer, beamArrow, retroGrid};
+  return {reduced, scramble, hyperText, typing, meteors, impact, ripple, orbit, borderBeam, shimmer, beamArrow, retroGrid};
 })();

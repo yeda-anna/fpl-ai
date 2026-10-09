@@ -96,12 +96,12 @@ three neons — lime for "do this", cyan for lines and information, magenta for 
 ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG AA
 (`python3 scripts/check_contrast.py`).
 
-- **An opening film** on every launch, six seconds and skippable: a couple of
+- **An opening film** on every launch, skippable: a couple of
   thousand drones wait in rows on a neon grid floor, lift off in a wave, swarm
   and lock into place as the logo portrait, light up in its colours and
   dissolve into the picture itself. The name decodes, a villain's one-liner
   types itself as the tagline ("Free transfer? Yahan kuch bhi free nahi
-  milta."), and the camera pushes in as the film irises open onto the app,
+  milta.") and holds for six seconds, then the camera pushes in as the film irises open onto the app,
   which has loaded underneath. Keyframed with
   [Theatre.js](https://www.theatrejs.com/docs/latest); it can be turned off in
   the menu and never plays under reduced motion.

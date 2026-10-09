@@ -86,7 +86,8 @@ Every launch opens with a few seconds of titles while the app loads underneath
 | 2.95 – 3.65 s | the drones dim as the portrait itself (`portrait.webp`) comes up beneath them | `Swarm.photo` |
 | 3.1 – 4.0 s | the name decodes (HyperText) as its letters track in | `Title` |
 | 3.75 – 4.85 s | the tagline types itself — a villain's one-liner, a different one each launch (`QUIPS.intro`): "Free transfer? Yahan kuch bhi free nahi milta." | `Line` |
-| 5.4 – 6.0 s | the camera pushes into the portrait and the film irises open onto the app | `Camera`, `Iris` |
+| 4.85 – 10.85 s | the tagline holds, the drones hovering over the portrait | — |
+| 10.85 – 11.45 s | the camera pushes into the portrait and the film irises open onto the app | `Camera`, `Iris` |
 
 - The drones are `PORTRAIT` (`portrait.js`, generated): every light in the
   portrait, with its colour from a 32-colour palette. A canvas draws each as a
@@ -121,7 +122,7 @@ following the originals (MIT, `frontend/vendor/magicui-LICENSE.md`).
 | --- | --- |
 | HyperText | page titles when they change, the film's title, the name in the top bar on hover |
 | Typing Animation | the landing boot lines; the film's log entry |
-| Meteors | a shower across the night sky behind every page (18 on a phone, up to 36 on a wide screen, started all over the sky), and more over the landing pitch |
+| Meteors | a shower across the night sky behind every page (18 on a phone, up to 36 on a wide screen). Each one falls to the grid floor and strikes it (`Magic.impact`): a flash, two shockwaves rolling out flat across the floor, sparks thrown up and a glowing crater that cools, while the floor flares for a moment. More over the landing pitch |
 | Ripple, Orbiting Circles | round the landing logo; the film's logo |
 | Border Beam | every loading card, the chosen plan in Plan → Transfers |
 | Shimmer Button | "Let's go" and "Suggest transfers" (the spark races while the solver works) |
