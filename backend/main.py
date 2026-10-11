@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import analysis
+import demo as demo_mod
 import fpl_api
 import priors
 import rules as rules_mod
@@ -198,31 +199,41 @@ def load_team(team_id: int, horizon: int, overrides: Optional[Dict[int, float]] 
     e = engine()
     rows = rows_with(horizon, overrides)
     index = {r["id"]: r for r in rows}
-    try:
-        entry = fpl_api.entry(team_id)
-    except Exception:
-        raise HTTPException(404, "No FPL team with ID %d." % team_id)
     gw = e.current_gw
-    try:
-        picks = fpl_api.entry_picks(team_id, gw)
-    except Exception:
-        raise HTTPException(404, "No squad found for team %d in GW%d." % (team_id, gw))
+    if team_id == demo_mod.DEMO_ID:      # the made-up demo team: no FPL account needed
+        fake = demo_mod.team(e.bootstrap["elements"], e.events, gw, e.rules.quota,
+                             e.rules.club_limit, e.rules.budget, allowed=set(index))
+        entry, picks, demo_history = fake["entry"], fake["picks"], fake["history"]
+    else:
+        demo_history = None
+        try:
+            entry = fpl_api.entry(team_id)
+        except Exception:
+            raise HTTPException(404, "No FPL team with ID %d." % team_id)
+        try:
+            picks = fpl_api.entry_picks(team_id, gw)
+        except Exception:
+            raise HTTPException(404, "No squad found for team %d in GW%d." % (team_id, gw))
     current_squad = [{"id": p["element"], "purchase_price": p.get("purchase_price")} for p in picks["picks"]]
     bank = picks.get("entry_history", {}).get("bank", 0) / 10.0
     try:
-        transfers = fpl_api.entry_transfers(team_id)
+        transfers = [] if demo_history is not None else fpl_api.entry_transfers(team_id)
     except Exception:
         transfers = []
     transfers = list(transfers or []) + made_transfers(e, current_squad, made or [], gw)
     current_squad, bank, pending = apply_pending_transfers(current_squad, bank, transfers, gw)
     current_squad = [p for p in current_squad if p["id"] in index]
     squad_rows = [index[p["id"]] for p in current_squad]
-    try:
-        history = fpl_api.entry_history(team_id)
-    except Exception:
-        history = {}
+    if demo_history is not None:
+        history = demo_history
+        ft = replay_free_transfers(history, gw, solver_mod.MAX_FREE_TRANSFERS)
+    else:
+        try:
+            history = fpl_api.entry_history(team_id)
+        except Exception:
+            history = {}
+        ft = estimate_free_transfers(team_id, gw)
     # transfers already made for the coming gameweek use up its free transfers (not under a Wildcard / Free Hit)
-    ft = estimate_free_transfers(team_id, gw)
     chip_next = {c["name"] for c in history.get("chips", []) if (c.get("event") or 0) > gw}
     if pending and not chip_next & {"wildcard", "freehit"}:
         ft = max(0, ft - len(pending))
@@ -349,7 +360,7 @@ def player(player_id: int, horizon: int = Query(6, ge=1, le=10),
 @app.get("/api/entry/{team_id}")
 def team(team_id: int, horizon: int = Query(5, ge=1, le=10), overrides: Optional[str] = None,
          made: Optional[str] = None, fresh: bool = False):
-    if fresh:       # a page load: re-read this manager from FPL rather than from the cache
+    if fresh and team_id != demo_mod.DEMO_ID:       # a page load: re-read this manager from FPL rather than from the cache
         fpl_api.refresh_team(team_id, engine().current_gw)
     ctx = load_team(team_id, horizon, parse_overrides(overrides), parse_made(made))
     split = analysis.squad_split(ctx["squad_rows"], 0)
@@ -363,6 +374,7 @@ def team(team_id: int, horizon: int = Query(5, ge=1, le=10), overrides: Optional
             "overall_points": ctx["entry"].get("summary_overall_points"),
             "gw_points": ctx["entry"].get("summary_event_points"),
             "value": round(ctx["entry"].get("last_deadline_value", 1000) / 10.0, 1),
+            "demo": bool(ctx["entry"].get("demo")),
         },
         "gw": ctx["engine"].current_gw,
         "next_gw": ctx["engine"].next_gw,
@@ -553,7 +565,7 @@ def copilot(req: CopilotRequest):
     ov = parse_overrides(req.overrides)
     rows = rows_with(req.horizon, ov)
     ctx = None
-    if req.team_id:
+    if req.team_id is not None:      # 0 is the demo team
         try:
             ctx = load_team(req.team_id, req.horizon, ov, parse_made(req.made))
         except HTTPException:
@@ -662,7 +674,24 @@ def version():
     return JSONResponse({"build": build}, headers=NO_STORE)
 
 
+_OG_LINK = re.compile(r'(<meta property="og:(?:image|url)" content=")/')
+_HOST = re.compile(r"^[A-Za-z0-9.-]+(?::\d+)?$")
+
+
+def _origin(request: Request) -> str:
+    """This deploy's own address (behind Railway's proxy), for link previews. '' if unsure."""
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    host = host.split(",")[0].strip()
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "https").split(",")[0].strip()
+    if not _HOST.match(host) or proto not in ("http", "https"):
+        return ""
+    return "%s://%s" % (proto, host)
+
+
 @app.api_route("/", methods=["GET", "HEAD"])
-def index():
+def index(request: Request):
     html, _ = _render_index()
+    origin = _origin(request)
+    if origin:       # link previews need absolute addresses
+        html = _OG_LINK.sub(lambda m: m.group(1) + origin + "/", html)
     return HTMLResponse(html, headers=NO_STORE)

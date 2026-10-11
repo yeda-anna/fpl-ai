@@ -403,6 +403,14 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 .mins.set{background:var(--accent-wash);color:var(--accent-ink);font-weight:750}
 .mins input{width:44px;padding:2px 4px;font-size:12px;font-family:var(--mono);border-radius:6px}
 .legend{font-size:12.5px;color:var(--ink-3);margin-top:12px;line-height:1.65}
+/* The demo team's guided tour (Home → My squad, demo only) */
+.demo-lead{margin:0 0 10px;color:var(--ink-2);line-height:1.6;overflow-wrap:anywhere}
+.demo-lead b{color:var(--ink)}
+.tour{margin:4px 0 0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:tour}
+.tour li{display:flex;align-items:baseline;gap:10px;min-width:0;color:var(--ink-2);line-height:1.5;overflow-wrap:anywhere}
+.tour-go{flex:none;min-width:92px;min-height:36px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:99px;
+  color:var(--neon-c);background:transparent;border:1px solid var(--glass-line-2);transition:border-color .2s,color .2s}
+.tour-go:hover,.tour-go:focus-visible{color:var(--ink);border-color:var(--neon-c)}
 /* Transfers made in the FPL app, not public until the deadline (Home → My squad) */
 .made-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
 .made-list li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;overflow-wrap:anywhere}
@@ -493,6 +501,13 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px;font-varia
 .land-help[open] summary:after{content:' –'}
 .land-help p{margin:8px 0 0;line-height:1.55}
 .land-note{margin:12px 0 0;font-size:12px;color:var(--ink-3)}
+/* "Don't play FPL?" - the way into the demo team */
+.land-demo{display:block;width:100%;margin-top:12px;min-height:44px;padding:10px 14px;cursor:pointer;font:inherit;font-size:13.5px;
+  color:var(--ink-2);background:transparent;border:1px dashed var(--glass-line-2);border-radius:12px;overflow-wrap:anywhere;
+  transition:border-color .2s,color .2s}
+.land-demo b{color:var(--neon-c);font-weight:700}
+.land-demo:hover,.land-demo:focus-visible{color:var(--ink);border-color:var(--neon-c)}
+.land-demo[disabled]{opacity:.7;cursor:progress}
 .land-note b{color:var(--neon-c);font-weight:700}
 
 /* ============================ loading ============================ */

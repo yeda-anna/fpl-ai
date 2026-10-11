@@ -295,11 +295,42 @@ async function reducedMotion(browser){
   await ctx.close();
 }
 
+// For visitors who don't play FPL: the landing offers a made-up demo team, roasted, with a tour.
+async function demoTeam(browser){
+  const ctx = await browser.newContext({ viewport:{width:390,height:844}, isMobile:true, hasTouch:true, reducedMotion:'reduce' });
+  const page = await ctx.newPage();
+  const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  ok('demo: the landing offers a demo team to people without FPL', await page.isVisible('#landDemo'));
+  await page.click('#landDemo');
+  await page.waitForSelector('#v-home-squad .demo-tour', { timeout: 30000 });
+  await settled(page, '#v-home-squad', 20000);
+  const head = { title: (await page.textContent('#view-title')).trim(), sub: (await page.textContent('#view-sub')).trim() };
+  ok('demo: Home opens on the made-up team, roasted', head.title === 'Gut Feeling FC' && head.sub.length > 25
+     && await page.$eval('#view-sub', e => e.classList.contains('verdict')), JSON.stringify(head));
+  ok('demo: the tour explains FPL and links every part of the app', /Fantasy Premier League/.test(await page.textContent('.demo-tour'))
+     && (await page.$$('.demo-tour .tour-go')).length >= 5);
+  ok('demo: no made-transfers card for a made-up team', !(await page.$('#v-home-squad .made')));
+  ok('demo: nothing is saved on the device', await page.evaluate(() => localStorage.getItem('fplai_team') === null));
+  ok('demo: fits the phone', await noOverflow(page), lastOverflow.join(', '));
+  await page.screenshot({ path: `${OUT}/m-20-demo.png` });
+  await page.click('.demo-tour .tour-go[data-go="home/grade"]');
+  ok('demo: the tour opens Grade, which marks the demo squad', await settled(page, '#v-home-grade', 60000)
+     && (await errIn(page, '#v-home-grade')).length === 0 && /\/\s*100/.test(await page.textContent('#v-home-grade')));
+  await page.reload({ waitUntil: 'networkidle' });
+  ok('demo: an app reload keeps you in the demo', await page.$eval('#landing', e => e.hidden) && /Gut Feeling/.test(await page.textContent('#teamLabel')));
+  await page.click('#menuBtn'); await page.click('#mForget');
+  ok('demo: leaving the demo goes back to the landing', await page.isVisible('#landing') && await page.evaluate(() => sessionStorage.getItem('fplai_demo') === null));
+  ok('demo: no console errors', errs.length === 0, errs.slice(0, 3).join(' || '));
+  await ctx.close();
+}
+
 (async () => {
   const browser = await chromium.launch();
   try { await phone(browser); } catch (e) { ok('phone run completed', false, e.message.split('\n')[0]); }
   try { await desktop(browser); } catch (e) { ok('desktop run completed', false, e.message.split('\n')[0]); }
   try { await reducedMotion(browser); } catch (e) { ok('reduced-motion run completed', false, e.message.split('\n')[0]); }
+  try { await demoTeam(browser); } catch (e) { ok('demo run completed', false, e.message.split('\n')[0]); }
   await browser.close();
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;

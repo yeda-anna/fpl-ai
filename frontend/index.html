@@ -10,6 +10,16 @@
 <meta name="apple-mobile-web-app-title" content="Papa Ranjeet">
 <meta name="description" content="Papa Ranjeet — a Fantasy Premier League planner: expected points, a multi-week transfer solver, chips, mini-leagues and more.">
 <title>Papa Ranjeet · FPL planner</title>
+<!-- the link preview (LinkedIn, WhatsApp, Slack…); the server makes og:image and og:url absolute -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Papa Ranjeet">
+<meta property="og:title" content="Papa Ranjeet · a Fantasy Premier League planner">
+<meta property="og:description" content="Expected points, a transfer optimiser, chips and mini-leagues, with a sense of humour. Don’t play FPL? Open the demo team and watch it get roasted.">
+<meta property="og:image" content="/static/icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:url" content="/">
+<meta name="twitter:card" content="summary">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="icon" type="image/png" href="/static/icon-192.png">
@@ -166,6 +176,7 @@
       <button type="submit" class="cta mg-shimmer" id="landGo"><span class="mg-spark" aria-hidden="true"><span></span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg><span class="lbl">Let’s go</span></button>
       <button type="button" class="btn ghost" id="landSkip">Just browsing</button>
     </div>
+    <button type="button" class="land-demo" id="landDemo">Don’t play FPL? <b>See a demo team</b> — no account needed</button>
     <details class="land-help"><summary>Where’s my Team ID?</summary>
       <p>Open <b>Points</b> on the FPL site or app. It’s the number in the address: <code>…/entry/<b>1234567</b>/event/5</code></p></details>
     <p class="land-note">Saved on <b>this device only</b>, so next time you go straight to your team.</p>

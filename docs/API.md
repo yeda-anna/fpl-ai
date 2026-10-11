@@ -13,6 +13,11 @@ docs: `/docs` (Swagger) and `/redoc` while the server runs.
 - `overrides` — the manager's minute edits as `"<player_id>:<minutes>,…"`,
   e.g. `12:70,328:0`. Minutes clamp to 0–90; malformed pairs are ignored.
 
+**The demo team**: team ID `0` never exists on FPL, so every team route answers
+for *Gut Feeling FC*, a made-up manager (`backend/demo.py`): a legal squad
+picked on vibes and an invented season. No FPL calls are made for it; `entry.demo`
+is `true` in `/api/entry/0`.
+
 **Errors**: unknown team or league → `404` with a readable `detail`. FPL
 unreachable with nothing cached → `503`.
 
