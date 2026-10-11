@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass. 107 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team. 120 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -56,6 +56,21 @@ What it covers:
   nothing counts up and there are no meteors.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
+
+## The demo team (no server needed)
+
+```bash
+./.venv/bin/python tests/test_demo.py
+```
+
+The demo squad (`backend/demo.py`) is legal under the rules it's given (squad
+size, positions, club limit, budget, even when tight), keeps an injured star,
+only uses players the model can project, is the same every time, and its
+invented season ends in a shocker so Home's roast has something to say.
+
+The e2e suite's demo run checks the landing's demo button, the roasted Home with
+its tour, that nothing is saved to `fplai_team`, that Grade works for team 0,
+that an app reload stays in the demo and that leaving it returns to the landing.
 
 ## Transfers since the last deadline (no server needed)
 

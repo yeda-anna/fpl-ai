@@ -6,8 +6,17 @@ docs: `/docs` (Swagger) and `/redoc` while the server runs.
 **Common parameters**
 
 - `horizon` — gameweeks ahead, 1–10 (route defaults differ; see below).
+- `made` — transfers made in the FPL app for the coming gameweek, which FPL keeps
+  private until the deadline, as `"<out_id>-<in_id>,…"`. Accepted wherever a team is
+  loaded (`/api/entry`, `/api/rate`, `/api/solve`, `/api/chips`, `/api/copilot`); a pair
+  that no longer fits the squad (or swaps positions) is ignored.
 - `overrides` — the manager's minute edits as `"<player_id>:<minutes>,…"`,
   e.g. `12:70,328:0`. Minutes clamp to 0–90; malformed pairs are ignored.
+
+**The demo team**: team ID `0` never exists on FPL, so every team route answers
+for *Gut Feeling FC*, a made-up manager (`backend/demo.py`): a legal squad
+picked on vibes and an invented season. No FPL calls are made for it; `entry.demo`
+is `true` in `/api/entry/0`.
 
 **Errors**: unknown team or league → `404` with a readable `detail`. FPL
 unreachable with nothing cached → `503`.
@@ -19,8 +28,8 @@ unreachable with nothing cached → `503`.
 | GET | `/api/meta` | — | current/next gameweek, teams, positions, rules summary, deadlines |
 | GET | `/api/players` | `horizon`=5, `position` (1–4), `team`, `max_price`, `min_minutes`=0, `search`, `available_only`=false, `sort`=`xpts_total`, `limit`=60, `offset`=0, `overrides` | paged projection rows with `total` |
 | GET | `/api/player/{id}` | `horizon`=6, `minutes` | one player's per-fixture breakdown and minutes model |
-| GET | `/api/entry/{team_id}` | `horizon`=5, `overrides`, `fresh`=false | manager, rank, bank, free transfers, squad with xPts, best XI, captain picks. `fresh=1` expires this manager's cached FPL data first (throttled to once per 20 s per team); the app sends it on the first read after a page load |
-| GET | `/api/rate/{team_id}` | `horizon`=5, `overrides` | grade out of 100, sub-scores, strengths, weaknesses |
+| GET | `/api/entry/{team_id}` | `horizon`=5, `overrides`, `made`, `fresh`=false | manager, rank, bank, free transfers, `pending_transfers` (`manual` when entered by hand), squad with xPts, best XI, captain picks. `fresh=1` expires this manager's cached FPL data first (throttled to once per 20 s per team); the app sends it on the first read after a page load |
+| GET | `/api/rate/{team_id}` | `horizon`=5, `overrides`, `made` | grade out of 100, sub-scores, strengths, weaknesses |
 | GET | `/api/picks` | `horizon`=5 | captains, differentials, value picks and dream team for next gameweek |
 | GET | `/api/compare` | `a`, `b`, `horizon`=6 | two players side by side, week by week |
 | GET | `/api/league/{league_id}` | `horizon`=5, `rivals`=12 (2–25) | rival ownership, effective ownership, Monte Carlo win odds |

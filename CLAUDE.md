@@ -12,7 +12,7 @@ single-page app renders it in a neon, sci-fi look — it opens with a short
 Theatre.js film of drones flying into the logo, and moves with GSAP, anime.js, Motion, AutoAnimate and effects
 rebuilt from Magic UI — with five tabs and a mobile app shell.
 
-Live: https://fpl-ai-production-966c.up.railway.app · Repo: yeda-anna/fpl-ai
+Live: https://paparanjeet.up.railway.app · Repo: yeda-anna/fpl-ai
 
 ## Run it
 
@@ -29,9 +29,10 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 107 checks, phone 390×844 + desktop 1440×900 + reduced motion
+npm --prefix tests test        # 120 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 ./.venv/bin/python tests/test_pending_transfers.py # transfers since the deadline, no server needed
+./.venv/bin/python tests/test_demo.py             # the demo team is a legal squad, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the neon palette
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
@@ -52,6 +53,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/solver.py` | Multi-gameweek MIP (PuLP/CBC), alternative paths via no-good cuts |
 | `backend/analysis.py` | Chips, Rate My Team, compare, weekly picks, mini-leagues |
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
+| `backend/demo.py` | The demo team (ID 0, "Gut Feeling FC") for visitors who don't play FPL: a legal squad picked on vibes and an invented season |
 | `frontend/index.html` | Shell: the opening film's stage, top bar, neon sky, the five-tab dock, the landing screen (neon pitch scene), logo, scripts |
 | `frontend/styles.css` | Design system: the neon tokens, glass, components, the HUD layer, the Magic UI effects, the film, landing, dock, breakpoints |
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
@@ -120,6 +122,12 @@ suite at **0 failures** — see `docs/TESTING.md`.
 - **The Team ID is asked once per device** on the landing screen and kept in
   `localStorage` (`fplai_team`); returning visitors go straight to their team.
   Team views `await teamReady()` so the first read after a page load is fresh.
+- **The demo team** is for visitors who don't play FPL: "See a demo team" on the
+  landing loads team **0** (`backend/demo.py`), never saved to `fplai_team` (only
+  `sessionStorage.fplai_demo`, so the app's own reloads keep it). Home → My squad
+  opens with a tour card that explains FPL in a sentence and links each part of
+  the app. Every team route must keep working for team 0 (`team_id is not None`,
+  never a truthiness test).
 - Live `backdrop-filter` only on floating chrome: `.nav-bar, .dock, .sheet,
   .land-card, .adv-body, .toast`. In-page cards never blur.
 - Single-column grids use `minmax(0,1fr)`, never bare `1fr` (it blows out on phones).
@@ -162,6 +170,8 @@ suite at **0 failures** — see `docs/TESTING.md`.
   team and gameweek. It may quote the score and the gap to the average, but it
   lives only in the page head, never gives advice, and the numbers in the tiles
   stay plain. There are no roasts under suggestions; don't add more without asking.
+  The demo team has its own list (`SCORE_ROASTS.demo`), aimed at the made-up
+  manager's vibes picking, asked for by the owner.
 - Shirts are plain silhouettes in club colours. No crests, sponsors, real kit
   designs or other sites' logos, mascots or UI copy.
 - Don't commit raw FPL API responses (`.cache/` is git-ignored); fetch them live.

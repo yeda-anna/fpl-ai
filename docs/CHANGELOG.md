@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-10-11 — A demo team for people who don't play FPL
+
+- The first screen now offers **See a demo team — no account needed**. It opens
+  *Gut Feeling FC*, a made-up side picked on vibes: the priciest names the
+  budget allows, whoever is left, an injured star kept "for the badge", a
+  Wildcard burnt in GW2, a hit every third week and a shocker last week. The
+  squad is legal under this season's rules and uses real players, prices and
+  fixtures, so Grade, Transfers, Chips, Players and Ask all work on it.
+- Home → My squad roasts it from its own list and opens with a short tour:
+  FPL in one sentence, then a button for each part of the app and what it does.
+- Nothing is saved: the demo lives in this tab only, a team you've saved stays
+  saved, and "Leave the demo" (on the tour or in the menu) goes back.
+- Links to the app now unfurl properly on LinkedIn, WhatsApp and Slack: Open
+  Graph title, description and image, made absolute for whichever address the
+  app is served from.
+
+## 2026-10-09 — Tell the app about a transfer FPL hasn't published yet
+
+- The previous fix didn't help: FPL keeps a transfer for the coming gameweek
+  **private** — only the manager, logged in, can see it — until the deadline
+  passes, so neither the picks nor the public transfers list carry it.
+- Home → My squad now has a **Transfers made for GW…** card: pick the player
+  sold and the player bought (same position) and every team view — squad, best
+  XI, bank, free transfers, the solver, chips, Grade and Ask — plans from the
+  updated squad. The transfers are kept on the device per team
+  (`fplai_made`), sent as `made=out-in,…`, can be removed, and drop out on their
+  own once the deadline passes and FPL's picks carry them.
+
 ## 2026-10-09 — Transfers show up the moment you make them
 
 - A transfer made on the FPL site or app for the coming gameweek now shows in

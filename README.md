@@ -7,7 +7,7 @@ multi-gameweek transfer solver, chip planning, team rating, mini-league
 analysis and a rules-based Copilot — all running on your own machine against
 live FPL data.
 
-**Live:** https://fpl-ai-production-966c.up.railway.app
+**Live:** https://paparanjeet.up.railway.app
 
 ## Run
 
@@ -28,6 +28,14 @@ saves it in your browser; after that it goes straight to your team (change or
 forget it from the team pill or the ⓘ menu). You can also skip and just browse.
 The ID is the number in the address bar on your Points page:
 `fantasy.premierleague.com/entry/<ID>/event/5`.
+
+**Don't play FPL?** Tap **See a demo team** on the first screen. You get *Gut
+Feeling FC*, a made-up team picked on vibes (the priciest names the budget
+allows, whoever's left, and an injured star kept "for the badge") with an
+invented, slightly-below-average season. It gets roasted like any other team,
+a short tour explains FPL in a sentence and links each part of the app, and
+nothing is saved on your device. Real players, prices and fixtures; made-up
+scores.
 
 ### On your phone
 
@@ -138,7 +146,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 107 headless checks, phone + desktop + reduced motion
+    npm --prefix tests test            # 120 headless checks, phone + desktop + reduced motion + the demo
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).

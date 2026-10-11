@@ -12,6 +12,7 @@ const S = {
   teamId: '', teamName: '',
   horizon: 5,
   overrides: store.get('fplai_minutes', {}),   // {playerId: minutes} - your own numbers
+  made: store.get('fplai_made', {}),           // {teamId: [[outId, inId], ...]} - transfers made in the FPL app, not public yet
   entry: null, meta: null, loaded: {},
   fresh: true,         // the next read of your team bypasses the server's cache (every page load starts true)
   ready: null,         // the first, fresh read of a saved team; team views wait for it
@@ -35,7 +36,15 @@ async function api(path, opts){
 const post = (path, body) => api(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
 const ovParam = () => Object.entries(S.overrides).map(([k,v])=>k+':'+v).join(',');
 const entryUrl = id => `/api/entry/${id}?horizon=${S.horizon}${ovQuery()}${S.fresh ? '&fresh=1' : ''}`;
-const ovQuery = () => { const o = ovParam(); return o ? '&overrides='+encodeURIComponent(o) : ''; };
+/* The demo team, for visitors who don't play FPL: team 0 never exists on FPL, so the
+   server answers for a made-up side instead (backend/demo.py). Kept for this tab only. */
+const DEMO = '0';
+const isDemo = () => S.teamId === DEMO;
+const demoFlag = on => { try{ on ? sessionStorage.setItem('fplai_demo', '1') : sessionStorage.removeItem('fplai_demo'); }catch(e){} };
+const madeParam = () => (S.made[S.teamId] || []).map(([o,i])=>o+'-'+i).join(',');
+const ovQuery = () => { const o = ovParam(), m = madeParam(); return (o ? '&overrides='+encodeURIComponent(o) : '') + (m ? '&made='+m : ''); };
+/* Your minute edits and the transfers you've told us about, on a request body. */
+const withEdits = b => { const o = ovParam(), m = madeParam(); if(o) b.overrides = o; if(m) b.made = m; return b; };
 
 /* ---------------- house humour ----------------
    British dry wit and Indian dark humour in the waiting and on the landing screen.
@@ -126,12 +135,19 @@ const SCORE_ROASTS = {
   ],
   fresh: [
     'No games played yet. Unbeaten, undefeated and completely unproven.'
+  ],
+  demo: [     // the made-up demo team only - a below-average week, every week
+    'Gut Feeling FC: {pts} points, {diff} under the average. Picked on vibes, captained on vibes, relegated on vibes.',
+    '{pts} points. This squad was built like flat-pack furniture: total confidence, no instructions.',
+    '{diff} below the average. Kept the injured star “for the badge”. The badge has a hamstring.',
+    '{pts} points. Took a hit, lost the hit, then took another hit to fix the hit.',
+    '{diff} under the average. The transfer strategy is a coin toss, and the coin is on loan.'
   ]
 };
 function scoreRoast(teamId, last, vsAvg){
   const d = vsAvg == null ? null : Math.round(vsAvg);
   const kind = !last ? 'fresh' : d == null ? 'none' : d >= 15 ? 'great' : d > 0 ? 'above' : d === 0 ? 'level' : d > -15 ? 'below' : 'awful';
-  const list = SCORE_ROASTS[kind], seed = teamId + '|' + (last ? last.gw + ':' + last.points : '-');
+  const list = isDemo() && (kind === 'below' || kind === 'awful') ? SCORE_ROASTS.demo : SCORE_ROASTS[kind], seed = teamId + '|' + (last ? last.gw + ':' + last.points : '-');
   let h = 0; for(let i=0;i<seed.length;i++) h = (h*31 + seed.charCodeAt(i)) | 0;
   const slots = {pts: last ? last.points : '–', diff: d == null ? '' : Math.abs(d)};
   return list[Math.abs(h) % list.length].replace(/\{(\w+)\}/g, (m,k)=> slots[k] != null ? slots[k] : m);
@@ -223,7 +239,7 @@ async function viewSquad(t){
     S.squadSub = scoreRoast(S.teamId, last, vsAvg);
     if(cur.tab === 'home' && cur.seg === 'squad') syncHead(true);
     const av = (e.chips_available||{})[e.next_gw] || [], CH = {wildcard:'WC',freehit:'FH',bboost:'BB','3xc':'TC'};
-    t.innerHTML = `
+    t.innerHTML = `${isDemo() ? demoTour(e) : ''}
       <div class="grid g4 mb">
         ${tile('Overall rank', e.entry.overall_rank ? e.entry.overall_rank.toLocaleString() : '–', esc(e.entry.name||''))}
         ${tile('GW'+e.gw+' score', last ? last.points : '–',
@@ -233,6 +249,7 @@ async function viewSquad(t){
           ? 'Made for GW'+e.next_gw+': '+e.pending_transfers.map(t=>esc((t.out||'?')+' → '+(t.in||'?'))).join(', ')
           : av.length ? 'Chips now: '+av.map(c=>CH[c]).join(' · ') : 'No chips this week')}
       </div>
+      ${isDemo() ? '' : madeCard(e)}
       <div class="grid g23 mb">
         <div class="card">
           <h3>Best XI for GW${e.next_gw} <span class="r">${e.formation} · ${num(e.xi_xpts)} xPts</span></h3>
@@ -256,11 +273,83 @@ async function viewSquad(t){
           </tbody></table></div>
         </div>
       </div>`;
+    if(isDemo()){ if(el('demoExit')) el('demoExit').onclick = exitDemo; }
+    else wireMade(e);
     if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; FX.burst(innerWidth/2, 180, 120); }
   }catch(err){
     t.innerHTML = errBox(err);
     if(cur.tab === 'home' && cur.seg === 'squad') el('view-sub').textContent = 'Couldn’t read the scoreline right now.';
   }
+}
+
+/* The demo's guided tour: what FPL is in one breath, and where each part of the app lives. */
+function demoTour(e){
+  const stop = (to, label, what) => `<li><button class="tour-go" data-go="${to}">${label}</button><span>${what}</span></li>`;
+  return `<div class="card mb demo-tour">
+    <h3>Demo team <span class="r">no FPL account needed</span></h3>
+    <p class="demo-lead"><b>Fantasy Premier League</b> in one breath: you get £${+e.entry.value}m to pick ${e.squad.length} real footballers, and they score you points every week they play well in real matches. Millions play. Most of them think they’re good at it.</p>
+    <p class="demo-lead">This is <b>${esc(e.entry.name)}</b>, a made-up team picked on vibes: the biggest names the money allowed, whoever was left, and an injured star kept “for the badge”. The scores are invented; the players, prices and fixtures are real. Here’s what the app makes of it:</p>
+    <ol class="tour">
+      ${stop('home/grade', 'Grade', 'marks the squad out of 100 against the best one the same money could buy.')}
+      ${stop('plan/transfers', 'Transfers', 'plans the next few weeks at once: who to sell, who to buy, who to captain.')}
+      ${stop('plan/chips', 'Chips', 'finds the best week to play each one-off power-up.')}
+      ${stop('players/projections', 'Players', 'projects points for every player in the league, fixture by fixture.')}
+      ${stop('ask/copilot', 'Ask', 'answers plain questions, like “who should I captain?”')}
+    </ol>
+    <div class="controls" style="margin-top:14px">
+      <button class="btn primary" onclick="openLanding()">Try it with my own team</button>
+      <button class="btn" id="demoExit">Leave the demo</button></div></div>`;
+}
+document.addEventListener('click', ev=>{
+  const b = ev.target.closest('.tour-go'); if(!b) return;
+  const [tab, seg] = b.dataset.go.split('/'); go(tab, seg);
+});
+
+/* Transfers made in the FPL app. FPL keeps a transfer for the coming gameweek private
+   until that deadline passes, so the public data we read can't see it: the manager
+   tells us here, it's kept on this device, and every team view counts it. */
+function madeCard(e){
+  const made = S.made[S.teamId] || [], pend = e.pending_transfers || [];
+  const row = t => `<li><span class="nm">${esc(t.out||'?')}</span> ${Magic.beamArrow()} <span class="nm">${esc(t.in||'?')}</span>
+    ${t.manual ? `<button class="btn sm" data-unmade="${t.out_id}-${t.in_id}" aria-label="Remove ${esc((t.out||'')+' to '+(t.in||''))}">Remove</button>` : '<span class="dim">from FPL</span>'}</li>`;
+  const stale = made.filter(([o,i])=>!pend.some(t=>t.manual && t.out_id===o && t.in_id===i)).length;
+  return `<div class="card mb made">
+    <h3>Transfers made for GW${e.next_gw} <span class="r">${pend.length ? pend.length+' counted' : 'none yet'}</span></h3>
+    <div class="legend" style="margin-top:0">Made a transfer in the FPL app? FPL keeps it private until the deadline, so add it here and every view will count it. It’s kept on this device and drops out once the deadline passes.</div>
+    ${pend.length ? `<ul class="made-list">${pend.map(row).join('')}</ul>` : ''}
+    ${stale ? `<div class="legend">${stale} saved transfer${stale>1?'s':''} no longer fit${stale>1?'':'s'} your squad and ${stale>1?'were':'was'} skipped. <button class="btn sm" id="madeClear">Clear saved</button></div>` : ''}
+    <div class="controls made-add">
+      <label class="fld">Out<select id="madeOut"><option value="">Player sold…</option>
+        ${e.squad.slice().sort((a,b)=>a.position-b.position||a.web_name.localeCompare(b.web_name)).map(p=>`<option value="${p.id}" data-pos="${p.position}">${esc(p.web_name)} · ${POS[p.position]}</option>`).join('')}</select></label>
+      <label class="fld">In<select id="madeIn" disabled><option value="">Player bought…</option></select></label>
+      <button class="btn primary" id="madeAdd" disabled>Add transfer</button>
+    </div></div>`;
+}
+function wireMade(e){
+  const save = list => { if(list.length) S.made[S.teamId] = list; else delete S.made[S.teamId];
+    store.set('fplai_made', S.made); invalidate(); rerender(); };
+  const mine = () => (S.made[S.teamId] || []).slice();
+  document.querySelectorAll('[data-unmade]').forEach(b=>b.onclick = ()=>{
+    const [o,i] = b.dataset.unmade.split('-').map(Number);
+    save(mine().filter(([a,c])=>!(a===o && c===i)));
+  });
+  if(el('madeClear')) el('madeClear').onclick = ()=>save([]);
+  const out = el('madeOut'), inn = el('madeIn'), add = el('madeAdd');
+  if(!out) return;
+  const owned = new Set(e.squad.map(p=>p.id));
+  out.onchange = async ()=>{
+    const opt = out.selectedOptions[0]; add.disabled = true;
+    if(!out.value){ inn.disabled = true; inn.innerHTML = '<option value="">Player bought…</option>'; return; }
+    inn.disabled = true; inn.innerHTML = '<option value="">Loading…</option>';
+    try{
+      const d = await api(`/api/players?horizon=${S.horizon}&position=${opt.dataset.pos}&sort=ownership&limit=800`);
+      const list = d.players.filter(p=>!owned.has(p.id)).sort((a,b)=>a.web_name.localeCompare(b.web_name));
+      inn.innerHTML = '<option value="">Player bought…</option>' + list.map(p=>`<option value="${p.id}">${esc(p.web_name)} · ${esc(p.team_short)} · £${num(p.price,1)}m</option>`).join('');
+      inn.disabled = false;
+    }catch(err){ inn.innerHTML = '<option value="">Couldn’t load players</option>'; }
+  };
+  inn.onchange = ()=>{ add.disabled = !(out.value && inn.value); };
+  add.onclick = ()=>{ if(out.value && inn.value) save(mine().concat([[+out.value, +inn.value]])); };
 }
 
 /* ---------------- Home: this week's picks (no team needed) ---------------- */
@@ -520,7 +609,7 @@ async function viewSolver(t){
     if(el('sWC').value) body.wildcard_gw = +el('sWC').value;
     if(el('sFH').value) body.free_hit_gw = +el('sFH').value;
     if(el('sFT').value) body.free_transfers = +el('sFT').value;
-    const ov = ovParam(); if(ov) body.overrides = ov;
+    withEdits(body);
     const key = JSON.stringify(body);
     el('adv').open = false;
     if(SV.key === key && SV.r){ draw(); return; }
@@ -600,7 +689,7 @@ async function viewChips(t){
   await teamReady();
   t.innerHTML = loading('Scoring every chip in every gameweek — about half a minute, so long enough to brew');
   try{
-    const body = {team_id:+S.teamId, horizon:S.horizon}; const ov = ovParam(); if(ov) body.overrides = ov;
+    const body = withEdits({team_id:+S.teamId, horizon:S.horizon});
     const r = await post('/api/chips', body);
     const top = r.best_plans[0];
     t.innerHTML = `
@@ -636,7 +725,7 @@ async function viewCopilot(t){
         <button class="btn primary" id="askBtn">Ask</button></div>
       <div class="chipset">${ASK.map(a=>`<button data-q="${esc(a)}">${esc(a)}</button>`).join('')}</div>
       <div class="legend">Answers are read straight off the projection model and the solver, so every claim has a number behind it.
-        ${S.teamId?'Answering for team <b>'+esc(S.teamId)+'</b>.':'Add a Team ID for answers about your own squad.'}</div>
+        ${S.teamId?'Answering for '+(isDemo()?'the demo team, ':'team ')+'<b>'+esc(S.teamName||S.teamId)+'</b>.':'Add a Team ID for answers about your own squad.'}</div>
     </div>
     <div id="ans" class="qa-log" aria-live="polite"></div>`;
   /* The log: every answer is an entry, newest on top. AutoAnimate slides
@@ -657,7 +746,7 @@ async function viewCopilot(t){
     const body = entry.querySelector('.qa-body');
     try{
       const b = {question:q, horizon:S.horizon}; if(S.teamId) b.team_id = +S.teamId;
-      const ov = ovParam(); if(ov) b.overrides = ov;
+      withEdits(b);
       const r = await post('/api/copilot', b);
       const needsTeam = !r.has_team && ['hit','transfer','rate','chip','bench'].includes(r.intent);
       body.innerHTML = `<div class="grid g23">
@@ -1015,7 +1104,7 @@ function go(tabId, segId){
   if(tabChanged) window.scrollTo({top:0, behavior: FX.reduced ? 'auto' : 'smooth'});
 }
 function render(tab, seg){
-  const key = [S.horizon, S.teamId, ovParam()].join('|'), id = tab+'/'+seg;
+  const key = [S.horizon, S.teamId, ovParam(), madeParam()].join('|'), id = tab+'/'+seg;
   if(S.loaded[id] === key) return;
   S.loaded[id] = key;
   const s = tabOf(tab).segs.find(x=>x.id===seg);
@@ -1061,10 +1150,11 @@ function updateTeamPill(){
 }
 function openLanding(){
   const L = el('landing');
-  el('landId').value = S.teamId || '';
+  el('landId').value = isDemo() ? '' : (S.teamId || '');
   el('landErr').textContent = '';
   el('landQuip').textContent = quip('welcome');
   el('landSkip').textContent = S.teamId ? 'Cancel' : 'Just browsing';
+  el('landDemo').hidden = isDemo();
   el('landGo').querySelector('.lbl').textContent = S.teamId ? 'Switch team' : 'Let’s go';
   if(!L.dataset.dressed){
     L.dataset.dressed = '1';
@@ -1080,7 +1170,7 @@ function closeLanding(){
   FX.landingOut(el('landing'), ()=>{ el('landing').hidden = true; document.body.classList.remove('landing-open'); });
 }
 function forgetTeam(){
-  store.del('fplai_team'); store.del('fplai_team_name');
+  store.del('fplai_team'); store.del('fplai_team_name'); demoFlag(false);
   S.teamId = ''; S.teamName = ''; S.ready = null; S.lastSeg = {};
   updateTeamPill(); invalidate();
 }
@@ -1089,7 +1179,7 @@ function loadSavedTeam(){
   const id = S.teamId;
   return api(entryUrl(id)).then(ent=>{
     S.fresh = false; S.entry = ent;
-    if(ent.entry && ent.entry.name && ent.entry.name !== S.teamName){ S.teamName = ent.entry.name; store.set('fplai_team_name', S.teamName); updateTeamPill(); }
+    if(ent.entry && ent.entry.name && ent.entry.name !== S.teamName){ S.teamName = ent.entry.name; if(!isDemo()) store.set('fplai_team_name', S.teamName); updateTeamPill(); }
     return ent;
   }).catch(err=>{
     if(/no fpl team|not found|404/i.test(err.message)){
@@ -1111,7 +1201,7 @@ el('landForm').addEventListener('submit', async e=>{
     const ent = await api(entryUrl(id));
     const isNew = id !== S.teamId;
     S.teamId = id; S.teamName = (ent.entry && ent.entry.name) || ('Team '+id); S.fresh = false; S.ready = null;
-    store.set('fplai_team', id); store.set('fplai_team_name', S.teamName);
+    store.set('fplai_team', id); store.set('fplai_team_name', S.teamName); demoFlag(false);
     updateTeamPill(); invalidate(); S.entry = ent;
     closeLanding();
     if(isNew) S.lastSeg = {};
@@ -1125,6 +1215,30 @@ el('landForm').addEventListener('submit', async e=>{
   }finally{ btn.disabled = false; btn.classList.remove('busy'); btn.querySelector('.lbl').textContent = label; }
 });
 el('landId').addEventListener('input', ()=>{ el('landErr').textContent = ''; });
+/* The demo: a made-up team, not saved on the device (a team you've saved stays saved). */
+el('landDemo').addEventListener('click', async ()=>{
+  const btn = el('landDemo'), label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Picking a team on vibes…';
+  try{
+    const ent = await api(`/api/entry/${DEMO}?horizon=${S.horizon}`);
+    S.teamId = DEMO; S.teamName = ent.entry.name; S.fresh = false; S.ready = null; S.lastSeg = {};
+    demoFlag(true);
+    updateTeamPill(); invalidate(); S.entry = ent;
+    closeLanding();
+    cur = {tab:'', seg:''}; go('home', 'squad');
+    toast('A made-up team, just to look around. Nothing is saved.');
+  }catch(err){ el('landErr').textContent = 'Couldn’t load the demo right now ('+err.message+').'; }
+  finally{ btn.disabled = false; btn.textContent = label; }
+});
+function exitDemo(){
+  demoFlag(false);
+  const saved = String(store.get('fplai_team', '') || '');
+  S.teamId = saved; S.teamName = saved ? store.get('fplai_team_name', '') : '';
+  S.ready = saved ? loadSavedTeam() : null; S.lastSeg = {};
+  updateTeamPill(); invalidate();
+  cur = {tab:'', seg:''}; go('home', saved ? 'squad' : 'picks');
+  if(!saved) openLanding();
+}
 el('landSkip').addEventListener('click', ()=>{ closeLanding(); if(!S.teamId && cur.tab === 'home') go('home', 'picks'); });
 el('teamBtn').addEventListener('click', openLanding);
 
@@ -1134,11 +1248,11 @@ function openMenu(){
   root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Menu">
     <button class="btn sm x" id="closeSheet">Close ✕</button>
     <h2 class="menu-h">Papa Ranjeet</h2>
-    <p class="menu-sub">${S.teamId ? 'Team <b>'+esc(S.teamName || S.teamId)+'</b> is saved on this device.' : 'No team saved on this device.'}</p>
+    <p class="menu-sub">${isDemo() ? 'You’re looking at the demo team, <b>'+esc(S.teamName)+'</b>. Nothing is saved.' : S.teamId ? 'Team <b>'+esc(S.teamName || S.teamId)+'</b> is saved on this device.' : 'No team saved on this device.'}</p>
     <div class="menu-actions">
-      <button class="btn" id="mTeam">${icon('players')}<span>${S.teamId ? 'Change team' : 'Add team'}</span></button>
+      <button class="btn" id="mTeam">${icon('players')}<span>${isDemo() ? 'Use my own team' : S.teamId ? 'Change team' : 'Add team'}</span></button>
       <button class="btn" id="mRefresh">${icon('refresh')}<span>Refresh app</span></button>
-      <button class="btn" id="mForget" ${S.teamId ? '' : 'disabled'}>${icon('forget')}<span>Forget team</span></button>
+      <button class="btn" id="mForget" ${S.teamId ? '' : 'disabled'}>${icon('forget')}<span>${isDemo() ? 'Leave the demo' : 'Forget team'}</span></button>
     </div>
     ${hasFilm() ? `<div class="menu-film"><span class="t">Opening film</span><div class="acts">
       <button class="btn sm" id="mFilm" aria-pressed="${Intro.isOn() && !FX.reduced}" ${FX.reduced ? 'disabled' : ''}>${FX.reduced ? 'Off — your device asks for less motion' : Intro.isOn() ? 'Plays on every launch' : 'Off'}</button>
@@ -1151,7 +1265,7 @@ function openMenu(){
   el('closeSheet').onclick = close;
   el('mTeam').onclick = ()=>{ close(); openLanding(); };
   el('mRefresh').onclick = ()=>location.reload();       // the page is never stored, so this is always a clean load
-  el('mForget').onclick = ()=>{ close(); forgetTeam(); cur = {tab:'', seg:''}; go('home', 'picks'); openLanding(); };
+  el('mForget').onclick = ()=>{ close(); if(isDemo()){ exitDemo(); return; } forgetTeam(); cur = {tab:'', seg:''}; go('home', 'picks'); openLanding(); };
   if(hasFilm()) el('mFilm').onclick = ()=>{
     const on = !Intro.isOn(); Intro.setEnabled(on);
     el('mFilm').setAttribute('aria-pressed', String(on)); el('mFilm').textContent = on ? 'Plays on every launch' : 'Off';
@@ -1186,13 +1300,17 @@ FX.observe(el('views'));
 (async function boot(){
   S.horizon = +el('horizon').value;
   const saved = String(store.get('fplai_team', '') || '');
-  if(saved){
+  let demo = false; try{ demo = sessionStorage.getItem('fplai_demo') === '1'; }catch(e){}
+  if(demo){                                 // still looking round the demo in this tab (e.g. after the app reloaded itself)
+    S.teamId = DEMO; S.teamName = 'Demo team';
+    S.ready = loadSavedTeam();
+  }else if(saved){
     S.teamId = saved; S.teamName = store.get('fplai_team_name', '');
     S.ready = loadSavedTeam();              // straight to your team; no question asked
   }
   updateTeamPill();
   routeFromHash();
-  if(!saved) openLanding();                 // first visit on this device: who are you?
+  if(!saved && !demo) openLanding();        // first visit on this device: who are you?
   try{
     S.meta = S.meta || await api('/api/meta');
     const ev = S.meta.events.find(x=>x.id===S.meta.next_gw);
