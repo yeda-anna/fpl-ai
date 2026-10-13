@@ -4,8 +4,7 @@
    - GSAP (+ DrawSVGPlugin, MotionPathPlugin): the landing timeline, drawing the
      neon strokes, the ball's flight into the goal and the sliding indicators in
      the dock and the section switcher.
-   - anime.js: the light pulses running along the sky's neon wires, drawing a tab
-     icon when it lights up and the logo's neon flicker.
+   - anime.js: drawing a tab icon when it lights up, and the landing logo powering on.
    - Motion (motion.dev): physics and the viewport — cards blur-fade in as they
      scroll into view, figures tick up on springs, buttons spring back when
      pressed, lists drop in one by one and the scroll-progress line.
@@ -29,21 +28,9 @@ const FX = (() => {
   const wait = ms => new Promise(r=>setTimeout(r, ms));
   const clearInline = n => { n.style.opacity = ''; n.style.transform = ''; n.style.filter = ''; };
 
-  /* ---- the sky: a pulse of light travels along each neon wire ---- */
-  function sky(){
-    if(!canA || !A.svg) return;
-    document.querySelectorAll('.sky .pulse').forEach((p, i)=>{
-      const [d] = A.svg.createDrawable(p);
-      A.animate(d, {draw:['0 0', '0 0.14', '0.86 1', '1 1'], duration:9000 + i*2600, delay:i*1600, loop:true, ease:'inOutSine'});
-    });
-    // now and then the neon sign in the top bar flickers, like a real one
-    const logo = document.querySelector('.brand .neon-logo');
-    if(logo) A.animate(logo, {opacity:[1, .35, 1, .6, 1], duration:700, ease:'linear', loop:true, loopDelay:6500, delay:2500});
-  }
-
   /* ---- landing: draw the pitch, the logo flickers on, the boot lines type
          themselves (Magic UI TypingAnimation), the title decodes (HyperText),
-         meteors cross the sky, then the ball goes in ---- */
+         then the ball goes in ---- */
   let landTls = [], bootRun = 0;
   async function bootType(root){
     const run = ++bootRun, lines = Array.prototype.slice.call(root.querySelectorAll('.boot div'));
@@ -63,10 +50,7 @@ const FX = (() => {
   }
   function landingIn(root){
     landTls.forEach(t=>t.kill()); landTls = [];
-    if(typeof Magic !== 'undefined'){
-      Magic.meteors(root.querySelector('#landSky'), innerWidth < 640 ? 14 : 22);
-      Magic.hyperText(root.querySelector('.land-title'), {duration:1000});
-    }
+    if(typeof Magic !== 'undefined') Magic.hyperText(root.querySelector('.land-title'), {duration:1000});
     bootType(root);
     if(!canG) return;
     const q = s => root.querySelectorAll(s), card = root.querySelector('.land-card');
@@ -77,8 +61,8 @@ const FX = (() => {
            .fromTo(q('.scene .goal, .scene .net'), {drawSVG:'0%'}, {drawSVG:'100%', duration:.6, stagger:.08}, .55);
     }
     intro.fromTo(q('.scene .spot'), {scale:0, transformOrigin:'50% 50%'}, {scale:1, duration:.4, ease:'back.out(3)'}, .9);
-    // the drone portrait powers up: flickers on like a neon sign (anime.js)
-    if(canA) A.animate(root.querySelector('.land-logo .neon-logo'), {opacity:[0, 1, .3, 1, .55, 1], duration:900, ease:'linear', delay:350});
+    // the drone portrait powers up (anime.js)
+    if(canA) A.animate(root.querySelector('.land-logo .neon-logo'), {opacity:[0, 1], scale:[.85, 1], duration:700, ease:'outBack', delay:300});
     landTls.push(intro);
 
     if(!canPath) return;
@@ -98,7 +82,6 @@ const FX = (() => {
   function landingOut(root, done){
     const finish = ()=>{
       landTls.forEach(t=>t.kill()); landTls = []; bootRun++;
-      root.querySelectorAll('.mg-meteor').forEach(m=>m.remove());
       done();
     };
     if(!canG){ finish(); return; }
@@ -110,7 +93,7 @@ const FX = (() => {
     }});
   }
 
-  /* ---- navigation: indicators slide, the icon and the title line draw themselves ---- */
+  /* ---- navigation: indicators slide, the icon draws itself, the season bar runs in ---- */
   function slide(ind, btn, box){
     if(!ind || !btn || !box) return;
     box.classList.add('has-ind');
@@ -128,9 +111,9 @@ const FX = (() => {
     A.animate(A.svg.createDrawable(paths), {draw:['0 0', '0 1'], duration:650, ease:'inOutQuad'});
   }
   function drawTitle(){
-    const p = document.querySelector('#title-line path');
-    if(!p || !canDraw) return;
-    G.fromTo(p, {drawSVG:'0% 0%'}, {drawSVG:'0% 100%', duration:.9, ease:'power2.inOut'});
+    const segs = document.querySelectorAll('#raceBar span');
+    if(!segs.length || !canG) return;
+    G.fromTo(segs, {scaleY:0}, {scaleY:1, duration:.4, ease:'back.out(2)', stagger:.012, clearProps:'transform'});
   }
   function viewIn(view){
     if(!view || !canM || gate) return;
@@ -273,19 +256,9 @@ const FX = (() => {
     M.scroll(p=>{ bar.style.transform = 'scaleX(' + (typeof p === 'number' ? p : 0).toFixed(4) + ')'; });
   }
 
-  /* ---- pointer: the neon edge on a card follows you (hover devices only) ---- */
+  /* ---- pointer: hover the name in the top bar and it decodes itself again (Magic UI HyperText's animateOnHover) ---- */
   function pointerGlow(){
     if(!window.matchMedia || !matchMedia('(hover:hover)').matches) return;
-    let raf = 0, last = null;
-    document.addEventListener('pointermove', e=>{
-      last = e; if(raf) return;
-      raf = requestAnimationFrame(()=>{
-        raf = 0; const c = last.target.closest ? last.target.closest('.card, .tile') : null; if(!c) return;
-        const r = c.getBoundingClientRect();
-        c.style.setProperty('--mx', (last.clientX - r.left) + 'px'); c.style.setProperty('--my', (last.clientY - r.top) + 'px');
-      });
-    }, {passive:true});
-    // hover the name in the top bar and it decodes itself again (Magic UI HyperText's animateOnHover)
     const name = document.getElementById('brandName');
     if(name && typeof Magic !== 'undefined') name.parentNode.addEventListener('mouseenter', ()=>Magic.hyperText(name, {duration:650}));
   }
@@ -296,14 +269,14 @@ const FX = (() => {
     G.fromTo(node, {x:-10}, {x:0, duration:.6, ease:'elastic.out(1,.3)', clearProps:'transform'});
   }
 
-  /* ---- confetti: one canvas, neon colours, a single burst ---- */
+  /* ---- confetti: one canvas, the app's colours, a single burst ---- */
   const canvas = document.getElementById('fx'), ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
   let bits = [], raf = 0, dpr = 1;
   function burst(x, y, n){
     if(reduced || !ctx) return;
     dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
-    const cols = ['#C8FF3D', '#22F0FF', '#FF3DCB', '#FFD15C', '#F6F4FF'];
+    const cols = ['#d2ff2e', '#2ee88f', '#8b7bff', '#efffc4', '#f2f6f5'];
     for(let i=0;i<n;i++){
       const a = Math.random()*Math.PI*2, v = 5 + Math.random()*9;
       bits.push({x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v - 6, g:.28 + Math.random()*.12, w:5 + Math.random()*6, h:3 + Math.random()*5,
@@ -324,24 +297,6 @@ const FX = (() => {
     else { raf = 0; ctx.clearRect(0, 0, canvas.width, canvas.height); }
   }
 
-  /* ---- a meteor shower across the night sky, behind every page (Magic UI Meteors). Each one
-         falls to the grid floor and strikes it: a flash, a shockwave across the floor, sparks and
-         a cooling crater (Magic.impact), and the floor itself flares for a moment. ---- */
-  function shower(){
-    const box = document.getElementById('skyMeteors'), floor = document.querySelector('.backdrop > .retro');
-    if(!box || typeof Magic === 'undefined') return;
-    let flare = 0;
-    const hit = (x, y, col)=>{
-      if(document.hidden) return;
-      Magic.impact(box, x, y, col);
-      if(floor && !flare){ floor.classList.add('struck'); flare = setTimeout(()=>{ floor.classList.remove('struck'); flare = 0; }, 260); }
-    };
-    const fill = ()=>Magic.meteors(box, innerWidth < 640 ? 18 : innerWidth < 1100 ? 26 : 36, {spread:true, land:[.62, .97], onImpact:hit});
-    fill();
-    let w = innerWidth, t = 0;
-    window.addEventListener('resize', ()=>{ clearTimeout(t); t = setTimeout(()=>{ if(Math.abs(innerWidth - w) > 120){ w = innerWidth; fill(); } }, 400); });
-  }
-
-  function start(){ sky(); shower(); presses(); pointerGlow(); scrollProgress(); window.addEventListener('resize', relayout); }
+  function start(){ presses(); pointerGlow(); scrollProgress(); window.addEventListener('resize', relayout); }
   return {reduced, start, landingIn, landingOut, navigated, relayout, observe, hold, listIn, auto, shake, burst};
 })();

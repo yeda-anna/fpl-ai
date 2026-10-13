@@ -39,7 +39,7 @@ scores.
 
 ### On your phone
 
-The layout becomes an app below 1024px wide: a floating neon dock with all
+The layout becomes an app below 1024px wide: a floating dock with all
 five tabs (Home, Plan, Players, Leagues, Ask), sub-pages in a switcher under the
 title, and details opening as bottom sheets. Use **Add to Home Screen** to launch
 it full-screen like a native app.
@@ -99,13 +99,15 @@ copy is served.
 
 ## Look and feel
 
-**Neon, in orbit.** One look, no theme picker: near-black violet, dark glass and
-three neons — lime for "do this", cyan for lines and information, magenta for the
-ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG AA
-(`python3 scripts/check_contrast.py`).
+**Race day.** One look, no theme picker, after a racing-game leaderboard: a dark
+teal night, flat teal surfaces, italic Chakra Petch type, and everything you can
+press slanted like a speed stripe. Lime is "do this" (the main button, the open
+tab, your captain), green is progress (the season race bar under every title),
+purple is the selected sub-page and the projection bars. Every text colour
+passes WCAG AA (`python3 scripts/check_contrast.py`).
 
 - **An opening film** on every launch, skippable: a couple of
-  thousand drones wait in rows on a neon grid floor, lift off in a wave, swarm
+  thousand drones wait in rows on a grid floor, lift off in a wave, swarm
   and lock into place as the logo portrait, light up in its colours and
   dissolve into the picture itself. The name decodes, a villain's one-liner
   types itself as the tagline ("Free transfer? Yahan kuch bhi free nahi
@@ -113,30 +115,25 @@ ball and celebration — split **60 : 30 : 10**. Every text colour passes WCAG A
   which has loaded underneath. Keyframed with
   [Theatre.js](https://www.theatrejs.com/docs/latest); it can be turned off in
   the menu and never plays under reduced motion.
-- **Landing:** the first visit on a device asks for your FPL Team ID over a neon
-  pitch that draws itself while the ball flies into the net and meteors cross
-  the sky. The ID is saved in your browser, so every later visit goes straight
+- **Landing:** the first visit on a device asks for your FPL Team ID over a
+  pitch that draws itself while the ball flies into the net. The ID is saved in your browser, so every later visit goes straight
   to your team.
 - **Five tabs**, nothing hidden behind "More": **Home** (My squad · Grade ·
   Picks), **Plan** (Transfers · Chips), **Players** (Projections · Compare ·
   Prices · Line-ups · Set pieces · DEFCON), **Leagues** and **Ask**.
 - **Your name up in lights:** Home is titled with your team's name from FPL, and
   My squad opens with a dark football roast of your last gameweek's score.
-- **A sci-fi HUD** over the neon: target-lock corners on every panel, monospace
-  readouts, a `SYS//PLAN/TRANSFERS · GW8` locator above each title, faint
-  scanlines and a scan beam, a hologram pitch, and a boot sequence on the
-  landing screen.
+- **The season as a race:** under every title, a bar with a segment for each
+  gameweek, lime to green up to now, and how many gameweeks are left.
 - **Motion**, vendored (no CDN), each library with its own job:
-  [GSAP](https://gsap.com/docs/v3/) draws the neon SVG paths and flies the ball;
-  [anime.js](https://animejs.com/documentation) runs light pulses along the
-  sky's wires and draws the tab icons; [Motion](https://motion.dev) blur-fades
+  [GSAP](https://gsap.com/docs/v3/) draws the landing pitch and flies the ball;
+  [anime.js](https://animejs.com/documentation) draws the tab icons; [Motion](https://motion.dev) blur-fades
   cards in as you scroll to them, ticks figures up on springs, springs buttons
   back and fills the scroll-progress line;
   [AutoAnimate](https://auto-animate.formkit.com) glides the projections table
   into its new order when you sort or filter, and slides the Copilot's log down
   as new answers arrive. [Magic UI](https://magicui.design)'s effects — hyper
-  text, typing, meteors, ripple, orbiting circles, border beams, the shimmer
-  button, animated beams from player out to player in, the retro grid floor —
+  text, typing, ripple, orbiting circles, border beams, animated beams from player out to player in, the retro grid floor —
   are rebuilt in plain JS and CSS. `prefers-reduced-motion` turns all of it off.
 
 The full system — tokens, motion, navigation, breakpoints, the drone-portrait logo
@@ -146,7 +143,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 120 headless checks, phone + desktop + reduced motion + the demo
+    npm --prefix tests test            # 121 headless checks, phone + desktop + reduced motion + the demo
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).

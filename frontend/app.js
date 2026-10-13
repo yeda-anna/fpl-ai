@@ -220,7 +220,7 @@ function pitch(xi, bench, captain, vice, opts){
       ${gk.map(p => `<div><div class="slot-lbl">GKP</div>${tok(p)}</div>`).join('')}
       ${out.map((p,i) => `<div><div class="slot-lbl">${i+1}.${POS[p.position]}</div>${tok(p)}</div>`).join('')}</div>` : '';
   return `<div class="pitch-card">${opts.header || ''}
-    <div class="turf"><div class="sweep"></div><div class="turf-lines"></div><div class="turf-half"></div>
+    <div class="turf"><div class="turf-lines"></div><div class="turf-half"></div>
       <div class="turf-plane">${[1,2,3,4].map(q => `<div class="line-row">${rows[q].map(tok).join('')}</div>`).join('')}</div></div>
     ${benchHtml}</div>`;
 }
@@ -640,7 +640,7 @@ async function viewSolver(t){
           ${g.hits?`<span class="hit">−${g.hit_cost}</span>`:''}${g.chip?`<span class="chip">${CHIPS[g.chip]||g.chip}</span>`:''}</div></div>`;
     el('svLeft').innerHTML = `
       <div class="paths"><div class="lbl">Plans</div>
-        ${r.paths.map((x,i)=>`<button class="path ${i===SV.path?'on':''}" data-k="${i}">${i===SV.path?'<span class="mg-beam" aria-hidden="true" style="--from:#fff;--to:var(--neon-m);--dur:5s"></span>':''}
+        ${r.paths.map((x,i)=>`<button class="path ${i===SV.path?'on':''}" data-k="${i}">${i===SV.path?'<span class="mg-beam" aria-hidden="true" style="--from:var(--on-accent);--to:var(--purple);--dur:5s"></span>':''}
           <div class="pl">${x.label}</div><div class="pv">${num(x.total_xpts,1)}</div>
           <div class="ps">${i===0?'best found':(Math.abs(x.total_xpts-best)<0.05?'level':sign(x.total_xpts-best,1))} · ${x.total_hits?'−'+(x.total_hits*4):'no hits'}</div></button>`).join('')}
       </div>
@@ -940,7 +940,7 @@ const scoutView = kind => async function(t){
       const next = (R.price_change_deadlines||[])[0];
       const tbl = (list, dir) => `<div class="well"><table><thead><tr><th>Player</th><th style="width:34%">Progress</th><th>Odds tonight</th><th class="num">Net transfers</th></tr></thead><tbody>
         ${list.map(x=>`<tr><td><span class="nm">${esc(x.player.web_name)}</span><div class="u2">${esc(x.player.team_short)} · £${num(x.player.price,1)}m</div></td>
-          <td><div style="display:flex;align-items:center;gap:8px"><div class="meter" style="flex:1;margin:0"><i style="width:${Math.min(100,Math.abs(x.projected))}%;${dir<0?'background:linear-gradient(90deg,#FF3DCB,#FF8FB3)':''}"></i></div>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="meter" style="flex:1;margin:0"><i style="width:${Math.min(100,Math.abs(x.projected))}%;${dir<0?'background:linear-gradient(90deg,var(--down),var(--down-2))':''}"></i></div>
             <span style="font-family:var(--mono);font-size:12px;min-width:46px;text-align:right">${num(x.projected,0)}%</span></div></td>
           <td><span class="tag ${dir>0?'g':'r'}">${esc(x.likelihood_label)}</span></td>
           <td class="num ${x.net_transfers>=0?'up':'down'}">${x.net_transfers>=0?'+':''}${x.net_transfers.toLocaleString()}</td></tr>`).join('')
@@ -1118,12 +1118,28 @@ function syncHead(animate){
   const verdict = t.id === 'home' && seg.id === 'squad' && S.teamId;
   const title = el('view-title'), was = title.textContent;
   title.textContent = t.id === 'home' && S.teamId ? (S.teamName || 'Team '+S.teamId) : t.title;
-  el('view-eyebrow').textContent = 'SYS//' + t.label + (t.segs.length > 1 ? '/' + seg.label : '') + (S.meta ? ' · GW' + S.meta.next_gw : '');
+  el('view-eyebrow').textContent = t.label + (t.segs.length > 1 ? ' / ' + seg.label : '') + (S.meta ? ' · GW' + S.meta.next_gw : '');
+  raceBar();
   if(was !== title.textContent) Magic.hyperText(title, {duration:700});
   const sub = el('view-sub');
   sub.textContent = verdict ? (S.squadSub || seg.waiting) : seg.sub;
   sub.classList.toggle('verdict', !!(verdict && S.squadSub));
   if(animate){ sub.classList.remove('fresh'); void sub.offsetWidth; sub.classList.add('fresh'); }
+}
+/* The season as a race (under the page title): a segment a gameweek, lime to green up to the
+   current one, the next one outlined, the rest still to run. Built once per gameweek. */
+function raceBar(){
+  const bar = el('raceBar'), m = S.meta;
+  if(!bar || !m || !m.events || bar.dataset.gw === String(m.current_gw)) return;
+  bar.dataset.gw = String(m.current_gw);
+  const n = m.events.length, mix = (a, b, t) => Math.round(a + (b - a) * t);
+  bar.innerHTML = m.events.map((ev, i)=>{
+    const t = n > 1 ? i / (n - 1) : 0;
+    if(ev.id <= m.current_gw) return `<span style="--i:${i};background:rgb(${mix(0xd2,0x2e,t)},${mix(0xff,0xe8,t)},${mix(0x2e,0x8f,t)})"></span>`;
+    return `<span style="--i:${i}"${ev.id === m.next_gw ? ' class="next"' : ''}></span>`;
+  }).join('');
+  const left = Math.max(0, n - m.current_gw);
+  el('gwLeft').innerHTML = left ? `<b>${left}</b> gameweek${left === 1 ? '' : 's'} left` : 'Season over';
 }
 function routeFromHash(){
   let h = location.hash.slice(1);

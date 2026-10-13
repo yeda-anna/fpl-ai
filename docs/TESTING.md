@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team. 120 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team. 121 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -28,7 +28,7 @@ What it covers:
   **Skip** ends it, it plays again on a fresh launch and gets out of the way by
   itself, the menu turns it off (and then the app opens straight away), it runs
   to its end on desktop, and there is none under reduced motion.
-- **Landing:** a first visit opens it; it has the neon pitch scene and a quip;
+- **Landing:** a first visit opens it; it has the pitch scene and a quip;
   an empty ID and an unknown team each get a clear message; a real ID goes
   straight to Home → My squad, is saved in `localStorage`, names the team pill,
   and the first read asks FPL afresh (`fresh=1`).
@@ -51,9 +51,10 @@ What it covers:
   `/version`; every CSS/JS file, vendor libraries included, is content-hashed;
   `/` and `/api/*` are `no-store`; scripts arrive gzipped; each tab renders; a
   returning visitor skips the landing screen.
-- Counters (spring tickers) land on the true value; a meteor shower crosses
-  the sky behind the pages; with reduced motion everything is visible at once,
-  nothing counts up and there are no meteors.
+- Counters (spring tickers) land on the true value; the season race bar sits
+  under the title with the gameweeks left; the night is calm (no meteors, no
+  scanlines); with reduced motion everything is visible at once and nothing
+  counts up.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
 

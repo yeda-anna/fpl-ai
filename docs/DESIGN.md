@@ -5,72 +5,69 @@ Everything visual lives in `frontend/styles.css` (tokens, components, layout),
 effects) and `frontend/intro.js` (`Intro`, the opening film). Colours are custom properties
 ("tokens") declared once in `:root`. Change a token, not a component.
 
-## One look: neon
+## One look: race day
 
-A stadium at night. There is one theme and no theme picker: every screen, every
-device, the same look.
+After a racing-game leaderboard: a dark teal night, flat surfaces, italic
+**Chakra Petch** type, and everything you can press slanted like a speed stripe.
+There is one theme and no theme picker.
 
-| Share | Role | Tokens |
-| --- | --- | --- |
-| **60%** | The night: near-black violet | `--base #07051A`, `--base-hi #140C33`, `--base-lo #030210` |
-| **30%** | Dark glass: cards, rows, wells | `--glass-fill`, `--glass*`, `--row*`, `--well`, `--solid` |
-| **10%** | Three neons | lime `--neon-l #C8FF3D`, cyan `--neon-c #22F0FF`, magenta `--neon-m #FF3DCB` |
+| Role | Tokens |
+| --- | --- |
+| **The night** | `--bg #0a1214` (with a faint `--bg-hi #12201f` glow at the top), `--bg-2` |
+| **Surfaces**: cards, tiles, rows, sheets | `--surface #172327`, `--surface-2 #1f2e33`, `--surface-3 #2a3b40` — flat and solid, no borders, no glass |
+| **Text** | `--ink #f2f6f5`, `--ink-2 #cfd8da`, `--ink-3 #93a3a7` (labels); `--dim` is decoration only |
+| **Colour** | lime `--lime #d2ff2e` (+ `--lime-soft #efffc4`), green `--green #2ee88f`, purple `--purple #6d5cff` / `--purple-2 #8b7bff`, `--bar-gray` |
 
-What each neon means:
+What each colour means:
 
-- **Lime** is "do this": primary buttons, the active tab, the selected plan, the
-  captain, key figures (`--accent`, `--accent-ink`).
-- **Cyan** is lines and information: the pitch markings, the sky's wires, focus
-  rings, pointer glow, the title line (`--accent-2`, `--glow-2`).
-- **Magenta** is the ball and celebration: the goal, glows, the grade ring's end
-  (`--glow`).
+- **Lime** is "do this": the main button (a lime-soft/lime split, like a racing
+  "TRADE" button), the open tab in the dock and top bar, the captain, gains and
+  key figures (`--accent`, `--accent-ink`).
+- **Green** is progress and information: the season race bar, the pitch scene's
+  lines on the landing, good fixtures, `--up`.
+- **Purple** is "selected" and measurement: the chosen sub-page in the section
+  switcher, the chosen gameweek, the vice-captain, projection bars and sparklines.
 
 Rules:
 
-- Neon is light, so it lives on **strokes, edges and things you can press** —
-  never as a wash behind running text. Cards are dark and nearly solid so the
-  sky's wires never run behind words.
-- Text on a neon fill uses `--on-accent` (`#0A0620`), never white.
-- `--up`, `--down` and `--warn` sit outside the neons on purpose.
-- Contrast: every text token passes WCAG AA against the worst case (the
-  brightest glass over `--base-hi`), and `--on-accent` passes on every highlight
-  gradient. `python3 scripts/check_contrast.py` checks it and exits 1 on a miss.
+- **The slant.** Buttons, chips, tabs and badges lean (`--skew: -12deg`). Buttons
+  draw their shape as a skewed `::before` behind an upright label, so the focus
+  ring follows the slant (`--fill` sets the colour); small chips and strips use a
+  parallelogram `clip-path`. New pressable things join the selector list in "the
+  slant" block of `styles.css`.
+- **Italic for voice.** Titles, labels, numbers and buttons are italic
+  Chakra Petch; long running text (descriptions, legends, the tour) stays upright.
+- **Flat.** No glass, no glows behind words, no borders on cards. Depth comes
+  from the three surface steps.
+- Text on a lime, green, warn or down fill uses `--on-accent` (`#0a1214`); on
+  purple, `--on-purple` (white).
+- Contrast: `python3 scripts/check_contrast.py` checks every text token on
+  `--surface-2` (and the main ones on `--surface-3`), and the text on each fill,
+  and exits 1 below WCAG AA.
 
-| Token | ink | ink-2 | ink-3 | accent | up | down | warn |
+| Text on | ink | ink-2 | ink-3 | accent | up | down | warn |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| contrast | 13.83 | 9.52 | 6.47 | 12.78 | 11.64 | 7.05 | 10.41 |
+| `--surface-2` | 12.88 | 9.68 | 5.37 | 12.08 | 8.72 | 5.56 | 9.16 |
 
-### Gradients
-
-| Token | Value | Use |
-| --- | --- | --- |
-| `--grad-cta` | `135deg, lime → cyan` | primary buttons, the active section pill |
-| `--grad-info` | `135deg, #FF8BE3 → #8EA6FF` | the Copilot bubble |
-| `--meter-a → --meter-b` | cyan → lime | progress and score bars |
-| `--grad-grade` | lime → cyan → magenta | the Rate My Team grade letter |
-| `--ring-a → --ring-b` | lime → magenta | the Rate My Team score ring |
-| `#neonStroke` (SVG) | lime → cyan → magenta | the line under each page title |
-
-## The HUD layer
-
-Over the neon sits a sci-fi console: the app reads like a ship's HUD without
-changing a single page or flow. It lives in the "HUD" block of `styles.css`.
+### Pieces
 
 | Piece | How |
 | --- | --- |
-| **Target-lock corners** on `.card`, `.tile`, `.plan`, `.path`, `.sheet` | `--hud-corners`: eight thin linear gradients painted as the top background layer, coloured by `--bk` (cyan; lime on hover; dark on a lime fill) |
-| **Readouts** | `--hud` (system monospace stack) in uppercase with letter-spacing for labels, card titles, tabs, the switcher, table heads, tags and buttons. Body copy and numbers in tiles stay in the main face |
-| **Eyebrow** | `#view-eyebrow` above the title: `SYS//<TAB>/<SUB> · GW<n>`, set by `syncHead()`, with a blinking lime status light and a glint sweeping across (Magic UI Animated Shiny Text) |
-| **Decoding titles** | the page title scrambles and resolves left to right when it changes (Magic UI HyperText) |
-| **Screen texture** | `body:after` CRT scanlines; `.backdrop .dots` dot grid; `.backdrop .beam` a slow scan beam |
-| **Hologram pitch** | `.turf:before` scanlines and `.turf .sweep`, a light band running down the turf |
-| **Boot sequence** | `#boot` on the landing card, typed one character at a time (Magic UI Typing Animation) in `FX.landingIn` |
-| **Orbit** | round the landing logo: rings breathing out (Magic UI Ripple) and two satellites (Magic UI Orbiting Circles) |
+| **Page head** | an italic breadcrumb (`Plan / Transfers · GW8`), the title, "*n* gameweeks left", and the **season race bar**: a segment a gameweek, lime to green up to now, the next one outlined, the rest grey (`raceBar()` in `app.js`) |
+| **Ticker** | the deadline line, with a small pulse icon |
+| **Section switcher** | a slanted strip on `--surface`; the open sub-page on a purple slanted pill that slides |
+| **Dock** (phone) | a `--surface-2` slab; the open tab on a lime slanted stripe |
+| **Buttons** | `.btn` on `--surface-2`; `.btn.primary` and `.cta` in the lime split, italic, letter-spaced |
+| **Tiles** | a muted italic label, a big italic number |
+| **Tables** | rows straight on the surface with hairlines between, italic bold numbers |
+| **Chips** | `.pill` position badges (GKP warn, DEF purple, MID green, FWD lime), `.tag` gain chips, `.fdr` fixture squares — all slanted |
+| **Bars** | `.meter`: purple over a hatched grey track, slanted like a portfolio split; sparklines in purple |
+| **Pitch** | dark turf with lime markings and a glow from the touchline; player cards on `--surface-2` with lime xPts; captain a lime badge, vice purple |
+| **Sheets** | `--surface-2`, round; on a phone a bottom tray with a grabber |
+| **Avatars** | a small skewed square in a purple gradient |
 
-Rules: the texture stays faint (scanlines and grid never compete with text);
-corner brackets are decoration only, never a wash; radii are tight (`--r-sm`
-4px … `--r-xl` 14px). Every loop here is CSS and switches off under
-`prefers-reduced-motion`.
+The font is vendored: Chakra Petch 400–700 (upright and italic, latin subset)
+from `@fontsource/chakra-petch`, OFL, in `frontend/vendor/fonts/`.
 
 ## The opening film
 
@@ -108,6 +105,8 @@ Every launch opens with a few seconds of titles while the app loads underneath
   reloads itself (a new build, a back/forward restore) — a script in `<head>`
   decides before the first paint (`no-intro`). A page that took over 9 seconds
   to arrive skips it too, and a 15-second CSS failsafe hides it if scripts fail.
+- The drones keep the portrait's own colours; the film's chrome (title, tagline,
+  progress line, Skip) and its grid floor use the race-day colours.
 - The app never waits on it: views render underneath, and their entrances are
   held (`FX.hold(Intro.reveal)`) until the iris starts to open, so the app
   materialises as the film ends.
@@ -122,14 +121,12 @@ following the originals (MIT, `frontend/vendor/magicui-LICENSE.md`).
 | --- | --- |
 | HyperText | page titles when they change, the film's title, the name in the top bar on hover |
 | Typing Animation | the landing boot lines; the film's log entry |
-| Meteors | a shower across the night sky behind every page (18 on a phone, up to 36 on a wide screen). Each one falls to the grid floor and strikes it (`Magic.impact`): a flash, two shockwaves rolling out flat across the floor, sparks thrown up and a glowing crater that cools, while the floor flares for a moment. More over the landing pitch |
 | Ripple, Orbiting Circles | round the landing logo; the film's logo |
 | Border Beam | every loading card, the chosen plan in Plan → Transfers |
-| Shimmer Button | "Let's go" and "Suggest transfers" (the spark races while the solver works) |
+| Shimmer Button | kept in the markup of "Let's go" and "Suggest transfers" but hidden: on a slanted button it reads as noise |
 | Animated Beam | from the player out to the player in, in the transfer timeline and Grade's upgrades |
-| Retro Grid | the floor of the night sky; the film's floor |
-| Animated Shiny Text | the eyebrow above each title |
-| Scroll Progress | a neon line under the top bar (Motion's `scroll()`) |
+| Retro Grid | the film's floor |
+| Scroll Progress | a lime-to-green line under the top bar (Motion's `scroll()`) |
 | Blur Fade, Number Ticker, Animated List | cards, figures, and the Copilot's and Grade's reasons (Motion, in `motion.js`) |
 
 ## Navigation
@@ -145,7 +142,7 @@ switcher under the title.
 | **Leagues** | Mini-league |
 | **Ask** | Copilot |
 
-- Desktop: the tabs sit in the top bar. Phone (≤ 1023px): a floating neon dock.
+- Desktop: the tabs sit in the top bar. Phone (≤ 1023px): a floating dock.
 - Every sub-page has its own address (`#plan/chips`). Old single-view addresses
   (`#solver`, `#xpts`, `#rate` …) are mapped to the new places, and `#model`
   opens the menu.
@@ -154,7 +151,7 @@ switcher under the title.
 
 ## Landing: the Team ID, asked once
 
-The first visit on a device opens the landing screen: a neon pitch, the logo,
+The first visit on a device opens the landing screen: a pitch drawn in lines, the logo,
 and one field for the FPL Team ID. Once entered, the ID is stored in
 `localStorage` (`fplai_team`, `fplai_team_name`) and every later visit goes
 straight to Home → My squad without asking. The team pill and the menu change or
@@ -164,7 +161,7 @@ offer to add a team.
 ## Motion
 
 Five libraries, vendored in `frontend/vendor/` (no CDN), each doing what it's
-best at: GSAP for SVG drawing and timelines, anime.js for the sky and icons,
+best at: GSAP for SVG drawing and timelines, anime.js for icons,
 Motion for springs, in-view and scroll, AutoAnimate for lists that change, and
 Theatre.js for the opening film. It lives in `motion.js` (`FX`), `magic.js` and
 `intro.js`, and every function is safe to call when a library failed to load or
@@ -173,26 +170,25 @@ library; our layer is `FX`.)
 
 | Effect | Library | Where |
 | --- | --- | --- |
-| Landing: pitch lines and the goal **draw themselves**, the logo flickers on like a neon sign, then the ball flies along a dotted path into the net, the net ripples and **GOAL!** flashes — on a loop | GSAP timeline + DrawSVGPlugin + MotionPathPlugin; anime.js flicker | landing |
-| The sky: three neon wires across the background, each with a **pulse of light** travelling along it | anime.js `svg.createDrawable` | backdrop |
+| Landing: pitch lines and the goal **draw themselves**, the logo powers on, then the ball flies along a dotted path into the net, the net ripples and **GOAL!** flashes — on a loop | GSAP timeline + DrawSVGPlugin + MotionPathPlugin; anime.js | landing |
 | The tab icon **draws itself** when its tab lights up | anime.js | dock, top bar |
 | The dock capsule and the section pill **slide** to the active item with a little overshoot | GSAP `elastic` | dock, switcher |
-| The neon line under the title redraws on every tab change | GSAP DrawSVG | page head |
+| The season race bar's segments pop up one after another on every tab change | GSAP stagger | page head |
 | Views fade up; new cards, tiles and plans **blur-fade in one after another** — the ones further down as you scroll to them (Magic UI Blur Fade) | Motion `animate` + `stagger` + `inView`, inline styles cleared after (so hover transforms still work) | every view |
 | Figures **tick up** to their value on a spring, when they come into view (Magic UI Number Ticker) | Motion spring | tiles, solver, grade |
 | Buttons give a **springy press** | Motion spring | all buttons |
 | The projections table **glides into its new order** when you sort or filter (each player keeps his row); new rows from "Show 40 more" fade in | AutoAnimate on keyed rows (`syncRows`) | Players → Projections |
 | The Copilot keeps a **log**: each answer is an entry, newest on top; older ones slide down and fold | AutoAnimate | Ask |
 | Reasons **drop in one by one** (Magic UI Animated List) | Motion spring + stagger | Ask, Grade |
-| A neon line under the top bar fills as you scroll (Magic UI Scroll Progress) | Motion `scroll()` | top bar |
+| A lime-to-green line under the top bar fills as you scroll (Magic UI Scroll Progress) | Motion `scroll()` | top bar |
 | The opening film | Theatre.js sequence | launch |
 | A wrong Team ID gets a head-shake | GSAP | landing |
-| The neon logo in the top bar flickers every few seconds | anime.js | top bar |
 | Confetti for a +15 week, an A grade, a plan that gains, and five taps on the logo | canvas | global |
 
-Cheap loops stay in CSS: the loader (a neon dash running along a path), the
-breathing glow on the primary button and the selected plan, the captain's ring,
-bars and sparklines growing, and the players walking onto the pitch.
+Cheap loops stay in CSS: the loader (a lime dash running along a path), bars,
+sparklines and race-bar segments growing, and the players walking onto the pitch.
+There is no meteor shower, no sky animation, no scanlines and no corner brackets:
+the background is still.
 
 `prefers-reduced-motion`: the CSS rule turns every animation off, there is no
 opening film, and `FX.reduced` makes the JS effects leave things in their
@@ -204,23 +200,21 @@ fade), never animate layout, never animate one element with two libraries at
 once, and clear inline styles when an animation ends (GSAP `clearProps`, Motion
 `.then`, anime.js `onComplete`).
 
-## Glass and light
+## Surfaces and focus
 
-- **Fill:** `--glass-fill`, dark violet and nearly solid, with a 1px
-  `--glass-line` border and the **rim**: a `:before` hairline across the top.
-- **Pointer glow:** on hover devices, a neon edge (cyan into magenta) follows
-  the pointer around `.card` and `.tile` (`--mx/--my`, a masked radial gradient).
+- **Fill:** flat `--surface` cards on the `--bg` night; `--surface-2` for sheets,
+  inputs' neighbours and secondary buttons; `--surface-3` for hovers and chips.
 - **Blur:** live `backdrop-filter` only on floating chrome — `.nav-bar`, `.dock`,
-  `.sheet`, `.land-card`, `.adv-body`, `.toast`. In-page cards never blur.
-- **Pitch:** dark turf with cyan neon markings and a cyan glow around the card.
-- **Focus:** a cyan ring with a soft glow; mouse clicks don't show it.
+  `.toast`. Cards and sheets are solid.
+- **Focus:** a lime ring; on slanted buttons it's drawn round the slanted shape.
+  Inputs show focus by turning their border lime. Mouse clicks don't show it.
 
 ## Layout and breakpoints
 
 | Width | Behaviour |
 | --- | --- |
 | ≤ 1180px | multi-column grids collapse; the team pill shows only its avatar |
-| ≤ 1023px | **app shell**: top bar, floating neon dock with five tabs, bottom-sheet details |
+| ≤ 1023px | **app shell**: top bar, floating dock with five tabs, bottom-sheet details |
 | ≤ 760px | phone sizing: tighter padding, smaller type, fluid pitch; the section switcher spans the width and scrolls |
 | ≤ 380px | small-phone tweaks |
 
@@ -238,7 +232,7 @@ manifest and favicon) and `portrait.js` (the film's ~2,600 drones, traced from
 the picture's own lights). The `<symbol id="logo">` in `index.html` holds
 `logo.webp`; every logo in the app is a `<use>` of it, clipped to its slot (a
 rounded square in the top bar, a circle on the landing card and the avatar),
-with a soft neon glow (`.neon-logo`). Don't edit the generated files by hand.
+without a glow (`.neon-logo`). Don't edit the generated files by hand.
 
 ## Voice
 
@@ -267,7 +261,7 @@ with a soft neon glow (`.neon-logo`). Don't edit the generated files by hand.
 
 1. Colours from tokens only — no new hex literals in components (the pitch cards
    and SVG art are the exceptions).
-2. Text on a neon fill uses `--on-accent`.
+2. Text on a lime/green/warn/down fill uses `--on-accent`; on purple, `--on-purple`. Pressable things slant (join "the slant" block).
 3. Nothing to bump — the server fingerprints CSS/JS by content, vendor files
    included (see `ARCHITECTURE.md` → Freshness).
 4. New colours: `python3 scripts/check_contrast.py`.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#030210">
+<meta name="theme-color" content="#0a1214">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -34,16 +34,13 @@
 <!-- shared SVG: gradients, and the logo — the drone portrait (logo.webp, from scripts/digitize.py) — as a symbol for <use> -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <linearGradient id="neonStroke" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#C8FF3D"/><stop offset=".5" stop-color="#22F0FF"/><stop offset="1" stop-color="#FF3DCB"/>
-    </linearGradient>
     <linearGradient id="shirtShade" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>
       <stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
     <!-- the animated beam between a player out and a player in (userSpace: every arrow is 0..46 wide) -->
     <linearGradient id="beamGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="46" y2="0">
-      <stop offset="0" stop-color="#FF3DCB" stop-opacity="0"/><stop offset=".35" stop-color="#FF3DCB"/>
-      <stop offset=".75" stop-color="#22F0FF"/><stop offset="1" stop-color="#C8FF3D"/></linearGradient>
+      <stop offset="0" stop-color="#6d5cff" stop-opacity="0"/><stop offset=".35" stop-color="#8b7bff"/>
+      <stop offset=".75" stop-color="#2ee88f"/><stop offset="1" stop-color="#d2ff2e"/></linearGradient>
   </defs>
   <symbol id="logo" viewBox="0 0 100 100"><image href="/static/logo.webp" width="100" height="100" preserveAspectRatio="xMidYMid slice"/></symbol>
 </svg>
@@ -67,25 +64,8 @@
   <button class="in-skip" id="inSkip" type="button">Skip intro <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5v13l8-6.5zM12 5.5v13l8-6.5z" fill="currentColor"/></svg></button>
 </div>
 
-<!-- the night sky: neon wires with a pulse of light running along each (anime.js), a meteor shower and a moving grid floor -->
-<div class="backdrop" aria-hidden="true">
-  <div class="retro"><div class="retro-plane"><div class="retro-grid"></div></div></div>
-  <svg class="sky" viewBox="0 0 100 100" preserveAspectRatio="none">
-    <path class="glow c" d="M-5 22 C 20 8, 38 34, 58 18 S 92 6, 105 16"/>
-    <path class="wire c" d="M-5 22 C 20 8, 38 34, 58 18 S 92 6, 105 16"/>
-    <path class="pulse c" d="M-5 22 C 20 8, 38 34, 58 18 S 92 6, 105 16"/>
-    <path class="glow m" d="M-5 64 C 18 52, 34 80, 56 66 S 88 52, 105 70"/>
-    <path class="wire m" d="M-5 64 C 18 52, 34 80, 56 66 S 88 52, 105 70"/>
-    <path class="pulse m" d="M-5 64 C 18 52, 34 80, 56 66 S 88 52, 105 70"/>
-    <path class="glow l" d="M-5 92 C 24 84, 46 100, 70 88 S 96 82, 105 90"/>
-    <path class="wire l" d="M-5 92 C 24 84, 46 100, 70 88 S 96 82, 105 90"/>
-    <path class="pulse l" d="M-5 92 C 24 84, 46 100, 70 88 S 96 82, 105 90"/>
-  </svg>
-  <div class="sky-meteors" id="skyMeteors"></div>
-  <div class="dots"></div>
-  <div class="beam"></div>
-  <div class="grain"></div>
-</div>
+<!-- the night: a dark teal ground with a faint glow at the top -->
+<div class="backdrop" aria-hidden="true"></div>
 
 <header class="nav-bar">
   <div class="nav-in">
@@ -108,13 +88,14 @@
 <main class="page">
   <div class="page-head">
     <div>
-      <div class="eyebrow mg-shiny" id="view-eyebrow">SYS//HOME</div>
-      <h1 id="view-title" class="mg-hyper">Home</h1>
-      <svg class="title-line" id="title-line" viewBox="0 0 180 14" aria-hidden="true"><path d="M2 8 C 26 2, 46 13, 70 7 S 112 2, 136 8 S 168 12, 178 6"/></svg>
+      <div class="eyebrow" id="view-eyebrow">Home</div>
+      <div class="title-row"><h1 id="view-title" class="mg-hyper">Home</h1><span class="days" id="gwLeft"></span></div>
+      <!-- the season as a race: a segment a gameweek, filled up to now (app.js, raceBar) -->
+      <div class="race-bar" id="raceBar" aria-hidden="true"></div>
       <p id="view-sub">Your squad, projected forward.</p>
     </div>
     <div class="controls">
-      <span class="tag" id="rail-foot">Loading gameweek…</span>
+      <span class="ticker" id="rail-foot">Loading gameweek…</span>
       <label class="fld">Horizon
         <select id="horizon">
           <option value="1">1 GW</option><option value="3">3 GW</option>
@@ -133,7 +114,6 @@
 
 <!-- first visit: who are you? Saved on the device, so it's asked once. -->
 <div class="landing" id="landing" hidden role="dialog" aria-modal="true" aria-labelledby="landTitle">
-  <div class="land-sky" id="landSky" aria-hidden="true"></div>
   <svg class="scene" id="scene" viewBox="0 0 400 250" aria-hidden="true">
     <g class="lines">
       <path class="ln" d="M30 244V30h340v214"/>

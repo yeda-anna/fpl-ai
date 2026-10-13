@@ -74,7 +74,7 @@ API request after boot may wait for that warm-up.
 ## Frontend
 
 No build, no framework, no CDN. `index.html` holds the shell (the opening
-film's stage, top bar, the neon sky, the dock, the landing screen and its pitch
+film's stage, top bar, the page head with the season race bar, the dock, the landing screen and its pitch
 scene, the logo). `app.js`
 defines five tabs and their sub-pages in `TABS` and routes by hash
 (`#home/squad`, `#plan/chips`, `#players/compare` …; old addresses like

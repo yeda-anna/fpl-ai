@@ -89,7 +89,7 @@ const Intro = (() => {
      rows on the launch pad, lift off back row last, swoop up and fly to their place in the
      portrait, then take their colours from it. The camera (the same zoom as the stage)
      applies to where they're going, so they fly into the push-in at the end. */
-  const FLIGHT = '#CFF9FF';
+  const FLIGHT = '#EFFFC4';
   function swarm(canvas, mark){
     const ctx = canvas && canvas.getContext && canvas.getContext('2d'), P = typeof PORTRAIT !== 'undefined' ? PORTRAIT : null;   // portrait.js (a top-level const, not on window)
     if(!ctx || !P || !mark) return null;
