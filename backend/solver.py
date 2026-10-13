@@ -24,6 +24,7 @@ MAX_FREE_TRANSFERS = 5                         # 2025/26 rules: bank up to 5
 BENCH_WEIGHT = 0.12                            # bench points are worth something
 VICE_WEIGHT = 0.04                             # the vice only plays if the captain blanks
 DECAY = 0.87                                   # a point next week beats a point in GW+5
+MIN_CHANCE = 75                                # don't buy or captain a player below this chance of playing next round
 
 
 SELL_ON_FEE = 0.5
@@ -88,12 +89,18 @@ def solve(rows: List[Dict[str, Any]],
           pool_size: int = 160,
           time_limit: int = 25,
           forbid: Optional[List[List[Any]]] = None,
-          gap: float = 0.005) -> Dict[str, Any]:
+          gap: float = 0.005,
+          min_chance: Optional[int] = None) -> Dict[str, Any]:
     """Return an optimal transfer plan.
 
     current_squad: [{"id": int, "purchase_price": int}, ...] - may be empty, in which
     case this becomes a "build me a squad from scratch" (wildcard) problem.
+    min_chance: FPL's chance of playing next round (0-100) a player needs before the
+    plan will buy him or make him captain or vice in the coming gameweek. Players
+    already owned can stay. Later weeks are left to the projections, which let a
+    doubtful player's odds recover.
     """
+    min_chance = MIN_CHANCE if min_chance is None else max(0, min(100, int(min_chance)))
     owned = {p["id"]: p for p in current_squad}
     pool = build_pool(rows, list(owned.keys()), pool_size)
     index = {r["id"]: r for r in pool}
@@ -200,6 +207,14 @@ def solve(rows: List[Dict[str, Any]],
         objective.append(-d * HIT_COST * hits[t])
     prob += pulp.lpSum(objective)
 
+    # Chance of playing: nobody below min_chance comes in, or wears the armband, this week.
+    doubtful = [p for p in ids if (index[p].get("chance_next") if index[p].get("chance_next") is not None else 100) < min_chance]
+    for p in doubtful:
+        if p not in owned:
+            prob += tin[p][0] == 0
+        prob += capt[p][0] == 0
+        prob += vice[p][0] == 0
+
     # No-good cuts: each forbidden plan is ruled out so the solver must find a
     # genuinely different route rather than returning the same answer again.
     for banned in (forbid or []):
@@ -276,8 +291,13 @@ def solve(rows: List[Dict[str, Any]],
     feasible = getattr(prob, "sol_status", 1) > 0 and pulp.LpStatus[status] != "Infeasible"
     signature = [(p, t) for t in T for p in ids if val(tin[p][t]) == 1]
 
+    passed_over = sorted((index[p] for p in doubtful if p not in owned), key=lambda r: -r["xpts_total"])[:5]
     return {
         "signature": signature,
+        "min_chance": min_chance,
+        "passed_over": [{"id": r["id"], "web_name": r["web_name"], "team_short": r["team_short"],
+                         "chance_next": r.get("chance_next"), "xpts_total": round(r["xpts_total"], 2)}
+                        for r in passed_over],
         "feasible": feasible,
         "status": pulp.LpStatus[status],
         "horizon": horizon,

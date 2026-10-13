@@ -23,6 +23,16 @@ For each club, attack and defence multipliers relative to
 - **Evidence** from this season's xG and xG conceded.
 - Blend: the prior counts as `SHRINK_GAMES = 6` games, so it fades as the season
   goes on.
+- **Recent form** (`_recent_team_form`): each club's xG for and against per game
+  over the last six gameweeks of live data (a club's xG is the sum of its
+  players'; its xG against is what its opponents made), each game back counting
+  `TEAM_FORM_DECAY = 0.8` as much. The season rate counts as `TEAM_FORM_K = 6`
+  games against that run, and the result moves attack and defence by at most
+  `TEAM_FORM_RANGE = (0.80, 1.25)`. So a side that has stopped creating is a
+  weaker attack, and one that has started leaking is a better fixture for
+  attackers. The multipliers are `form_attack` / `form_defence` in `/api/meta`'s
+  `team_ratings`, and each fixture carries the opponent's (`opp_form_attack`,
+  `opp_form_defence`); the player sheet says "opponent leaky lately" and so on.
 
 ## 3. Fixture goals
 
@@ -51,9 +61,23 @@ times `HOME_ADV = 1.10` at home or `AWAY_ADV = 0.92` away.
 
 ## 5. Attacking returns
 
-The player's share of his club's xG and xA per 90, shrunk toward a price-based
-prior by position (`PLAYER_SHRINK_90S = 2.5`), scaled to the fixture's expected
-goals and his expected minutes.
+The player's share of his club's xG and xA per 90, scaled to the fixture's
+expected goals and his expected minutes. His per-90 rate (`attacking_rates`)
+blends three things, in order of trust:
+
+1. **Season** xG/xA per 90, shrunk toward a price-based prior by position
+   (`PLAYER_SHRINK_90S = 2.5`).
+2. **Recent form**: his xG/xA per 90 over the last six gameweeks (recent weeks
+   weighted more, as for minutes). It counts half once he has
+   `FORM_RATE_K = 4` recent 90s and never more than `FORM_RATE_CAP = 35%`.
+3. **What he actually did**: season goals and assists per 90. It counts half at
+   `FINISH_K = 30` season 90s and never more than `FINISH_CAP = 25%`, because
+   finishing above xG mostly regresses.
+
+**Chance to score**: `p_goal = 1 − e^(−xG)` per fixture (and `p_return` with
+assists); per gameweek, the chance of at least one goal across its fixtures.
+Shown in Players → Projections ("Show: Chance to score", "Sort: Chance to score,
+next GW") and on the player sheet.
 
 ## 6. Defence and extras
 
@@ -68,9 +92,10 @@ goals and his expected minutes.
 
 `player_horizon()` returns, per player:
 `id, web_name, team, team_short, position, now_cost, price, selected_by_percent,
-status, news, form, total_points, minutes, per_gw[], xpts_total, xpts_next,
-fpl_ep_next`. Each `per_gw` entry has `gw, fixtures[] (with xmins, xpts …),
-xpts, blank, double`.
+status, news, chance_next, form, total_points, minutes, per_gw[], xpts_total,
+xpts_next, p_goal_next, fpl_ep_next`. `chance_next` is FPL's chance of playing
+next round (0–100, from `availability`). Each `per_gw` entry has `gw, fixtures[]
+(with xmins, xpts, p_goal, p_return, opp_form_* …), xpts, p_goal, blank, double`.
 
 ## Checking it
 

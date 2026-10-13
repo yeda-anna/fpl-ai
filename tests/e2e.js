@@ -163,6 +163,11 @@ async function phone(browser){
       return c && !c.classList.contains('busy') && tr && tr.dataset.pid !== f; }, first, { timeout: 20000 }).then(() => true, () => false);
     ok('phone: re-sorting moves the rows in place (AutoAnimate)', moved && await page.$eval('#xpTable .card.xp', c => c.dataset.mark === 'kept')
        && await page.$eval('#xpBody', b => !!b._aa));
+    await page.selectOption('#fFdr', 'goal');
+    ok('phone: projections can show each week as a chance to score', await page.waitForFunction(() => {
+      const c = document.querySelector('#xpTable .card.xp'); const td = document.querySelector('#xpBody tr td.num');
+      return c && !c.classList.contains('busy') && td && /^\d+%/.test(td.textContent.trim()); }, null, { timeout: 20000 }).then(() => true, () => false));
+    await page.selectOption('#fFdr', 'xp');
     await page.selectOption('#fSort', 'xpts_total');
     await page.waitForFunction(f => { const tr = [...document.querySelectorAll('#xpBody > tr')].find(x => !('__aa_del' in x)); const c = document.querySelector('#xpTable .card.xp');
       return c && !c.classList.contains('busy') && tr && tr.dataset.pid === f; }, first, { timeout: 20000 }).catch(() => {});
@@ -182,6 +187,7 @@ async function phone(browser){
   await page.click('#dock button[data-tab="plan"]'); await page.click('#segs button[data-seg="transfers"]');
   await page.waitForSelector('#svLeft .path', { timeout: 90000 });
   ok('phone: the solver returns plans', (await page.$$('#svLeft .path')).length >= 1);
+  ok('phone: the plan says who it would not buy or captain on fitness', /under 75% to play/.test(await page.textContent('#svRight .legend')));
   await page.click('#gwNext'); await page.waitForTimeout(250);
   ok('phone: the pitch steps to the next gameweek', /GW\d+/.test(await page.textContent('.gw-nav span')));
 
@@ -204,6 +210,7 @@ async function phone(browser){
   await page.waitForSelector('#v-home-squad .pl-tok', { timeout: 20000 });
   await page.click('#v-home-squad .pl-tok');
   ok('phone: the player sheet opens', await page.waitForSelector('.sheet .tile', { timeout: 20000 }).then(() => true, () => false));
+  ok('phone: the player sheet gives a chance to score and to play', /\d+% to score/.test(await page.textContent('.sheet')) && /% fit to play/.test(await page.textContent('.sheet')));
   await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 
   // ---- menu: how it works, refresh, forget ----

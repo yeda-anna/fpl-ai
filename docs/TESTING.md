@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team. 121 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team. 124 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -57,6 +57,20 @@ What it covers:
   counts up.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
+
+## The planner's rules (no server needed)
+
+```bash
+./.venv/bin/python tests/test_model_rules.py
+```
+
+On a made-up four-club league: a club that has stopped creating chances becomes
+a weaker attack (within the bounds) and no live data means no form adjustment;
+a player in form projects above his season rate and one out of form below it;
+real goals nudge the rate only a little; chance to score is `1 − e^(−xG)`;
+benched recent weeks cut expected minutes; a 50%-doubtful player isn't bought at
+75% (but is at "anyone") and is listed as passed over; a doubtful player already
+owned stays in the XI but doesn't wear the armband until his odds recover.
 
 ## The demo team (no server needed)
 

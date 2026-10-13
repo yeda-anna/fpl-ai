@@ -31,6 +31,12 @@ program, solved with CBC through PuLP.
   with — nothing is added. The count shown for later gameweeks is replayed from
   the transfers the plan actually makes.
 - `max_hits` caps paid transfers per week.
+- **Chance of playing** (`min_chance`, default `MIN_CHANCE = 75`): in the coming
+  gameweek nobody whose `chance_next` is below it is bought, captained or made
+  vice. Players already owned can stay. Later weeks are left to the projections,
+  where a doubtful player's odds recover. The response lists the best players
+  this left out (`passed_over`); Plan → Transfers → Advanced settings sets it
+  (100 / 75 / 50 / anyone).
 - **Building from scratch** (no current squad): the first squad is free and
   must not spend banked transfers.
 

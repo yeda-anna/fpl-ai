@@ -9,8 +9,13 @@ Model outline
 1. Team ratings   attack / defence strength from season xG and xGC, shrunk toward the
                   league average because only a handful of games have been played.
 2. Fixture goals  Poisson means for each side of a fixture, adjusted for home advantage.
-3. Minutes        availability x start rate -> P(play), P(60+), expected minutes.
-4. Returns        the player's share of his team's xG / xA scaled onto the fixture.
+   Team form      each club's last few games (xG for and against) lean its rating, so a
+                  side in a slump is a weaker opponent than its season average says.
+3. Minutes        availability x start rate -> P(play), P(60+), expected minutes, from
+                  the last few gameweeks' minutes blended with the season.
+4. Returns        the player's share of his team's xG / xA scaled onto the fixture. His
+                  rate blends season xG/xA, his recent xG/xA, and (a little) the goals and
+                  assists he actually got. P(score) = 1 - exp(-xG) per fixture.
 5. Defence        Poisson clean-sheet probability and the -1 per 2 conceded penalty.
 6. Extras         saves, the 2025/26 defensive-contribution bonus, BPS-implied bonus, cards.
 """
@@ -45,6 +50,14 @@ ELO_K_RANGE = (0.0006, 0.0020)
 RETURN_RAMP = (60.0, 75.0)        # minutes in a player's first and second games back
 RETURN_NEWS_DAYS = 28             # a flag this recent marks a player as coming back
 REVERT_RATE = 0.50                # per gameweek ahead, the share of the gap to his usual role that remains
+# recent form and real output (rules the owner asked for: recent performances, weak opponents)
+FORM_RATE_K = 4.0                 # a player's recent xG/xA rate needs this many recent 90s to count half...
+FORM_RATE_CAP = 0.35              # ...and never more than this share of his rate
+FINISH_K = 30.0                   # his actual goals/assists per 90 need this many season 90s to count half...
+FINISH_CAP = 0.25                 # ...and never more than this share (finishing above xG mostly regresses)
+TEAM_FORM_DECAY = 0.80            # each game further back counts 20% less in a club's recent form
+TEAM_FORM_K = 6.0                 # the season rate is worth this many games against the recent run
+TEAM_FORM_RANGE = (0.80, 1.25)    # recent form moves a club's attack or defence by at most this much
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -107,6 +120,7 @@ class Engine(object):
         self.next_gw = self._next_gw()
         self._played = self._games_played()
         self._fixtures_by_gw = self._index_fixtures()
+        self._team_form = self._recent_team_form()
         self._team_rates = self._team_ratings()
         self._recent = self._recent_form()
         self._priors = self._fit_priors()
@@ -206,9 +220,16 @@ class Engine(object):
             def_obs = o["xgc_pg"] / LEAGUE_GOALS_PER_TEAM if n else prior_def
             att = w * att_obs + (1 - w) * prior_att
             dfn = w * def_obs + (1 - w) * prior_def
+            # recent form: a club scoring less (or conceding more) lately is leaned that way
+            form = self._form_multipliers(tid, o)
+            att *= form["attack"]
+            dfn *= form["defence"]
             ratings[tid] = {
                 "attack": max(0.45, min(2.2, att)),
                 "defence": max(0.45, min(2.2, dfn)),   # >1 means leaky
+                "form_attack": round(form["attack"], 3),
+                "form_defence": round(form["defence"], 3),
+                "form_games": form["games"],
                 "attack_prior": round(prior_att, 3),
                 "defence_prior": round(prior_def, 3),
                 "elo": round(elos[tid], 1) if tid in elos else None,
@@ -218,6 +239,64 @@ class Engine(object):
                 "games": self._played.get(tid, 0),
             }
         return ratings
+
+    def _recent_team_form(self) -> Dict[int, Dict[str, float]]:
+        """Each club's recency-weighted xG for and against per game over the last few weeks.
+
+        From the per-gameweek live data: a club's xG in a gameweek is the sum of its
+        players' xG (split evenly over a double); its xG against is what its opponents
+        made in those fixtures. Weeks without live data contribute nothing.
+        """
+        out: Dict[int, Dict[str, float]] = {}
+        if not self.live_by_gw:
+            return out
+        team_of = {pid: p["team"] for pid, p in self.players.items()}
+        for k, gw in enumerate(sorted(self.live_by_gw.keys(), reverse=True)):
+            fixtures = [f for f in self._fixtures_by_gw.get(gw, []) if f.get("team_h") and f.get("team_a")]
+            if not fixtures:
+                continue
+            n_fix: Dict[int, int] = {}
+            for f in fixtures:
+                for side in ("team_h", "team_a"):
+                    n_fix[f[side]] = n_fix.get(f[side], 0) + 1
+            xg_gw: Dict[int, float] = {}
+            seen = False
+            for el in (self.live_by_gw[gw] or {}).get("elements", []):
+                st = el.get("stats", {})
+                if "expected_goals" not in st:
+                    continue
+                seen = True
+                t = team_of.get(el.get("id"))
+                if t in n_fix:
+                    xg_gw[t] = xg_gw.get(t, 0.0) + _f(st.get("expected_goals"))
+            if not seen:
+                continue
+            w = TEAM_FORM_DECAY ** k
+            for f in fixtures:
+                h, a = f["team_h"], f["team_a"]
+                for me, opp in ((h, a), (a, h)):
+                    r = out.setdefault(me, {"w": 0.0, "xg": 0.0, "xga": 0.0, "games": 0})
+                    r["w"] += w
+                    r["xg"] += w * xg_gw.get(me, 0.0) / n_fix[me]
+                    r["xga"] += w * xg_gw.get(opp, 0.0) / n_fix[opp]
+                    r["games"] += 1
+        return out
+
+    def _form_multipliers(self, tid: int, observed: Dict[str, float]) -> Dict[str, Any]:
+        """How far a club's recent run moves its season attack and defence."""
+        r = self._team_form.get(tid)
+        if not r or r["w"] <= 0 or observed["n"] <= 0:
+            return {"attack": 1.0, "defence": 1.0, "games": 0}
+        lo, hi = TEAM_FORM_RANGE
+
+        def lean(recent_pg, season_pg):
+            if season_pg <= 0:
+                return 1.0
+            blended = (r["w"] * recent_pg + TEAM_FORM_K * season_pg) / (r["w"] + TEAM_FORM_K)
+            return max(lo, min(hi, blended / season_pg))
+        return {"attack": lean(r["xg"] / r["w"], observed["xg_pg"]),
+                "defence": lean(r["xga"] / r["w"], observed["xgc_pg"]),
+                "games": r["games"]}
 
     def _blocked_weeks(self) -> Dict[int, set]:
         """Gameweeks a player cannot play for contractual reasons.
@@ -270,11 +349,16 @@ class Engine(object):
                 mins = _f(st.get("minutes")) / n_fix
                 starts = min(1.0, _f(st.get("starts")) / n_fix)
                 r = out.setdefault(pid, {"w": 0.0, "minutes": 0.0, "starts": 0.0,
-                                         "start_minutes": 0.0, "start_w": 0.0, "games": 0})
+                                         "start_minutes": 0.0, "start_w": 0.0, "games": 0,
+                                         "att_min": 0.0, "xg": 0.0, "xa": 0.0})
                 r["w"] += weight
                 r["minutes"] += weight * mins
                 r["starts"] += weight * starts
                 r["games"] += 1
+                if "expected_goals" in st:          # attacking form, for player_rates
+                    r["att_min"] += weight * _f(st.get("minutes"))
+                    r["xg"] += weight * _f(st.get("expected_goals"))
+                    r["xa"] += weight * _f(st.get("expected_assists"))
                 if starts > 0 and mins > 0:
                     r["start_minutes"] += weight * mins
                     r["start_w"] += weight
@@ -468,6 +552,40 @@ class Engine(object):
             return max(0.0, slope * price + intercept)
         return max(0.0, info["mean"])
 
+    def attacking_rates(self, p: Dict[str, Any]) -> Dict[str, Any]:
+        """xG and xA per 90 from three sources, in order of trust:
+
+        1. the season's xG/xA per 90, shrunk toward a price-implied prior when minutes
+           are thin;
+        2. his recent xG/xA per 90 (the last few gameweeks, recent ones weighted more),
+           up to FORM_RATE_CAP of the rate once he has enough recent minutes;
+        3. what he actually scored and created: season goals and assists per 90, up
+           to FINISH_CAP once he has a long season behind him. Finishing above xG
+           mostly regresses, so this stays a small nudge.
+        """
+        nineties = _f(p.get("minutes")) / 90.0
+        w = nineties / (nineties + PLAYER_SHRINK_90S) if nineties > 0 else 0.0
+        pos = p["element_type"]
+        price = p["now_cost"] / 10.0
+        out = {}
+        recent = self._recent.get(p["id"]) or {}
+        r90 = recent.get("att_min", 0.0) / 90.0
+        lean = min(FORM_RATE_CAP, r90 / (r90 + FORM_RATE_K)) if r90 > 0 else 0.0
+        fin = min(FINISH_CAP, nineties / (nineties + FINISH_K)) if nineties > 0 else 0.0
+        for key, field, actual, rkey in (("xg90", "expected_goals_per_90", "goals_scored", "xg"),
+                                         ("xa90", "expected_assists_per_90", "assists", "xa")):
+            season = w * _f(p.get(field)) + (1 - w) * self._prior_for(pos, key, price)
+            rate = season
+            if lean > 0:
+                rate = (1 - lean) * rate + lean * (recent.get(rkey, 0.0) / r90)
+            if fin > 0:
+                rate = (1 - fin) * rate + fin * (_f(p.get(actual)) / nineties)
+            out[key] = max(0.0, rate)
+            out[key + "_season"] = season
+        out["form_weight"] = round(lean, 3)
+        out["actual_weight"] = round(fin, 3)
+        return out
+
     def player_rates(self, p: Dict[str, Any]) -> Dict[str, float]:
         """Per-90 rates, shrunk toward a price-implied prior when minutes are thin."""
         nineties = _f(p.get("minutes")) / 90.0
@@ -475,9 +593,10 @@ class Engine(object):
         pos = p["element_type"]
         price = p["now_cost"] / 10.0
         obs_bps = (_f(p.get("bps")) / nineties) if nineties > 0 else 0.0
+        att = self.attacking_rates(p)
         return {
-            "xg90": w * _f(p.get("expected_goals_per_90")) + (1 - w) * self._prior_for(pos, "xg90", price),
-            "xa90": w * _f(p.get("expected_assists_per_90")) + (1 - w) * self._prior_for(pos, "xa90", price),
+            "xg90": att["xg90"],
+            "xa90": att["xa90"],
             "dc90": w * _f(p.get("defensive_contribution_per_90")) + (1 - w) * self._prior_for(pos, "dc90", price),
             "saves90": _f(p.get("saves_per_90")),
             "bps90": w * obs_bps + (1 - w) * self._prior_for(pos, "bps90", price),
@@ -548,6 +667,11 @@ class Engine(object):
             "fdr": fixture["team_h_difficulty"] if home else fixture["team_a_difficulty"],
             "xg": round(xg, 3),
             "xa": round(xa, 3),
+            "p_goal": round(1.0 - math.exp(-xg), 3),       # chance he scores at least once
+            # the opponent's recent run against its season (>1: scoring more / leakier lately)
+            "opp_form_attack": self._team_rates[opponent].get("form_attack", 1.0),
+            "opp_form_defence": self._team_rates[opponent].get("form_defence", 1.0),
+            "p_return": round(1.0 - math.exp(-(xg + xa)), 3),   # ... or scores or assists
             "lam_for": round(lam_for, 3),
             "lam_against": round(lam_against, 3),
             "clean_sheet_prob": round(math.exp(-lam_against), 3),
@@ -584,10 +708,14 @@ class Engine(object):
             fixtures = self.fixtures_for_team(p["team"], gw)
             legs = [self.player_fixture_xpts(player_id, f, minutes_override, gw - start_gw)
                     for f in fixtures]
+            miss = 1.0
+            for leg in legs:
+                miss *= 1.0 - leg["p_goal"]
             per_gw.append({
                 "gw": gw,
                 "fixtures": legs,
                 "xpts": round(sum(leg["xpts"] for leg in legs), 3),
+                "p_goal": round(1.0 - miss, 3),
                 "blank": len(legs) == 0,
                 "double": len(legs) > 1,
             })
@@ -602,12 +730,14 @@ class Engine(object):
             "selected_by_percent": _f(p.get("selected_by_percent")),
             "status": p.get("status"),
             "news": p.get("news") or "",
+            "chance_next": int(round(self.availability(p) * 100)),   # FPL's chance of playing next round
             "form": _f(p.get("form")),
             "total_points": p.get("total_points", 0),
             "minutes": p.get("minutes", 0),
             "per_gw": per_gw,
             "xpts_total": round(sum(g["xpts"] for g in per_gw), 3),
             "xpts_next": per_gw[0]["xpts"] if per_gw else 0.0,
+            "p_goal_next": per_gw[0]["p_goal"] if per_gw else 0.0,
             "fpl_ep_next": _f(p.get("ep_next")),
         }
 
