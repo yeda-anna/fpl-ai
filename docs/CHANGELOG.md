@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-13 — The planner's new rules: form, chance to score, fitness, opponents
+
+- **Recent form counts.** A player's scoring rate now blends his season xG/xA
+  with his last six gameweeks (up to 35%) and, a little, the goals and assists he
+  actually got (up to 25%). Minutes already came from recent gameweeks.
+- **Chance to score** for every fixture (`1 − e^(−xG)`): on the player sheet, and
+  in Players → Projections as "Show: Chance to score" and a sort.
+- **Fitness rule:** Plan → Transfers won't buy, captain or vice-captain anyone
+  under 75% to play in the coming gameweek (Advanced settings: 100 / 75 / 50 /
+  anyone), and says who it left out.
+- **Opponents in poor form:** each club's last six games lean its attack and
+  defence (by at most 20–25%), so a side that has stopped scoring or started
+  leaking is treated that way. The player sheet flags "opponent leaky lately".
+
 ## 2026-10-13 — Race day: a new look
 
 - The whole app is redesigned after a racing-game leaderboard the owner supplied:

@@ -51,11 +51,15 @@ unreachable with nothing cached → `503`.
   "bank": null,
   "pool_size": 160,
   "paths": 3,
-  "overrides": null
+  "overrides": null,
+  "min_chance": 75
 }
 ```
 
-`free_transfers` and `bank` default to the manager's real values. The response
+`free_transfers` and `bank` default to the manager's real values. `min_chance`
+(0–100) is the chance of playing a player needs to be bought or captained in the
+coming gameweek; the response echoes it with `passed_over`, the best players it
+left out. The response
 has up to `paths` plans, each with per-gameweek transfers, XI, bench, captain,
 vice, hits and xPts, plus the do-nothing baseline and a `feasible` flag.
 

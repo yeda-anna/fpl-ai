@@ -331,6 +331,8 @@ def players(horizon: int = Query(5, ge=1, le=10),
         out.sort(key=lambda r: -r["xpts_next"])
     elif sort == "ownership":
         out.sort(key=lambda r: -r["selected_by_percent"])
+    elif sort == "p_goal":
+        out.sort(key=lambda r: -r.get("p_goal_next", 0.0))
     else:
         out.sort(key=lambda r: -r["xpts_total"])
     return {"count": len(out), "horizon": horizon, "offset": offset,
@@ -414,6 +416,7 @@ class SolveRequest(BaseModel):
     paths: int = 3
     overrides: Optional[str] = None
     made: Optional[str] = None
+    min_chance: Optional[int] = None     # chance of playing needed to buy or captain (default solver.MIN_CHANCE)
 
 
 def _do_nothing(ctx, plan) -> float:
@@ -439,7 +442,7 @@ def solve(req: SolveRequest):
             max_hits=req.max_hits, wildcard_gw=req.wildcard_gw,
             free_hit_gw=req.free_hit_gw, pool_size=req.pool_size,
             time_limit=20 if i == 0 else 12, forbid=forbidden,
-            gap=0.005 if i == 0 else 0.01,
+            gap=0.005 if i == 0 else 0.01, min_chance=req.min_chance,
         )
         if not r.get("feasible") or not r["gameweeks"]:
             break
@@ -476,6 +479,8 @@ def solve(req: SolveRequest):
                         "gain_vs_nothing": round(p["total_xpts"] - _do_nothing(ctx, p), 2),
                         "gameweeks": p["gameweeks"]} for i, p in enumerate(paths)]
     result["no_transfer_baseline"] = round(baseline["xi_xpts"] + baseline["captain_xpts"], 2)
+    result["min_chance"] = paths[0].get("min_chance") if paths else None
+    result["passed_over"] = paths[0].get("passed_over", []) if paths else []
     result["free_transfers_start"] = ft
     result["bank_start"] = bank
     return result

@@ -352,6 +352,17 @@ function wireMade(e){
   add.onclick = ()=>{ if(out.value && inn.value) save(mine().concat([[+out.value, +inn.value]])); };
 }
 
+/* The opponent's recent run, where it matters to this player: attackers care whether the
+   other side has been leaking chances lately, defenders and keepers whether it's been blunt. */
+function oppForm(f, position){
+  const att = position >= 3, d = f.opp_form_defence || 1, a = f.opp_form_attack || 1;
+  if(att && d >= 1.08) return ' · <span class="up">opponent leaky lately</span>';
+  if(att && d <= 0.92) return ' · <span class="warn">opponent tight lately</span>';
+  if(!att && a <= 0.92) return ' · <span class="up">opponent blunt lately</span>';
+  if(!att && a >= 1.08) return ' · <span class="warn">opponent firing lately</span>';
+  return '';
+}
+
 /* ---------------- Home: this week's picks (no team needed) ---------------- */
 async function viewPicks(t){
   t.innerHTML = loading('Picking this week’s standouts');
@@ -423,8 +434,8 @@ async function viewXpts(t){
         <label class="fld">Search<input id="fSearch" placeholder="Player name" style="width:150px"></label>
         <label class="fld">Sort<select id="fSort">
           <option value="xpts_total">xPts, horizon</option><option value="xpts_next">xPts, next GW</option>
-          <option value="value">xPts per £m</option><option value="ownership">Ownership</option></select></label>
-        <label class="fld">Show<select id="fFdr"><option value="xp">xPts</option><option value="fdr">Fixtures</option></select></label>
+          <option value="value">xPts per £m</option><option value="ownership">Ownership</option><option value="p_goal">Chance to score, next GW</option></select></label>
+        <label class="fld">Show<select id="fFdr"><option value="xp">xPts</option><option value="goal">Chance to score</option><option value="fdr">Fixtures</option></select></label>
       </div>
       <div class="controls">
         ${nEdits?`<button class="btn sm" id="resetMins">Reset ${nEdits} minute edit${nEdits>1?'s':''}</button>`:''}
@@ -453,7 +464,7 @@ async function viewXpts(t){
       const d = await api('/api/players?'+q);
       if(mine !== XP.seq || !el('xpTable')) return;
       const gws = d.players.length ? d.players[0].per_gw.map(g=>g.gw) : [];
-      const showFdr = el('fFdr').value === 'fdr';
+      const showFdr = el('fFdr').value === 'fdr', showGoal = el('fFdr').value === 'goal';
       const cells = p => {
         const firstMins = (p.per_gw[0] && p.per_gw[0].fixtures[0]) ? p.per_gw[0].fixtures[0].xmins : 0;
         const edited = S.overrides[p.id] != null;
@@ -462,6 +473,8 @@ async function viewXpts(t){
           ${p.per_gw.map(g=>{
             if(g.blank) return `<td class="num dim">—</td>`;
             if(showFdr) return `<td class="num">${g.fixtures.map(f=>`${fdr(f.fdr)} <span class="u2" style="display:inline">${esc(f.opponent_short)}${f.home?'':'·a'}</span>`).join('<br>')}</td>`;
+            if(showGoal){ const pg = g.p_goal || 0;
+              return `<td class="num" style="${pg >= .4 ? 'color:var(--accent-deep)' : pg < .1 ? 'color:var(--ink-3);font-weight:600' : ''}">${num(pg*100,0)}%${g.double?'<sup class="accent">2</sup>':''}</td>`; }
             const v = g.xpts, hot = v >= 6 ? 'font-weight:800;color:var(--accent-deep)' : v >= 4.5 ? 'font-weight:700' : '';
             return `<td class="num" title="${esc(g.fixtures.map(f=>f.opponent_short+(f.home?' (H)':' (A)')).join(', '))}" style="${hot}">${num(v,1)}${g.double?'<sup class="accent">2</sup>':''}</td>`;
           }).join('')}
@@ -537,13 +550,13 @@ window.openPlayer = async function(id){
       <div class="grid g4 mb">
         ${tile('Next GW', num(p.xpts_next), 'FPL’s own estimate: '+num(p.fpl_ep_next))}
         ${tile(S.horizon+' gameweeks', num(p.xpts_total,1), num(p.xpts_total/S.horizon)+' a week')}
-        ${tile('Expected minutes', num(mm.xmins,0)+'′', 'Start chance '+num(mm.p_start*100,0)+'%')}
+        ${tile('Expected minutes', num(mm.xmins,0)+'′', 'Start chance '+num(mm.p_start*100,0)+'% · '+(p.chance_next!=null?p.chance_next:100)+'% fit to play')}
         ${tile('Minutes when starting', num(mm.starter_minutes,0)+'′', mm.recent_trend==null?'':'Recent vs season: '+sign(mm.recent_trend,0)+'′')}
       </div>
       <div class="grid g3">
         <div class="card"><h3>Fixtures</h3><div class="well"><table><tbody>
           ${p.per_gw.map(g=>`<tr><td class="dim">GW${g.gw}</td>
-            <td>${g.fixtures.map(f=>`${fdr(f.fdr)} ${esc(f.opponent_short)} <span class="u2" style="display:inline">${f.home?'home':'away'} · ${num(f.xmins,0)}′</span>`).join('<br>')||'<span class="dim">No fixture</span>'}</td>
+            <td>${g.fixtures.map(f=>`${fdr(f.fdr)} ${esc(f.opponent_short)} <span class="u2" style="display:inline">${f.home?'home':'away'} · ${num(f.xmins,0)}′ · ${num(f.p_goal*100,0)}% to score${oppForm(f, p.position)}</span>`).join('<br>')||'<span class="dim">No fixture</span>'}</td>
             <td class="num accent"><b>${num(g.xpts)}</b></td></tr>`).join('')}
         </tbody></table></div></div>
         <div class="card"><h3>Where the points come from</h3>
@@ -581,6 +594,9 @@ async function viewSolver(t){
           <label class="fld">Wildcard in<select id="sWC"><option value="">Not this window</option></select></label>
           <label class="fld">Free Hit in<select id="sFH"><option value="">Not this window</option></select></label>
           <label class="fld">Free transfers<input id="sFT" type="number" min="1" max="5" placeholder="Auto from your history"></label>
+          <label class="fld">Buy or captain only if<select id="sChance">
+            <option value="100">Fully fit (100%)</option><option value="75" selected>75%+ likely to play</option>
+            <option value="50">50%+ likely to play</option><option value="0">Anyone, flags or not</option></select></label>
           <div class="sub">${Object.keys(S.overrides).length ? 'Using your '+Object.keys(S.overrides).length+' minute edit(s) from Expected Points.' : 'Edit any player’s minutes in Expected Points and the solver will use them.'}</div>
         </div></details>
       </div>
@@ -600,8 +616,8 @@ async function viewSolver(t){
     }
   }catch(err){ el('svRight').innerHTML = errBox(err); el('svLeft').innerHTML=''; return; }
 
-  const markAdv = ()=> el('adv').dataset.active = (el('sWC').value||el('sFH').value||el('sFT').value) ? '1' : '0';
-  ['sWC','sFH','sFT'].forEach(id=>el(id).addEventListener('change', markAdv));
+  const markAdv = ()=> el('adv').dataset.active = (el('sWC').value||el('sFH').value||el('sFT').value||el('sChance').value !== '75') ? '1' : '0';
+  ['sWC','sFH','sFT','sChance'].forEach(id=>el(id).addEventListener('change', markAdv));
   el('sH').addEventListener('change', ()=>{ S.horizon = +el('sH').value; el('horizon').value = S.horizon; invalidate(); rerender(); });
 
   const run = async ()=>{
@@ -609,6 +625,7 @@ async function viewSolver(t){
     if(el('sWC').value) body.wildcard_gw = +el('sWC').value;
     if(el('sFH').value) body.free_hit_gw = +el('sFH').value;
     if(el('sFT').value) body.free_transfers = +el('sFT').value;
+    body.min_chance = +el('sChance').value;
     withEdits(body);
     const key = JSON.stringify(body);
     el('adv').open = false;
@@ -671,7 +688,8 @@ async function viewSolver(t){
       </div></div>
       <div class="legend">Captain ${esc(p.gameweeks[SV.gw].captain?p.gameweeks[SV.gw].captain.web_name:'–')}, vice ${esc(p.gameweeks[SV.gw].vice_captain?p.gameweeks[SV.gw].vice_captain.web_name:'–')} in GW${p.gameweeks[SV.gw].gw}.
         Template rating compares your planned XI’s ownership with the eleven most-owned players: 100 is pure template, low is differential.
-        Plans are within 0.5% of the best possible; ${r.pool_size} players searched.</div>`;
+        Plans are within 0.5% of the best possible; ${r.pool_size} players searched.
+        ${r.min_chance ? `Nobody under ${r.min_chance}% to play is bought or captained in GW${p.gameweeks[0].gw}${(r.passed_over||[]).length ? ' — left out: '+r.passed_over.map(x=>esc(x.web_name)+' ('+x.chance_next+'%)').join(', ') : ''}.` : 'Flagged players can be bought and captained.'}</div>`;
     const pick = ev=>{ const x = ev.target.closest('[data-i]'); if(!x) return; SV.gw = +x.dataset.i; draw(); };
     el('svRight').querySelector('.gw-strip').addEventListener('click', pick);
     el('svRight').querySelector('.timeline').addEventListener('click', pick);
@@ -995,10 +1013,12 @@ async function viewModel(t){
       </div>
       <div class="grid g3 mb">
         ${P('1 · How strong is each club?', `Each club starts from its <b>Elo rating</b> (ClubElo, via the FPL-Core-Insights match files). Promoted clubs with no top-flight rating sit just below the weakest club that has one.
-          This season's xG and xG conceded then pull each club away from that starting point, more with every game played. How many goals an Elo point is worth is fitted from this season's own numbers.`)}
+          This season's xG and xG conceded then pull each club away from that starting point, more with every game played. How many goals an Elo point is worth is fitted from this season's own numbers.
+          Then <b>recent form</b>: each club's last six games lean its attack and defence (by at most about a fifth), so a side that has stopped creating, or started leaking, is treated that way.`)}
         ${P('2 · Who plays, and for how long?', `Minutes come from FPL's week-by-week data (<code>/event/{gw}/live/</code>), with each week further back weighted 28% less. The model learns each player's <b>minutes when he starts</b>, eases injury returners back in (about 60′, then 75′), lets doubtful players' odds recover week by week, and drifts longer-range weeks back toward a player's usual role.
           Loanees barred from facing their parent club get zero for that week. You can overwrite anyone's minutes in the Expected Points table.`)}
         ${P('3 · What is each fixture worth?', `Goals for each side follow a <b>Poisson model</b> with home advantage. A player gets his share of his club's attack from his xG and xA per 90, shrunk toward a price-based estimate when his sample is thin.
+          His recent xG and xA (the last six weeks, up to 35%) and, a little, the goals and assists he actually got (up to 25%) are blended in. His <b>chance to score</b> is 1 − e<sup>−xG</sup> for the fixture.
           The points values come straight from FPL's published scoring table rather than being typed in by hand.`)}
       </div>
       <div class="grid g2 mb">
@@ -1014,6 +1034,7 @@ async function viewModel(t){
           <div class="kv"><span>Chip windows</span><span>${[...new Set((R.chips||[]).map(c=>'GW'+c.start+'–'+c.stop))].join(', ')}</span></div>
         </div>
         ${P('The solver', `A mixed-integer program (CBC via PuLP) picks squad, starting XI, captain, vice-captain and transfers for every gameweek at once, inside the published limits above, with your real bank and selling prices.
+          It won't buy or captain anyone under <b>75% to play</b> in the coming week (change it in Advanced settings), and tells you who it left out.
           After the best route it re-solves with that route ruled out, twice, so you see <b>three genuinely different plans</b>. Chips are only offered in weeks where FPL's chip windows and your history allow them.<br><br>
           <b>Data:</b> the FPL API (players, prices, fixtures, your squad, per-week minutes, price progress, set-pieces, scoring rules) and FPL-Core-Insights (club Elo). Cached locally, rebuilt every 15 minutes.`)}
       </div>
