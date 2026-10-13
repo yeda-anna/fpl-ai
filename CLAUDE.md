@@ -59,12 +59,12 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `frontend/index.html` | Shell: the opening film's stage, top bar, the page head with the season race bar, the five-tab dock, the landing screen (pitch scene), logo, scripts |
 | `frontend/styles.css` | Design system: the tokens, the Chakra Petch faces, "the slant", components, the Magic UI effects, the film, landing, dock, breakpoints |
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
-| `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators), anime.js (sky pulses, icon drawing, flicker), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
-| `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Meteors, Ripple, OrbitingCircles, BorderBeam, ShimmerButton, AnimatedBeam, RetroGrid |
+| `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators, the race bar), anime.js (icon drawing, the landing logo), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
+| `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Ripple, OrbitingCircles, BorderBeam, ShimmerButton (hidden), AnimatedBeam, RetroGrid |
 | `frontend/intro.js` | `Intro`: the opening film, a Theatre.js sequence (keyframes in `KEYS`) played on launch: a drone swarm drawn on a canvas |
 | `frontend/portrait.js` | `PORTRAIT`: the film's drones, traced from the lights in the portrait — generated, don't edit |
 | `frontend/portrait.webp`, `logo.webp`, `icon-*.png` | The drone-portrait image the owner supplied, its square face crop (the logo) and the home-screen icons — generated |
-| `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, Theatre.js core 0.7, AutoAnimate 0.10 — vendored, see its README |
+| `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, Theatre.js core 0.7, AutoAnimate 0.10, Chakra Petch (fonts/) — vendored, see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `scripts/calibrate.py` | Projection sanity check |
 | `scripts/check_contrast.py` | WCAG AA check for the palette |
@@ -92,8 +92,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 - No build step, no framework, no CDN. Plain JS in `app.js`; animation in
   `motion.js` (`FX`), `magic.js` (`Magic`) and `intro.js` (`Intro`), using the
   vendored libraries in `frontend/vendor/`, each with its own job: GSAP (+
-  DrawSVG, MotionPath) for SVG drawing and timelines, anime.js for the sky and
-  icons, Motion for springs, in-view and scroll, AutoAnimate for lists that
+  DrawSVG, MotionPath) for SVG drawing and timelines, anime.js for icons, Motion for springs, in-view and scroll, AutoAnimate for lists that
   change, Theatre.js core for the opening film. Magic UI is React, so its
   effects are rebuilt in `magic.js` + CSS — never pull in React for it. Don't
   add another library without asking; upgrade by replacing the files and noting
