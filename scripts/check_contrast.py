@@ -1,10 +1,12 @@
-"""WCAG contrast check for the colours in frontend/styles.css (one neon theme, in :root).
+"""WCAG contrast check for the colours in frontend/styles.css (one theme, in :root).
 
 Run:  python3 scripts/check_contrast.py          (exit 1 if anything is under AA)
 
-Text tokens are measured against the worst case a reader meets: the brightest
-glass (--glass-3) over the lightest part of the background (--base-hi). Text on a
-highlight (--on-accent) is measured against both ends of each highlight gradient.
+Text tokens are measured against the lightest surface that carries running text
+(--surface-2: sheets, inputs, buttons); the two main text tokens also against
+--surface-3 (secondary buttons, hovers). Text on a fill is measured against the
+fill: --on-accent (dark) on lime, lime-soft, green, warn and down; --on-purple
+(white) on purple.
 """
 import os
 import re
@@ -19,17 +21,8 @@ def parse_color(v):
     m = re.match(r"#([0-9a-fA-F]{6})$", v)
     if m:
         h = m.group(1)
-        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (1.0,)
-    m = re.match(r"rgba?\(([^)]+)\)", v)
-    if m:
-        p = [x.strip() for x in m.group(1).split(",")]
-        return (float(p[0]), float(p[1]), float(p[2]), float(p[3]) if len(p) > 3 else 1.0)
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
     raise ValueError(v)
-
-
-def over(fg, bg):
-    a = fg[3]
-    return tuple(fg[i] * a + bg[i] * (1 - a) for i in range(3)) + (1.0,)
 
 
 def lum(c):
@@ -44,43 +37,30 @@ def ratio(a, b):
     return (la + 0.05) / (lb + 0.05)
 
 
-def blocks(css):
+def tokens(css):
     out = {}
-    for m in re.finditer(r"(\[data-theme=[^{]+|:root[^{]*)\{([^}]*)\}", css):
-        sel, body = m.group(1), m.group(2)
-        toks = dict((k, v.strip()) for k, v in re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", body))
-        for name in re.findall(r'data-theme="(\w+)"', sel) or (["neon"] if sel.startswith(":root") else []):
-            out.setdefault(name, {}).update(toks)
+    for m in re.finditer(r":root\s*\{([^}]*)\}", css):
+        out.update((k, v.strip()) for k, v in re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", m.group(1)))
     return out
 
 
 def main():
-    css = open(CSS, encoding="utf-8").read()
-    themes = blocks(css)
-    base = themes["neon"]
+    t = tokens(open(CSS, encoding="utf-8").read())
+    c = lambda k: parse_color(t[k])
+    checks = []
+    for tok in ("--ink", "--ink-2", "--ink-3", "--accent-ink", "--up", "--down", "--warn"):
+        checks.append((tok, "--surface-2"))
+    for tok in ("--ink", "--ink-2"):
+        checks.append((tok, "--surface-3"))
+    for fill in ("--lime", "--lime-soft", "--green", "--warn", "--down"):
+        checks.append(("--on-accent", fill))
+    checks.append(("--on-purple", "--purple"))
     failures = 0
-    print("%-9s %7s %7s %7s %7s %7s %7s %7s | %s" % ("theme", "ink", "ink-2", "ink-3", "accent", "up", "down", "warn", "on-accent vs CTA / info gradients"))
-    names = [n for n in themes if n != "neon"] or ["neon"]          # a single theme lives in :root
-    for name in names:
-        t = dict(base); t.update(themes.get(name, {}))
-        bg = over(parse_color(t["--glass-3"]), parse_color(t["--base-hi"]))
-        row = []
-        for tok in ("--ink", "--ink-2", "--ink-3", "--accent-ink", "--up", "--down", "--warn"):
-            r = ratio(parse_color(t[tok]), bg)
-            row.append(r)
-            if r < AA:
-                failures += 1
-                print("  FAIL %s %s %.2f" % (name, tok, r))
-        on = parse_color(t["--on-accent"])
-        grads = []
-        for g in ("--grad-cta", "--grad-info"):
-            for hx in re.findall(r"#[0-9a-fA-F]{6}", t[g]):
-                r = ratio(on, parse_color(hx))
-                grads.append(r)
-                if r < AA:
-                    failures += 1
-                    print("  FAIL %s on-accent on %s %s %.2f" % (name, g, hx, r))
-        print("%-9s %s | min %.2f" % (name, " ".join("%7.2f" % r for r in row), min(grads)))
+    for fg, bg in checks:
+        r = ratio(c(fg), c(bg))
+        flag = "ok" if r >= AA else "FAIL"
+        failures += r < AA
+        print("%-13s on %-12s %5.2f  %s" % (fg, bg, r, flag))
     print("\nAA (%.1f:1) %s" % (AA, "met everywhere" if not failures else "FAILED in %d places" % failures))
     return 1 if failures else 0
 

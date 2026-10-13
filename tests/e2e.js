@@ -106,7 +106,9 @@ async function phone(browser){
     ok('phone: the verdict is the same line on the way back', (await page.textContent('#view-sub')).trim() === sub);
   }
   ok('phone: home fits width', await noOverflow(page), lastOverflow.join(', '));
-  ok('phone: a meteor shower crosses the sky behind every page', (await page.$$('#skyMeteors .mg-meteor')).length >= 12);
+  ok('phone: the season runs as a race bar under the title', (await page.$$('#raceBar span')).length >= 20 && /left|over/i.test(await page.textContent('#gwLeft')));
+  ok('phone: a calm night: no meteors, scanlines or corner brackets', (await page.$$('.mg-meteor')).length === 0
+     && await page.evaluate(() => getComputedStyle(document.body, '::after').content === 'none'));
   await page.screenshot({ path: `${OUT}/m-02-home.png` });
   {
     // a transfer made in the FPL app (private until the deadline) can be entered by hand and counts everywhere

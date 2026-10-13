@@ -8,7 +8,8 @@ repository. Read this first; the `docs/` folder has the detail.
 Papa Ranjeet is a Fantasy Premier League planner. A FastAPI backend pulls the
 official FPL API, projects expected points (xPts) for every player, and runs a
 mixed-integer solver over transfers, captaincy and chips. A no-build vanilla-JS
-single-page app renders it in a neon, sci-fi look — it opens with a short
+single-page app renders it in a race-day look (dark teal, italic Chakra Petch,
+slanted lime buttons) — it opens with a short
 Theatre.js film of drones flying into the logo, and moves with GSAP, anime.js, Motion, AutoAnimate and effects
 rebuilt from Magic UI — with five tabs and a mobile app shell.
 
@@ -29,11 +30,11 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 120 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
+npm --prefix tests test        # 121 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 ./.venv/bin/python tests/test_pending_transfers.py # transfers since the deadline, no server needed
 ./.venv/bin/python tests/test_demo.py             # the demo team is a legal squad, no server needed
-python3 scripts/check_contrast.py                 # WCAG AA for the neon palette
+python3 scripts/check_contrast.py                 # WCAG AA for the palette
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
@@ -54,8 +55,8 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/analysis.py` | Chips, Rate My Team, compare, weekly picks, mini-leagues |
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
 | `backend/demo.py` | The demo team (ID 0, "Gut Feeling FC") for visitors who don't play FPL: a legal squad picked on vibes and an invented season |
-| `frontend/index.html` | Shell: the opening film's stage, top bar, neon sky, the five-tab dock, the landing screen (neon pitch scene), logo, scripts |
-| `frontend/styles.css` | Design system: the neon tokens, glass, components, the HUD layer, the Magic UI effects, the film, landing, dock, breakpoints |
+| `frontend/index.html` | Shell: the opening film's stage, top bar, the page head with the season race bar, the five-tab dock, the landing screen (pitch scene), logo, scripts |
+| `frontend/styles.css` | Design system: the tokens, the Chakra Petch faces, "the slant", components, the Magic UI effects, the film, landing, dock, breakpoints |
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
 | `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators), anime.js (sky pulses, icon drawing, flicker), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
 | `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Meteors, Ripple, OrbitingCircles, BorderBeam, ShimmerButton, AnimatedBeam, RetroGrid |
@@ -102,20 +103,20 @@ suite at **0 failures** — see `docs/TESTING.md`.
   `no-store`, and `app.js` reloads when `/version` reports a newer build. Never hand-write `?v=` numbers,
   and keep new CSS/JS referenced as `/static/<file>` (sub-folders are fine:
   `/static/vendor/…`) so they're fingerprinted too.
-- **One neon look, no theme picker.** Colours come from the `:root` tokens only
-  (`docs/DESIGN.md`), split **60:30:10** — near-black violet, dark glass, and
-  three neons: lime (`--neon-l`, "do this"), cyan (`--neon-c`, lines and
-  information), magenta (`--neon-m`, the ball and celebration). Text on a neon
-  fill uses `--on-accent`, never white. Every text token must pass AA — run
-  `python3 scripts/check_contrast.py`.
-- **The HUD layer** (sci-fi console: corner brackets, mono readouts, the
-  `SYS//…` eyebrow, scanlines, the hologram pitch, the landing boot lines) sits
-  on top of the neon — see "The HUD layer" in `docs/DESIGN.md`. New panels get
-  the corners by joining the `.card,.tile,.plan,.path,.sheet` selector, not with
-  new hex values.
-- Neon lives on strokes, edges and things you can press — never as a wash behind
-  running text. Cards stay dark and nearly solid so the sky's wires never run
-  behind words.
+- **One look, race day, no theme picker.** Colours come from the `:root` tokens
+  only (`docs/DESIGN.md`): a dark teal night (`--bg`), three flat surfaces
+  (`--surface`, `-2`, `-3`), and three colours — lime (`--lime`, "do this": the
+  main button, the open tab, the captain), green (`--green`, progress and
+  information), purple (`--purple`, the selected sub-page, projection bars).
+  Type is italic **Chakra Petch** (vendored in `frontend/vendor/fonts/`). Text on
+  a lime/green fill uses `--on-accent`; on purple `--on-purple`. Every text
+  token must pass AA — run `python3 scripts/check_contrast.py`.
+- **Pressable things slant** (`--skew`): buttons draw a skewed `::before` behind an
+  upright label (set `--fill`), so join "the slant" block in `styles.css`; chips
+  and strips use a parallelogram `clip-path`. Surfaces are flat and solid — no
+  glass, no glow behind words, no borders on cards. There is no meteor shower,
+  no sky animation, no scanlines and no corner brackets; don't bring them back
+  without asking.
 - **Five tabs** (Home, Plan, Players, Leagues, Ask) with sub-pages in the section
   switcher — add a new page as a sub-page in `TABS` (`app.js`), not as a sixth
   tab, and give it an address (`#tab/sub`). Keep old addresses mapped in `LEGACY`.
@@ -128,8 +129,8 @@ suite at **0 failures** — see `docs/TESTING.md`.
   opens with a tour card that explains FPL in a sentence and links each part of
   the app. Every team route must keep working for team 0 (`team_id is not None`,
   never a truthiness test).
-- Live `backdrop-filter` only on floating chrome: `.nav-bar, .dock, .sheet,
-  .land-card, .adv-body, .toast`. In-page cards never blur.
+- Live `backdrop-filter` only on floating chrome: `.nav-bar, .dock, .toast`.
+  Cards and sheets never blur.
 - Single-column grids use `minmax(0,1fr)`, never bare `1fr` (it blows out on phones).
 - Phone layout must not widen the viewport: the e2e suite scans every element
   against 390px. Long strings need `overflow-wrap:anywhere`.

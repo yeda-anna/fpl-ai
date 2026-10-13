@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-13 — Race day: a new look
+
+- The whole app is redesigned after a racing-game leaderboard the owner supplied:
+  a dark teal night, flat teal surfaces, italic **Chakra Petch** type (vendored,
+  OFL), and every button, tab and chip slanted like a speed stripe. Lime is the
+  main action and the open tab, green is progress, purple is the selected
+  sub-page and the projection bars.
+- Under every title, the **season as a race**: a segment a gameweek, lime to green
+  up to now, the next one outlined, and how many gameweeks are left.
+- Tables are rows on the surface with hairlines between; tiles carry big italic
+  numbers; bars are slanted purple segments; the pitch has lime markings and a
+  touchline glow; phone sheets are trays with a grabber.
+- Gone: the meteor shower and its ground impacts, the neon sky wires, the
+  sci-fi corner brackets, scanlines, scan beam and monospace readouts, and the
+  glows. The background is still.
+- Kept: the drone intro film (its title, tagline, progress line and floor now in
+  the new colours), the landing pitch scene, the demo team and every feature.
+
 ## 2026-10-11 — A demo team for people who don't play FPL
 
 - The first screen now offers **See a demo team — no account needed**. It opens
