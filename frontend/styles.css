@@ -378,6 +378,8 @@ td.num{font-style:italic;font-weight:700}
 .spark i{flex:1;min-width:3px;border-radius:2px 2px 0 0;min-height:3px;background:linear-gradient(180deg,var(--purple-2),var(--purple));transform:skewX(-8deg)}
 .grade{font-size:76px;font-style:italic;font-weight:700;line-height:1;
   background:var(--grad-race);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lg-go{margin-top:8px}
+.card .tile{background:var(--surface-2)}      /* a tile inside a card (a league summary) stands off it */
 .mins{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-style:italic;font-weight:600;color:var(--ink-3);cursor:pointer;padding:3px 7px;border-radius:5px;transition:.15s}
 .mins:hover{background:var(--surface-2);color:var(--lime)}
 .mins.set{background:var(--accent-wash);color:var(--lime);font-weight:700}

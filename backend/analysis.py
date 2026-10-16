@@ -462,11 +462,16 @@ def compare(engine, rows, id_a, id_b):
 
 # --- mini-leagues ----------------------------------------------------------
 
-def mini_league(engine, rows, standings, gw, horizon, sims=4000, max_rivals=12):
-    """Rival ownership, differentials and a Monte Carlo on who wins the league."""
+def mini_league(engine, rows, standings, gw, horizon, sims=4000, max_rivals=12, also=None):
+    """Rival ownership, differentials and a Monte Carlo on who wins the league.
+
+    `also`: extra standings rows (the manager asking) to include even if they are not
+    in the top `max_rivals`."""
     import fpl_api
     index = {r["id"]: r for r in rows}
     results = standings.get("standings", {}).get("results", [])[:max_rivals]
+    have = {r["entry"] for r in results}
+    results = results + [r for r in (also or []) if r.get("entry") not in have]
 
     managers = []
     for res in results:

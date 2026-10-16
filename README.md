@@ -60,7 +60,7 @@ calls the FPL API — useful for development on networks that can't reach it.
 | Copilot | Plain-English questions answered straight from the model and solver |
 | Rate My Team | Score out of 100 against the best squad your own budget could buy |
 | Compare | Two players side by side, week by week |
-| Minileagues | Rival ownership, effective ownership, and Monte Carlo win probability |
+| Minileagues | Enter any Team ID and see every league that manager is in: place, points, the leader and the gap. Then, per league: rival ownership, effective ownership, and Monte Carlo win probability |
 | Scout | Price-change odds, set-piece takers, defensive-contribution leaders, predicted line-ups |
 
 ## The model
@@ -143,7 +143,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 124 headless checks, phone + desktop + reduced motion + the demo
+    npm --prefix tests test            # 134 headless checks, phone + desktop + reduced motion + the demo
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).
@@ -182,7 +182,8 @@ See [`docs/TESTING.md`](docs/TESTING.md).
     backend/priors.py    Elo prior and recent-form data
     backend/xpts.py      expected-points engine
     backend/solver.py    multi-gameweek MIP optimiser
-    backend/analysis.py  chips, rating, compare, picks, mini-leagues
+    backend/analysis.py  chips, rating, compare, picks, mini-league analysis
+    backend/leagues.py   a manager's mini-leagues: every league, their place and the gap in each
     backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
     backend/main.py      FastAPI routes + static hosting
     frontend/            single-page app, no build step: app.js (views, tabs), motion.js (FX: GSAP, anime.js, Motion,

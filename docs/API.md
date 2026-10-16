@@ -32,7 +32,8 @@ unreachable with nothing cached → `503`.
 | GET | `/api/rate/{team_id}` | `horizon`=5, `overrides`, `made` | grade out of 100, sub-scores, strengths, weaknesses |
 | GET | `/api/picks` | `horizon`=5 | captains, differentials, value picks and dream team for next gameweek |
 | GET | `/api/compare` | `a`, `b`, `horizon`=6 | two players side by side, week by week |
-| GET | `/api/league/{league_id}` | `horizon`=5, `rivals`=12 (2–25) | rival ownership, effective ownership, Monte Carlo win odds |
+| GET | `/api/entry/{team_id}/leagues` | — | **every mini-league the manager is in** (read from their public FPL profile): for each private league their place and movement, points, the leader, the gap to the leader and to the neighbours either side, and the league's average and best week; FPL's own leagues (Overall, country, club …) and head-to-head leagues with place and percentile; and a summary (leading, top three, climbing, best place). Reads up to 15 private leagues in full (one or two standings pages each, four at a time), the rest are listed. Any Team ID works; the demo team (0) is in none; unknown team → 404 |
+| GET | `/api/league/{league_id}` | `horizon`=5, `rivals`=12 (2–25), `entry` | rival ownership, effective ownership, Monte Carlo win odds. With `entry`, that manager is always in the table, even outside the top `rivals` |
 | GET | `/api/scout` | `horizon`=5 | price-change odds, set-piece takers, DEFCON leaders |
 | GET | `/api/lineups` | `horizon`=1 | predicted XIs per club |
 

@@ -883,20 +883,76 @@ async function viewCompare(t){
 }
 
 /* ---------------- Mini-leagues ---------------- */
+/* Every league a manager is in (any Team ID), with their place, the leader and the gap. */
+const LG = {team:''};         // the manager whose leagues are listed (their row is always in the analysis)
+const ord = n => n == null ? '–' : n.toLocaleString();
+function leaguesHtml(r){
+  const by = k => r.leagues.filter(l=>l.kind === k), priv = by('private'), s = r.summary || {};
+  if(!r.leagues.length) return r.demo
+    ? `<div class="note">The demo team is in no mini-leagues. Enter a real Team ID above, or try a league ID below (314 is the Overall league).</div>`
+    : `<div class="note">${esc(r.team || 'This team')} isn’t in any leagues yet. FPL lists them on the manager’s profile.</div>`;
+  const move = l => l.movement > 0 ? ` <span class="up">▲${ord(l.movement)}</span>` : l.movement < 0 ? ` <span class="down">▼${ord(-l.movement)}</span>` : '';
+  const rowOf = l => {
+    const place = l.my_rank ? '#'+ord(l.my_rank)+move(l) : '–';
+    const gap = l.unavailable ? '<span class="dim">unavailable</span>'
+      : l.i_lead ? `<span class="tag">Leading</span>${l.ahead_of_next != null ? `<div class="u2">+${l.ahead_of_next} clear</div>` : ''}`
+      : l.gap_to_leader != null ? `−${l.gap_to_leader}<div class="u2">${esc(l.leader.entry_name||'')}</div>` : '–';
+    const pts = l.my_total != null ? `${l.my_total}<div class="u2">GW ${l.my_gw}${l.gw_avg != null ? ' · avg '+num(l.gw_avg,0) : ''}</div>` : '–';
+    return `<tr><td><span class="nm">${esc(l.name)}</span><div class="u2">${l.size ? ord(l.size)+' managers' : ''}${l.closed ? ' · closed' : ''}</div>
+        <button class="btn sm lg-go" data-lg="${l.id}">Analyse</button></td>
+      <td class="num">${place}</td><td class="num">${pts}</td><td class="num">${gap}</td></tr>`;
+  };
+  const other = by('h2h').concat(by('system'));
+  return `
+    <div class="grid g4 mb">
+      ${tile('Mini-leagues', s.private, s.unread ? s.unread+' not read in full' : 'private leagues')}
+      ${tile('Leading', s.leading, s.top3 ? s.top3+' in the top three' : 'none in the top three')}
+      ${tile('Moving', '<span class="up">▲'+(s.climbing||0)+'</span> <span class="down">▼'+(s.falling||0)+'</span>', 'places since last week')}
+      ${tile('Best place', s.best ? '#'+ord(s.best.rank) : '–', s.best ? esc(s.best.name)+(s.best.size ? ' of '+ord(s.best.size) : '') : '')}
+    </div>
+    ${priv.length ? `<div class="well mb"><table><thead><tr><th>League</th><th class="num">Place</th><th class="num">Points</th><th class="num">Behind leader</th></tr></thead>
+      <tbody>${priv.map(rowOf).join('')}</tbody></table></div>` : ''}
+    ${other.length ? `<div class="well"><table><thead><tr><th>FPL’s own &amp; head-to-head</th><th class="num">Place</th><th class="num">Top</th></tr></thead><tbody>
+      ${other.map(l=>`<tr><td><span class="nm">${esc(l.name)}</span><div class="u2">${l.kind === 'h2h' ? 'head-to-head' : 'FPL league'}${l.size ? ' · '+ord(l.size)+' managers' : ''}</div></td>
+        <td class="num">${l.my_rank ? '#'+ord(l.my_rank)+move(l) : '–'}</td>
+        <td class="num">${l.percentile != null ? 'top '+l.percentile+'%' : '–'}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
+}
 async function viewLeague(t){
-  t.innerHTML = `<div class="card mb"><div class="controls">
+  const mine = S.teamId && !isDemo() ? S.teamId : '';
+  t.innerHTML = `<div class="card mb"><h3>Your mini-leagues <span class="r" id="lgWho"></span></h3>
+      <div class="controls">
+        <label class="fld">FPL Team ID<input id="lgTeam" type="number" placeholder="e.g. 1421260" style="width:150px" value="${esc(LG.team || mine)}"></label>
+        <button class="btn primary" id="lgFind">Find leagues</button></div>
+      <div class="legend">Any manager’s ID works. Every league they’re in, with their place, the leader and the gap; Analyse opens the rivals’ squads and win chances below.</div>
+      <div id="lgList" style="margin-top:14px"></div></div>
+    <div class="card mb"><div class="controls">
       <label class="fld">League ID<input id="lgId" type="number" placeholder="e.g. 314" style="width:136px" value="${esc(store.get('fplai_league',''))}"></label>
       <label class="fld">Rivals<select id="lgN"><option>6</option><option selected>12</option><option>20</option></select></label>
       <button class="btn primary" id="lgGo">Analyse</button></div>
       <div class="legend">The league ID is in the address bar on your league page:
         <code>fantasy.premierleague.com/leagues/<b>123456</b>/standings/c</code>. Try 314 for the overall league.</div></div>
     <div id="lgOut"></div>`;
+  const find = async ()=>{
+    const id = el('lgTeam').value.replace(/\D/g, '');
+    if(!id){ el('lgList').innerHTML = ''; el('lgWho').textContent = ''; return; }
+    LG.team = id;
+    el('lgList').innerHTML = loading('Reading every league');
+    try{
+      const r = await api(`/api/entry/${id}/leagues`);
+      el('lgWho').textContent = [r.team, r.manager].filter(Boolean).join(' · ');
+      el('lgList').innerHTML = leaguesHtml(r);
+      el('lgList').querySelectorAll('[data-lg]').forEach(b=>b.onclick = ()=>{
+        el('lgId').value = b.dataset.lg; go();
+        el('lgOut').scrollIntoView({behavior: FX.reduced ? 'auto' : 'smooth', block:'start'});
+      });
+    }catch(e){ el('lgList').innerHTML = errBox(e); }
+  };
   const go = async ()=>{
     const id = el('lgId').value.trim(); if(!id) return;
     store.set('fplai_league', id);
     el('lgOut').innerHTML = loading('Fetching rival squads and simulating 4,000 finishes');
     try{
-      const r = await api(`/api/league/${id}?horizon=${S.horizon}&rivals=${el('lgN').value}`);
+      const r = await api(`/api/league/${id}?horizon=${S.horizon}&rivals=${el('lgN').value}${LG.team ? '&entry='+LG.team : ''}`);
       const top = r.managers[0], o0 = r.ownership[0], e0 = r.effective_ownership[0];
       el('lgOut').innerHTML = `
         <div class="grid g4 mb">
@@ -908,7 +964,7 @@ async function viewLeague(t){
         <div class="card mb"><h3>Chance to win <span class="r">${r.sims.toLocaleString()} simulations over ${S.horizon} GW</span></h3>
           <div class="well"><table><thead><tr><th>#</th><th>Manager</th><th class="num">Points</th><th class="num">Projected</th><th style="width:30%">Win</th><th class="num">Top 3</th></tr></thead><tbody>
           ${r.managers.map(m=>`<tr><td class="dim">${m.rank}</td>
-            <td><span class="nm">${esc(m.name)}</span><div class="u2">${esc(m.player_name)}</div></td>
+            <td><span class="nm">${esc(m.name)}</span>${String(m.entry) === String(LG.team) ? ' <span class="tag">you</span>' : ''}<div class="u2">${esc(m.player_name)}</div></td>
             <td class="num">${m.total}</td><td class="num">${num(m.horizon_xpts,1)}</td>
             <td><div style="display:flex;align-items:center;gap:9px"><div class="meter" style="flex:1;margin:0"><i style="width:${Math.max(1,m.win_probability)}%"></i></div>
               <b class="accent" style="font-family:var(--mono);font-size:12.5px;min-width:44px;text-align:right">${num(m.win_probability,1)}%</b></div></td>
@@ -928,6 +984,10 @@ async function viewLeague(t){
     }catch(e){ el('lgOut').innerHTML = errBox(e); }
   };
   el('lgGo').onclick = go;
+  el('lgFind').onclick = find;
+  el('lgTeam').addEventListener('keydown', ev=>{ if(ev.key === 'Enter') find(); });
+  if(el('lgTeam').value) find();
+  else if(isDemo()) el('lgList').innerHTML = leaguesHtml({leagues:[], demo:true});
   if(el('lgId').value) go();
 }
 
@@ -1080,7 +1140,7 @@ const TABS = [
     {id:'setpieces',   label:'Set pieces',  view:scoutView('setpieces'), sub:'Who takes the penalties, free kicks and corners at every club.'},
     {id:'defcon',      label:'DEFCON',      view:scoutView('defcon'), sub:'Who is most likely to earn defensive-contribution points next gameweek.'}]},
   {id:'leagues', label:'Leagues', icon:'leagues', title:'Mini-leagues', segs:[
-    {id:'league', label:'Mini-league', view:viewLeague, sub:'What your rivals own, who they captain, and how likely each of you is to win.'}]},
+    {id:'league', label:'Mini-league', view:viewLeague, sub:'Your place in every league you’re in, the gap to the leader, and who’s likeliest to win.'}]},
   {id:'ask', label:'Ask', icon:'ask', title:'Ask', segs:[
     {id:'copilot', label:'Copilot', view:viewCopilot, sub:'Ask in plain English. Every answer is read straight off the model, so you can check the numbers behind it.'}]}
 ];
