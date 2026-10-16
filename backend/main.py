@@ -18,6 +18,7 @@ from pydantic import BaseModel
 import analysis
 import demo as demo_mod
 import fpl_api
+import leagues as leagues_mod
 import priors
 import rules as rules_mod
 import scout as scout_mod
@@ -530,11 +531,36 @@ def compare(a: int, b: int, horizon: int = Query(6, ge=1, le=10)):
 
 @app.get("/api/league/{league_id}")
 def league(league_id: int, horizon: int = Query(5, ge=1, le=10),
-           rivals: int = Query(12, ge=2, le=25)):
+           rivals: int = Query(12, ge=2, le=25), entry: Optional[int] = None):
+    """Rivals' squads and who is likeliest to win. With `entry`, that manager is always
+    in the table, even when they sit outside the top `rivals`."""
     e = engine()
     standings = fpl_api.league_standings(league_id)
+    also = []
+    if entry is not None:
+        try:
+            mine = fpl_api.entry(entry)
+            rank = next((x.get("entry_rank") for x in (mine.get("leagues") or {}).get("classic") or []
+                         if x.get("id") == league_id), None)
+            row = leagues_mod.find_entry_row(entry, rank, standings, fpl_api.league_standings, league_id)
+            if row:
+                also.append(row)
+        except Exception:
+            pass                               # the analysis still works without them
     return analysis.mini_league(e, rows_for(horizon), standings, e.current_gw,
-                                horizon, max_rivals=rivals)
+                                horizon, max_rivals=rivals, also=also)
+
+
+@app.get("/api/entry/{team_id}/leagues")
+def team_leagues(team_id: int):
+    """Every mini-league a manager is in, with their place, the leader and the gap in each."""
+    if team_id == demo_mod.DEMO_ID:           # a made-up team is in no leagues
+        return dict(leagues_mod.empty(team_id, demo_mod.NAME, "Demo Manager"), demo=True)
+    try:
+        profile = fpl_api.entry(team_id)
+    except Exception:
+        raise HTTPException(404, "No FPL team with ID %d." % team_id)
+    return leagues_mod.my_leagues(profile, team_id, fpl_api.league_standings)
 
 
 @app.get("/api/scout")

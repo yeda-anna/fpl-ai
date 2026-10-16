@@ -30,11 +30,12 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 124 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
+npm --prefix tests test        # 134 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 ./.venv/bin/python tests/test_pending_transfers.py # transfers since the deadline, no server needed
 ./.venv/bin/python tests/test_demo.py             # the demo team is a legal squad, no server needed
 ./.venv/bin/python tests/test_model_rules.py      # form, chance to score, fitness, opponent form, no server needed
+./.venv/bin/python tests/test_leagues.py          # a manager's mini-leagues, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the palette
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
@@ -53,7 +54,8 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/priors.py` | Elo prior (FPL-Core-Insights) and recent per-gameweek minutes |
 | `backend/xpts.py` | The expected-points engine |
 | `backend/solver.py` | Multi-gameweek MIP (PuLP/CBC), alternative paths via no-good cuts |
-| `backend/analysis.py` | Chips, Rate My Team, compare, weekly picks, mini-leagues |
+| `backend/analysis.py` | Chips, Rate My Team, compare, weekly picks, mini-league analysis |
+| `backend/leagues.py` | A manager's mini-leagues from their FPL profile: every league, their place, the leader and the gap |
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
 | `backend/demo.py` | The demo team (ID 0, "Gut Feeling FC") for visitors who don't play FPL: a legal squad picked on vibes and an invented season |
 | `frontend/index.html` | Shell: the opening film's stage, top bar, the page head with the season race bar, the five-tab dock, the landing screen (pitch scene), logo, scripts |

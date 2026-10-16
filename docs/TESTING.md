@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team. 124 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team and the leagues list. 134 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -57,6 +57,25 @@ What it covers:
   counts up.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
+
+## A manager's mini-leagues (no server needed)
+
+```bash
+./.venv/bin/python tests/test_leagues.py
+```
+
+On payloads shaped like FPL's own (`/entry/{id}/` and the 50-a-page standings):
+which standings page a rank sits on; private vs FPL-own vs head-to-head leagues;
+the leader, the gap to the leader, the points behind the manager above and ahead
+of the one below — and that a neighbour on a page that wasn't read is **not**
+guessed; a manager on page 3 is found by reading page 3 and not page 2; a league
+that fails to load keeps what the profile says; only the first 15 private leagues
+are read in full; no leagues at all.
+
+The e2e suite's leagues run calls the real endpoints offline (a real team, the
+demo team, an unknown team) and then stubs the leagues answer to check the list,
+the summary tiles, the phone fit, and that **Analyse** opens that league with the
+manager always included (`entry=`).
 
 ## The planner's rules (no server needed)
 

@@ -334,12 +334,49 @@ async function demoTeam(browser){
   await ctx.close();
 }
 
+// Every league a manager is in: the real endpoints offline, then a stubbed answer shaped like FPL's own.
+async function myLeagues(browser){
+  const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
+  const page = await ctx.newPage();
+  const errs = []; page.on('pageerror', e => errs.push(e.message));
+  await page.addInitScript(() => { localStorage.setItem('fplai_intro', '"off"'); localStorage.setItem('fplai_team', '"1"'); });
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  const api = await page.evaluate(async () => {
+    const get = u => fetch(u).then(async r => ({ s: r.status, j: await r.json() }));
+    return { real: await get('/api/entry/1/leagues'), demo: await get('/api/entry/0/leagues'), none: await get('/api/entry/99999999/leagues') };
+  });
+  ok('leagues: a real team answers with a list and a summary', api.real.s === 200 && Array.isArray(api.real.j.leagues) && 'summary' in api.real.j, JSON.stringify(api.real.j).slice(0, 80));
+  ok('leagues: the demo team is in none, and says so', api.demo.s === 200 && api.demo.j.demo === true && api.demo.j.leagues.length === 0);
+  ok('leagues: an unknown team is a readable 404', api.none.s === 404 && /No FPL team/.test(api.none.j.detail || ''));
+  const fake = { entry:1, team:'Plain FC', manager:'Anna Y', summary:{ private:2, leading:1, top3:2, climbing:1, falling:0, best:{ id:888, name:'Work', rank:1, size:9 }, unread:0 },
+    leagues:[
+      { id:268323, name:'Friends', kind:'private', my_rank:3, last_rank:4, movement:1, size:12, my_total:470, my_gw:70, gw_avg:51, gap_to_leader:30, behind_next:10, ahead_of_next:15, i_lead:false, leader:{ entry_name:'Leaders', total:500 } },
+      { id:888, name:'Work', kind:'private', my_rank:1, last_rank:1, movement:0, size:9, my_total:610, my_gw:65, gw_avg:40, gap_to_leader:0, ahead_of_next:10, i_lead:true, leader:{ entry_name:'Plain FC', total:610 } },
+      { id:55, name:'Head to head', kind:'h2h', my_rank:2 },
+      { id:314, name:'Overall', kind:'system', my_rank:1200000, last_rank:1250000, movement:50000, size:11500000, percentile:10 } ] };
+  await page.route('**/api/entry/*/leagues', r => r.fulfill({ json: fake }));
+  await page.goto(BASE + '#leagues/league', { waitUntil: 'networkidle' });
+  await page.waitForSelector('#lgList table', { timeout: 20000 });
+  ok('leagues: every private league is listed with place, points and the gap', (await page.evaluate(() => document.querySelectorAll('#lgList .well')[0].querySelectorAll('tbody tr').length)) === 2
+     && /Friends/.test(await page.textContent('#lgList')) && /−30/.test(await page.textContent('#lgList')) && /Leading/.test(await page.textContent('#lgList')));
+  ok('leagues: FPL’s own and head-to-head leagues are listed apart', /Overall/.test(await page.textContent('#lgList')) && /head-to-head/.test(await page.textContent('#lgList')) && /top 10%/.test(await page.textContent('#lgList')));
+  ok('leagues: the summary tiles count them', (await page.$$('#lgList .tile')).length === 4 && /Work/.test(await page.textContent('#lgList .tile:last-child')));
+  ok('leagues: the list fits the phone', await noOverflow(page), lastOverflow.join(', '));
+  await page.screenshot({ path: `${OUT}/m-30-my-leagues.png` });
+  const [req] = await Promise.all([page.waitForRequest(r => /\/api\/league\/268323/.test(r.url())), page.click('[data-lg="268323"]')]);
+  ok('leagues: Analyse opens that league with the manager always included', /[?&]entry=1(&|$)/.test(req.url()), req.url());
+  ok('leagues: the league id is filled in for you', (await page.inputValue('#lgId')) === '268323');
+  ok('leagues: no script errors', errs.length === 0, errs.slice(0, 3).join(' || '));
+  await ctx.close();
+}
+
 (async () => {
   const browser = await chromium.launch();
   try { await phone(browser); } catch (e) { ok('phone run completed', false, e.message.split('\n')[0]); }
   try { await desktop(browser); } catch (e) { ok('desktop run completed', false, e.message.split('\n')[0]); }
   try { await reducedMotion(browser); } catch (e) { ok('reduced-motion run completed', false, e.message.split('\n')[0]); }
   try { await demoTeam(browser); } catch (e) { ok('demo run completed', false, e.message.split('\n')[0]); }
+  try { await myLeagues(browser); } catch (e) { ok('leagues run completed', false, e.message.split('\n')[0]); }
   await browser.close();
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;

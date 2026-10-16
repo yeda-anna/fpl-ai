@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-16 — All your mini-leagues, from a Team ID
+
+- **Leagues → Mini-league** now opens with **every league a manager is in**: type any
+  FPL Team ID (yours is filled in) and it reads their public profile. For each
+  private league: their place and how far they moved since last week, their points
+  and this week's score against the league's average, the leader, the gap to the
+  leader and to the managers either side. FPL's own leagues (Overall, country,
+  club …) and head-to-head leagues are listed with place and percentile, and four
+  tiles summarise it (leagues, leading, moving, best place).
+- **Analyse** on a league opens the existing rival analysis (what they own, effective
+  ownership, who's likeliest to win) for it, and the manager is **always in the
+  table**, tagged "you", even when they sit outside the top 12.
+- New `GET /api/entry/{id}/leagues`; `GET /api/league/{id}` takes `entry=`. Up to
+  15 private leagues are read in full, four at a time; the demo team is in none.
+
 ## 2026-10-13 — The planner's new rules: form, chance to score, fitness, opponents
 
 - **Recent form counts.** A player's scoring rate now blends his season xG/xA
