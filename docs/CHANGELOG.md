@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-17 — Behind the scenes: every change is built and checked before it ships
+
+- Nothing changes in the app itself. Every pull request is now **built the same
+  way Railway builds the live site, started up and smoke-tested** before it can
+  be merged, so a broken build or a change that won't start never reaches you.
+- The unit tests also run on every pull request, on both the Python the live
+  site uses and the older one the app promises to support, along with a syntax
+  check of the app's scripts and the colour-contrast check.
+- `scripts/smoke.sh` checks any running copy (local, preview or live) in one go.
+
 ## 2026-10-17 — Logs you can search
 
 - The server now writes **one JSON line per event** to stdout, which Railway's log
