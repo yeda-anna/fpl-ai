@@ -39,7 +39,9 @@ npm --prefix tests test        # 136 checks, phone 390×844 + desktop 1440×900 
 ./.venv/bin/python tests/test_season.py            # the season rank chart's data, no server needed
 ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # every unit test at once (rules, solver, analysis, scout, API routes on a made-up league), no server or network
 ./.venv/bin/python tests/test_telemetry.py        # structured JSON logs, no server needed
+./.venv/bin/python tests/test_ci_scripts.py       # the CI gate's own scripts, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the palette
+scripts/smoke.sh http://127.0.0.1:8787            # health, page, build id, assets on a running copy (--live: unknown team → 404)
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
@@ -75,6 +77,9 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `tests/fakes.py` | A made-up 20-club league in FPL's own shape, for the unit tests (no network) |
 | `scripts/calibrate.py` | Projection sanity check |
 | `scripts/check_contrast.py` | WCAG AA check for the palette |
+| `scripts/smoke.sh` | Smoke test for a running copy (CI's built image, a preview, live) |
+| `scripts/check_start_command.py` | `Procfile` and `railway.json` start the app the same way |
+| `.github/workflows/ci.yml` | CI on every PR and push to `main`: unit tests on 3.9 + 3.12, frontend checks, a Railpack build that boots and is smoke-tested |
 | `scripts/digitize.py` | From the supplied image: `portrait.webp`, `logo.webp`, the PNG icons and `portrait.js` |
 | `docs/` | Architecture, model, solver, API, design, data, testing, deployment |
 | `.claude/agents/` | Specialist sub-agents for this repo |
@@ -189,6 +194,9 @@ suite at **0 failures** — see `docs/TESTING.md`.
 
 **Git and deploy**
 - Railway deploys `main` automatically (`railway.json`). Health check: `/healthz`.
+- Change `main` only through a pull request; CI (`unit (py3.9)`, `unit (py3.12)`,
+  `frontend`, `build`) must be green before it merges (`docs/TESTING.md` → CI).
+  Keep `Procfile` and `railway.json`'s start command identical.
 - Commit messages: imperative subject, a body that says *why*.
 - Never force-push `main`.
 

@@ -1,5 +1,41 @@
 # Testing
 
+## CI: the gate on every pull request
+
+`main` deploys to production as soon as it changes, so every pull request into
+`main` runs `.github/workflows/ci.yml` (GitHub Actions), and so does every push
+to `main`. Four jobs, each a required check on `main`:
+
+| Check | What it runs | Red means |
+| --- | --- | --- |
+| `unit (py3.9)` | `pip install -r requirements.txt`, `python -m compileall -q backend tests scripts`, then every unit test with `FPL_CACHE_ONLY=1` | A test failed, or the code uses something Python 3.9 doesn't have (`match`, a runtime `X \| Y`, a 3.10+ API) |
+| `unit (py3.12)` | the same on 3.12, what Railway runs | A test failed on production's Python |
+| `frontend` | `node --check` on every `frontend/*.js` (not `vendor/`), then `scripts/check_contrast.py` | A syntax error that would ship straight to phones, or a colour below WCAG AA |
+| `build` | `scripts/check_start_command.py`, then builds the image with the pinned **Railpack** CLI (Railway's builder), runs it with `FPL_CACHE_ONLY=1` and runs `scripts/smoke.sh` against it | `Procfile` and `railway.json` start the app differently, a dependency or Python version won't install, or the built app doesn't boot and serve its page |
+
+Everything is offline: no job calls the FPL API. The Playwright suite isn't in
+CI yet — it needs live FPL data; phase 2 of `plans/ci-build-deploy-gate.md`
+runs it against a Railway preview of each PR. Until then, run it locally as
+below and put the counts in the PR.
+
+A red `build` job prints the Railpack plan, the build log and the app's own
+logs (`App logs` step). To repeat it locally you need Docker:
+
+```bash
+docker run --rm --privileged -d --name buildkit moby/buildkit:v0.34.0
+BUILDKIT_HOST=docker-container://buildkit railpack build . --name fpl-ai:ci
+docker run -d --name app -p 8000:8000 -e PORT=8000 -e FPL_CACHE_ONLY=1 fpl-ai:ci
+scripts/smoke.sh http://127.0.0.1:8000
+```
+
+`scripts/smoke.sh <url> [--live]` works on any running copy: `/healthz` is 200
+with `"ok": true` (retried for up to 60 s while it boots), `/` carries a build
+id that `/version` agrees with, and the first content-hashed `/static/…?v=`
+asset in the page loads. `--live` adds `/api/entry/999999999` → 404, which
+needs real FPL data (offline with an empty cache it can't build the model).
+Railpack and BuildKit are pinned by version (Railpack also by checksum) and
+every action by commit, in `ci.yml`; bump them there.
+
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
@@ -78,6 +114,8 @@ network or the `.cache/` folder.
 | `test_season.py` | The season rank chart's data: a smaller rank is a climb, weeks in order, unranked weeks dropped, best/worst/latest, and `/api/entry` carrying `season` in step with `history` |
 | `test_api.py` | Every route through FastAPI's test client on the demo team: shapes the frontend reads, `no-store` headers, a minutes override and a hand-entered transfer flowing through, and unknown teams as readable 404s |
 | `test_telemetry.py` | Structured logs: every line is single-line JSON with Railway's level names, uvicorn shares the handler with its access log off, a request is logged by route template and never with the Team ID in its path (404 info, unhandled exception a 500 at error, `/healthz` debug), FPL fetches log their endpoint kind (an outage is a warning when a stale copy is served, an error when not), and a solve logs its time, status and `feasible` |
+
+| `test_ci_scripts.py` | The CI gate's own scripts: `check_start_command.py` reads both files, ignores spacing and reports a mismatch or a missing command; `smoke.sh` passes a healthy app (and waits for one that's still booting) and fails, with a readable reason, on a bad `/healthz`, a page error, a missing build id, a `/version` that disagrees, a missing asset, and — with `--live` — an unknown team that isn't a 404. Runs a tiny local server; skips if bash or curl is missing |
 
 `test_api.py` holds one `expectedFailure`: `/api/meta` returns a 500 when the
 Elo prior can't be fetched. Remove the decorator once that's fixed.
