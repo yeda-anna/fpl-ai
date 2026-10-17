@@ -38,6 +38,9 @@ npm --prefix tests test        # 134 checks, phone 390×844 + desktop 1440×900 
 ./.venv/bin/python tests/test_leagues.py          # a manager's mini-leagues, no server needed
 ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # every unit test at once (rules, solver, analysis, scout, API routes on a made-up league), no server or network
 ./.venv/bin/python tests/test_telemetry.py        # structured JSON logs, no server needed
+./.venv/bin/python tests/test_serve_fake.py       # the fake-league server for screenshots, no server needed
+./.venv/bin/python scripts/serve_fake.py --port 8790   # the app on the made-up league, network off (demo team)
+node scripts/screenshots.js --after http://127.0.0.1:8790 --view home/squad   # phone + desktop shots; fails on console errors / overflow
 ./.venv/bin/python tests/test_ci_scripts.py       # the CI gate's own scripts, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the palette
 scripts/smoke.sh http://127.0.0.1:8787            # health, page, build id, assets on a running copy (--live: unknown team → 404)
@@ -76,6 +79,8 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `tests/fakes.py` | A made-up 20-club league in FPL's own shape, for the unit tests (no network) |
 | `scripts/calibrate.py` | Projection sanity check |
 | `scripts/check_contrast.py` | WCAG AA check for the palette |
+| `scripts/serve_fake.py` | The app on the made-up league in `tests/fakes.py`, network off: any checkout (`--repo`), the demo team, for screenshots and UI checks without FPL |
+| `scripts/screenshots.js` | Before/after screenshots of one view at phone and desktop (Playwright from `tests/`), failing on console errors or overflow past 390px |
 | `scripts/smoke.sh` | Smoke test for a running copy (CI's built image, a preview, live) |
 | `scripts/check_start_command.py` | `Procfile` and `railway.json` start the app the same way |
 | `.github/workflows/ci.yml` | CI on every PR and push to `main`: unit tests on 3.9 + 3.12, frontend checks, a Railpack build that boots and is smoke-tested |
@@ -205,3 +210,5 @@ suite at **0 failures** — see `docs/TESTING.md`.
 - Touching the UI? `docs/DESIGN.md` and the `brand-and-design` skill.
 - Adding an endpoint or a view? The `add-feature` skill.
 - Shipping? The `deploy-railway` skill.
+- A UI pull request? The `pr-screenshots` skill (`.claude/skills/pr-screenshots/`): before/after shots for the description.
+- Opening or tidying a pull request? The `create-pr` skill (`.claude/skills/create-pr/`): one squashed commit, a short description.
