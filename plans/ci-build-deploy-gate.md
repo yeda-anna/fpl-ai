@@ -1,6 +1,6 @@
 # Plan: a build + deploy gate on every pull request
 
-**Status:** proposal, waiting for owner approval · **Author:** rugvedj (with Claude) · **Date:** 2026-10-17
+**Status:** approved (PR #19); phase 1 implemented in PR A `chore/ci-workflow` · **Author:** rugvedj (with Claude) · **Date:** 2026-10-17
 **Base:** `main` @ `7ad7e86` (after #17, the baseline unit tests)
 
 ## 1. Goal
