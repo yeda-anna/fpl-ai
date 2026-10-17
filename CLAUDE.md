@@ -37,6 +37,7 @@ npm --prefix tests test        # 134 checks, phone 390×844 + desktop 1440×900 
 ./.venv/bin/python tests/test_model_rules.py      # form, chance to score, fitness, opponent form, no server needed
 ./.venv/bin/python tests/test_leagues.py          # a manager's mini-leagues, no server needed
 ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # every unit test at once (rules, solver, analysis, scout, API routes on a made-up league), no server or network
+./.venv/bin/python tests/test_telemetry.py        # structured JSON logs, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the palette
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
@@ -58,6 +59,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/analysis.py` | Chips, Rate My Team, compare, weekly picks, mini-league analysis |
 | `backend/leagues.py` | A manager's mini-leagues from their FPL profile: every league, their place, the leader and the gap |
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
+| `backend/telemetry.py` | Structured logs: one JSON line per event on stdout for Railway, a line per request by route template; `LOG_LEVEL` |
 | `backend/demo.py` | The demo team (ID 0, "Gut Feeling FC") for visitors who don't play FPL: a legal squad picked on vibes and an invented season |
 | `frontend/index.html` | Shell: the opening film's stage, top bar, the page head with the season race bar, the five-tab dock, the landing screen (pitch scene), logo, scripts |
 | `frontend/styles.css` | Design system: the tokens, the Chakra Petch faces, "the slant", components, the Magic UI effects, the film, landing, dock, breakpoints |
@@ -89,6 +91,9 @@ suite at **0 failures** — see `docs/TESTING.md`.
   are legacy and unused.
 - Network calls go through `fpl_api.get()` so caching and offline mode keep working.
 - Unknown teams must return **404** with a readable `detail`, not a 500.
+- Log with `telemetry.event(log, "area.what", **fields)` (`log = telemetry.get_logger(__name__)`),
+  never `print`. Never log a Team ID, league ID, URL path with an ID, or a request
+  body: routes by template, FPL calls by endpoint kind (`docs/DEPLOYMENT.md` → Logs).
 - The solver must check `feasible` before trusting a plan. A plan built from an
   empty squad must not spend free transfers (see `solver.py`).
 

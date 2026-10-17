@@ -7,11 +7,16 @@ now against points later and paying -4 hits only when they pay for themselves.
 """
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any, Dict, List, Optional
 
 import pulp
 
+import telemetry
 from rules import roll_free_transfers
+
+log = telemetry.get_logger("solver")
 
 SQUAD_SIZE = 15
 XI_SIZE = 11
@@ -224,7 +229,9 @@ def solve(rows: List[Dict[str, Any]],
 
     # Stop once the plan is provably within GAP of the best possible. Projections
     # carry far more uncertainty than 0.5%, so proving the last sliver is wasted time.
+    started = time.perf_counter()
     status = prob.solve(pulp.PULP_CBC_CMD(msg=0, timeLimit=time_limit, gapRel=gap))
+    solve_ms = telemetry.ms_since(started)
 
     def val(v):
         return int(round(v.value() or 0))
@@ -289,6 +296,10 @@ def solve(rows: List[Dict[str, Any]],
     # sol_status > 0 means CBC holds a genuine integer-feasible plan (optimal, or the
     # best found before the time limit). Anything else and the variables are junk.
     feasible = getattr(prob, "sol_status", 1) > 0 and pulp.LpStatus[status] != "Infeasible"
+    telemetry.event(log, "solver.solved", logging.INFO if feasible else logging.WARNING,
+                    ms=solve_ms, status=pulp.LpStatus[status], feasible=feasible,
+                    horizon=horizon, pool_size=len(ids), time_limit=time_limit,
+                    hit_time_limit=solve_ms >= time_limit * 1000, alternative=bool(forbid))
     signature = [(p, t) for t in T for p in ids if val(tin[p][t]) == 1]
 
     passed_over = sorted((index[p] for p in doubtful if p not in owned), key=lambda r: -r["xpts_total"])[:5]

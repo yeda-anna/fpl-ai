@@ -76,6 +76,7 @@ network or the `.cache/` folder.
 | `test_analysis.py` | Best XI is legal and unbeaten; the Free Hit XI keeps the club limit and skips the injured; Rate My Team scores stay 0–100 and match the grade; compare, weekly picks, chips (used chips aren't offered, two chips never share a week) and mini-league odds (sum to 100, repeatable, a failed rival is skipped) |
 | `test_scout.py` | Copilot intent matching, price risers/fallers, set-piece takers, DEFCON thresholds, predicted XIs, and Copilot answers drawn from your own squad |
 | `test_api.py` | Every route through FastAPI's test client on the demo team: shapes the frontend reads, `no-store` headers, a minutes override and a hand-entered transfer flowing through, and unknown teams as readable 404s |
+| `test_telemetry.py` | Structured logs: every line is single-line JSON with Railway's level names, uvicorn shares the handler with its access log off, a request is logged by route template and never with the Team ID in its path (404 info, unhandled exception a 500 at error, `/healthz` debug), FPL fetches log their endpoint kind (an outage is a warning when a stale copy is served, an error when not), and a solve logs its time, status and `feasible` |
 
 `test_api.py` holds one `expectedFailure`: `/api/meta` returns a 500 when the
 Elo prior can't be fetched. Remove the decorator once that's fixed.
