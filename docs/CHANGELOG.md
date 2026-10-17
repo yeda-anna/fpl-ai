@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-17 — Logs you can search
+
+- The server now writes **one JSON line per event** to stdout, which Railway's log
+  explorer reads as structured logs: filter by `@event:fpl.fetch_failed`,
+  `@status:>=500` or `@route:/api/solve` and so on (`docs/DEPLOYMENT.md` → Logs).
+- Every request gets a line with its method, **route template**, status and time
+  taken. Team and league IDs are never logged: routes are logged as templates
+  (`/api/entry/{team_id}`) and FPL calls by kind (`entry`).
+- Problems that used to vanish now show up: an FPL outage (and whether a stale
+  copy was served instead), a failed start-up warm-up, a missing Elo prior or
+  recent-minutes feed, and any plan the solver couldn't make feasible. Engine
+  rebuilds and every solve log how long they took.
+- uvicorn's own lines go through the same JSON format on stdout (they used to go
+  to stderr, which Railway shows as errors); its plain access log is replaced by
+  the request line. `LOG_LEVEL` (default `INFO`) sets how much is written.
+
 ## 2026-10-16 — All your mini-leagues, from a Team ID
 
 - **Leagues → Mini-league** now opens with **every league a manager is in**: type any

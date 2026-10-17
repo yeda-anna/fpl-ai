@@ -70,3 +70,41 @@ FPL_CACHE_ONLY=1 ./run.sh
 | --- | --- | --- |
 | `PORT` | 8787 local / platform-set | listen port |
 | `FPL_CACHE_ONLY` | off | `1` = never call the FPL API; serve `.cache/` only |
+| `LOG_LEVEL` | `INFO` | `DEBUG` adds static files, `/healthz` and offline cache misses; `WARNING` keeps only problems |
+
+## Logs
+
+`backend/telemetry.py` writes one JSON object per line to **stdout** (nothing to
+stderr, which Railway marks as an error). Railway keeps them for the plan's log
+retention (3 days free, 7 Hobby, 30 Pro) and lets you search any field in the
+Log Explorer or with `railway logs`:
+
+```
+@event:http.request @status:>=500          # server errors
+@event:http.request @route:/api/solve @ms:>5000
+@event:fpl.fetch_failed                    # FPL outages; served_stale says if users still got data
+@event:engine.warmup_failed                # a bad boot
+@event:solver.solved @feasible:false
+```
+
+| Event | Level | Fields |
+| --- | --- | --- |
+| `http.request` | info (debug for `/static/*`, `/healthz`; error for 5xx) | `method`, `route` (template, `null` if unmatched), `status`, `ms`, `error` on an unhandled exception |
+| `fpl.fetch` | info | `endpoint` (kind: `entry`, `picks`, `live` …), `status`, `ms` — only on a cache miss |
+| `fpl.fetch_failed` | warn if a stale copy was served, error if not, info for a 404 | `endpoint`, `status`, `error`, `ms`, `served_stale` |
+| `fpl.cache_only_miss` | debug | `endpoint` |
+| `engine.built` | info | `ms`, `current_gw`, `next_gw`, `players`, `elo_prior`, `recent_gws` |
+| `engine.elo_prior_unavailable`, `engine.recent_live_unavailable` | warn | `error`, `detail` |
+| `engine.warmup_failed` | error | `error`, `traceback` |
+| `solver.solved` | info, warn if not feasible | `ms` (CBC time), `status`, `feasible`, `horizon`, `pool_size`, `time_limit`, `hit_time_limit`, `alternative` |
+
+uvicorn's own messages arrive as `logger: uvicorn.error` lines (with a
+`traceback` for an unhandled exception); its plain-text access log is turned off
+because the `http.request` line replaces it without the raw path.
+
+**Never log a Team ID, a league ID or a request body.** Log routes by template and
+FPL calls by endpoint kind; add new events with `telemetry.event(log, "area.what", **fields)`.
+
+Railway has no built-in log drain. For retention beyond the plan's window,
+forward stdout with a collector (Vector, Fluent Bit) or an OpenTelemetry exporter.
+
