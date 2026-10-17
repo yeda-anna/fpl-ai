@@ -385,6 +385,30 @@ td.num{font-style:italic;font-weight:700}
 .mins.set{background:var(--accent-wash);color:var(--lime);font-weight:700}
 .mins input{width:44px;padding:2px 4px;font-size:12px;border-radius:5px}
 .legend{font-size:13px;color:var(--ink-3);margin-top:12px;line-height:1.6}
+
+/* Season rank chart (Home → My squad): one green line on hairline grids, the current
+   rank at its end, the best week ringed. Text stays in ink tokens, never the line colour. */
+.season-lead{color:var(--ink-2);margin:2px 0 8px;line-height:1.5;overflow-wrap:anywhere}
+.season-lead b{color:var(--ink)}
+.season-plot{position:relative;margin:4px 0 6px;min-height:190px;border-radius:var(--r);touch-action:pan-y}
+.season-plot:focus-visible{outline:2px solid var(--lime);outline-offset:4px}
+.season-svg{display:block;overflow:visible}
+.season-svg .grid{stroke:var(--line-2);stroke-width:1}
+.season-svg .ax{fill:var(--ink-3);font:italic 600 11px var(--font);font-variant-numeric:tabular-nums}
+.season-svg .ax.lbl{fill:var(--ink-2)}
+.season-svg .end{fill:var(--ink);font:italic 700 13px var(--font);font-variant-numeric:tabular-nums}
+.season-line{fill:none;stroke:var(--green);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.season-dot,.season-hover{fill:var(--green);stroke:var(--surface);stroke-width:2}
+.season-best{fill:var(--surface);stroke:var(--green);stroke-width:2}
+.season-cross{stroke:var(--ink-3);stroke-width:1}
+.season-hit{fill:transparent;cursor:crosshair}
+.season-tip{position:absolute;pointer-events:none;background:var(--surface-3);border-radius:var(--r-sm);
+  padding:7px 10px;font-size:12.5px;line-height:1.4;color:var(--ink-2);white-space:nowrap;box-shadow:var(--sh-3)}
+.season-tip .tip-gw{color:var(--ink-3);font-weight:600}
+.season-tip .tip-val{color:var(--ink);font-weight:700;font-size:14px}
+.season-table{margin-top:6px}
+.season-table summary{display:inline-flex}
+.season-table .well{margin-top:10px;max-height:340px}
 /* The demo team's guided tour (Home → My squad, demo only) */
 .demo-lead{margin:0 0 10px;color:var(--ink-2);line-height:1.6;overflow-wrap:anywhere}
 .demo-lead b{color:var(--ink)}

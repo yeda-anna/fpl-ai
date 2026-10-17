@@ -418,6 +418,7 @@ def team(team_id: int, horizon: int = Query(5, ge=1, le=10), overrides: Optional
         "history": [{"gw": h["event"], "points": h["points"], "rank": h["overall_rank"],
                      "transfers": h["event_transfers"], "hits": h["event_transfers_cost"]}
                     for h in ctx["history"].get("current", [])],
+        "season": analysis.season_history(ctx["history"].get("current", [])),
     }
 
 

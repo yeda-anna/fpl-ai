@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-17 — Your season, as a rank chart
+
+- **Home → My squad** ends with **Your season**: your overall rank after every
+  gameweek, one green line, best at the top. Rank runs on a log scale, so climbing
+  from 2M to 1M looks as big as 200K to 100K. The current rank sits at the end of the
+  line, your best week is ringed, and a line above says where you are, how far you
+  moved last week and your best rank so far.
+- Hover or tap the chart (or focus it and use ← → Home End) for a week's rank, its
+  climb or drop, points and any hit. **Week by week** opens the same numbers as a table.
+- `GET /api/entry/{id}` now carries `season`: each ranked week with its `climb`
+  (positive = up the table), plus `best`, `worst` and `latest`. `history` is unchanged.
+- Drawn by hand as SVG at the card's own width (redrawn on resize), in the race-day
+  tokens; no new library. Works for the demo team too.
+
 ## 2026-10-17 — Behind the scenes: every change is built and checked before it ships
 
 - Nothing changes in the app itself. Every pull request is now **built the same
