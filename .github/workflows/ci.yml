@@ -1,0 +1,114 @@
+# The gate in front of production: Railway deploys every push to `main`, so a
+# pull request must build the way Railway builds it, boot, answer its health
+# check and pass the offline tests before it can be merged.
+# Plan and reasoning: plans/ci-build-deploy-gate.md. How to read a red run:
+# docs/TESTING.md → CI.
+#
+# The job names below are the required status checks on `main`; renaming one
+# means updating the ruleset too.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a PR cancels its older run. Runs on `main` are never cancelled:
+# Railway's "Wait for CI" waits on them.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  RAILPACK_VERSION: "0.42.0"
+  # sha256 of railpack-v0.42.0-x86_64-unknown-linux-musl.tar.gz, from the release's checksums.txt
+  RAILPACK_SHA256: "81bca91d0577c7650378762609116d12d8630e2cfc1779e41d3ac3964fc7194b"
+  BUILDKIT_IMAGE: "moby/buildkit:v0.34.0"
+
+jobs:
+  unit:
+    # 3.9 holds the line on CLAUDE.md's "Python 3.9-compatible" rule;
+    # 3.12 is what production runs (.python-version).
+    name: unit (py${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Compile every module (catches syntax newer than this Python)
+        run: python -m compileall -q backend tests scripts
+      - name: Unit tests (offline, no FPL calls)
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+        env:
+          FPL_CACHE_ONLY: "1"
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: JS syntax (every frontend file; vendor/ is third-party)
+        run: |
+          node --version
+          for f in frontend/*.js; do
+            echo "node --check $f"
+            node --check "$f"
+          done
+      - name: Colour contrast (WCAG AA)
+        run: python3 scripts/check_contrast.py
+
+  build:
+    name: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Procfile and railway.json start the app the same way
+        # Railway runs railway.json's startCommand; the Railpack CLI below reads the Procfile.
+        run: python3 scripts/check_start_command.py
+      - name: Install Railpack ${{ env.RAILPACK_VERSION }}
+        run: |
+          tarball="railpack-v${RAILPACK_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$tarball" \
+            "https://github.com/railwayapp/railpack/releases/download/v${RAILPACK_VERSION}/$tarball"
+          echo "${RAILPACK_SHA256}  $RUNNER_TEMP/$tarball" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/railpack"
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP/railpack" railpack
+          echo "$RUNNER_TEMP/railpack" >> "$GITHUB_PATH"
+      - name: Start BuildKit
+        run: docker run --rm --privileged -d --name buildkit "$BUILDKIT_IMAGE"
+      - name: Show the build plan
+        run: railpack info .
+      - name: Build the image the way Railway does
+        run: railpack build . --name fpl-ai:ci --progress plain
+        env:
+          BUILDKIT_HOST: docker-container://buildkit
+      - name: Boot it (offline, as a fresh deploy with an empty cache)
+        run: docker run -d --name app -p 8000:8000 -e PORT=8000 -e FPL_CACHE_ONLY=1 fpl-ai:ci
+      - name: Smoke test
+        run: bash scripts/smoke.sh http://127.0.0.1:8000
+      - name: App logs
+        if: always()
+        run: docker logs app 2>&1 || true
