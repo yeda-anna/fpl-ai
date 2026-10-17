@@ -58,6 +58,28 @@ What it covers:
 - No console errors and no failed requests (besides the deliberate unknown
   team).
 
+## Unit tests, all at once (no server, no network)
+
+```bash
+./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'    # every file below, ~10 s
+```
+
+Most of the unit tests run the real backend code on **a made-up 20-club league**
+(`tests/fakes.py`): FPL-shaped `bootstrap-static` and `fixtures` payloads, built
+from each player's id, so they come out the same on every run. Nothing touches the
+network or the `.cache/` folder.
+
+| File | What it proves |
+| --- | --- |
+| `test_rules.py` | Scoring, squad limits, formations and both chip windows are read from bootstrap-static; an empty payload falls back to the documented rules |
+| `test_solver.py` | Every plan is a squad FPL would accept in every week (15, 2-5-5-3, three a club, money in the bank) with a legal XI, captain ≠ vice, hits at 4 points, FPL's free-transfer roll-over, a different route when the best one is ruled out, Wildcards free and building from scratch spending nothing |
+| `test_analysis.py` | Best XI is legal and unbeaten; the Free Hit XI keeps the club limit and skips the injured; Rate My Team scores stay 0–100 and match the grade; compare, weekly picks, chips (used chips aren't offered, two chips never share a week) and mini-league odds (sum to 100, repeatable, a failed rival is skipped) |
+| `test_scout.py` | Copilot intent matching, price risers/fallers, set-piece takers, DEFCON thresholds, predicted XIs, and Copilot answers drawn from your own squad |
+| `test_api.py` | Every route through FastAPI's test client on the demo team: shapes the frontend reads, `no-store` headers, a minutes override and a hand-entered transfer flowing through, and unknown teams as readable 404s |
+
+`test_api.py` holds one `expectedFailure`: `/api/meta` returns a 500 when the
+Elo prior can't be fetched. Remove the decorator once that's fixed.
+
 ## A manager's mini-leagues (no server needed)
 
 ```bash
@@ -162,6 +184,7 @@ See `MODEL.md` for what "healthy" looks like.
   screenshots — the suite can't judge taste.
 - Any model change: run the calibration before and after and put both numbers in
   the commit message.
-- Any solver change: solve team 1 at horizons 1, 5 and 8 and from scratch
-  (`paths: 3`) and check every plan is `feasible`.
+- Any solver change: run `tests/test_solver.py`, then solve team 1 at horizons
+  1, 5 and 8 and from scratch (`paths: 3`) and check every plan is `feasible`.
+- Any backend change: the unit tests (`-m unittest discover -s tests`) stay green.
 - Headless only. Don't drive the user's own browser.

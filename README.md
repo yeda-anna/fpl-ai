@@ -144,6 +144,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
     npm --prefix tests test            # 134 headless checks, phone + desktop + reduced motion + the demo
+    ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # unit tests, no server needed
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
 See [`docs/TESTING.md`](docs/TESTING.md).

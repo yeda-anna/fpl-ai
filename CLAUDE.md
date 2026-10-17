@@ -36,6 +36,7 @@ npm --prefix tests test        # 134 checks, phone 390×844 + desktop 1440×900 
 ./.venv/bin/python tests/test_demo.py             # the demo team is a legal squad, no server needed
 ./.venv/bin/python tests/test_model_rules.py      # form, chance to score, fitness, opponent form, no server needed
 ./.venv/bin/python tests/test_leagues.py          # a manager's mini-leagues, no server needed
+./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # every unit test at once (rules, solver, analysis, scout, API routes on a made-up league), no server or network
 python3 scripts/check_contrast.py                 # WCAG AA for the palette
 for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
@@ -68,6 +69,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `frontend/portrait.webp`, `logo.webp`, `icon-*.png` | The drone-portrait image the owner supplied, its square face crop (the logo) and the home-screen icons — generated |
 | `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, Theatre.js core 0.7, AutoAnimate 0.10, Chakra Petch (fonts/) — vendored, see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
+| `tests/fakes.py` | A made-up 20-club league in FPL's own shape, for the unit tests (no network) |
 | `scripts/calibrate.py` | Projection sanity check |
 | `scripts/check_contrast.py` | WCAG AA check for the palette |
 | `scripts/digitize.py` | From the supplied image: `portrait.webp`, `logo.webp`, the PNG icons and `portrait.js` |
