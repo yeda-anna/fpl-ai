@@ -150,6 +150,26 @@ week, skipped weeks banking one, hits, the five-transfer cap, and — the case
 that was wrong — a Wildcard or Free Hit week, which keeps what was banked and
 adds nothing.
 
+## Before/after screenshots (UI pull requests)
+
+`scripts/serve_fake.py` serves any checkout on the made-up league, network off, so
+`main` and a branch can run side by side; `scripts/screenshots.js` shoots one view on
+both at phone and desktop and **fails** on console errors, a view that never draws or
+anything wider than 390px. The `pr-screenshots` skill (`.claude/skills/pr-screenshots/`)
+walks through it, up to putting the images in the PR description.
+
+```bash
+git worktree add ../shots-main origin/main
+./.venv/bin/python scripts/serve_fake.py --port 8791 --repo ../shots-main &   # before
+./.venv/bin/python scripts/serve_fake.py --port 8790 &                        # after (this checkout)
+npm --prefix tests install
+node scripts/screenshots.js --before http://127.0.0.1:8791 --after http://127.0.0.1:8790 \
+     --view home/squad --focus '.season-card' --out tests/screenshots/pr
+```
+
+Names and numbers on the fake league are test data. `tests/test_serve_fake.py` keeps
+the server working as the backend changes.
+
 ## Look and motion (by eye)
 
 The suite can't judge whether it looks right. After a UI change, run it, then
