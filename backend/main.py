@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import re
 import threading
@@ -23,7 +24,11 @@ import priors
 import rules as rules_mod
 import scout as scout_mod
 import solver as solver_mod
+import telemetry
 import xpts
+
+telemetry.setup()
+log = telemetry.get_logger("engine")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
@@ -32,6 +37,8 @@ app = FastAPI(title="Papa Ranjeet", version="1.5.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 # Compress the page, the scripts (about 470 KB of animation libraries before gzip) and the JSON.
 app.add_middleware(GZipMiddleware, minimum_size=1024)
+# One JSON log line per request (method, route template, status, ms) - see telemetry.py.
+telemetry.instrument(app)
 
 _lock = threading.Lock()
 _engine = {"obj": None, "built": 0.0}
@@ -42,21 +49,30 @@ ENGINE_TTL = 900
 def engine() -> xpts.Engine:
     with _lock:
         if _engine["obj"] is None or time.time() - _engine["built"] > ENGINE_TTL:
+            start = time.perf_counter()
             bs = fpl_api.bootstrap()
             fx = fpl_api.fixtures()
             probe = xpts.Engine(bs, fx)           # cheap pass, just to read the calendar
             try:
                 elo = priors.elo_strength(bs, priors.fetch_elo(bs, probe.current_gw))
-            except Exception:
+            except Exception as exc:
                 elo = {}
+                telemetry.event(log, "engine.elo_prior_unavailable", logging.WARNING,
+                                error=type(exc).__name__, detail=str(exc)[:200])
             try:
                 live = priors.fetch_recent_live(probe.current_gw)
-            except Exception:
+            except Exception as exc:
                 live = {}
+                telemetry.event(log, "engine.recent_live_unavailable", logging.WARNING,
+                                error=type(exc).__name__, detail=str(exc)[:200])
             _engine["obj"] = xpts.Engine(bs, fx, elo=elo, live_by_gw=live)
             solver_mod.configure(_engine["obj"].rules)
             _engine["built"] = time.time()
             _rows_cache.clear()
+            e = _engine["obj"]
+            telemetry.event(log, "engine.built", ms=telemetry.ms_since(start),
+                            current_gw=e.current_gw, next_gw=e.next_gw, players=len(e.players),
+                            elo_prior=bool(elo), recent_gws=len(live))
         return _engine["obj"]
 
 
@@ -617,7 +633,9 @@ def _warm_up():
         try:
             engine()
         except Exception:
-            pass        # first real request will retry and surface the error
+            # The first real request retries and surfaces the error; log it so a
+            # bad boot (FPL down, empty offline cache) is visible in the deploy logs.
+            telemetry.event(log, "engine.warmup_failed", logging.ERROR, exc_info=True)
     threading.Thread(target=build, daemon=True).start()
 
 

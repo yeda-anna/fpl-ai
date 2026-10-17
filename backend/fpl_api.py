@@ -6,11 +6,16 @@ No auth is required for any of them.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from typing import Any, Dict, List, Optional
 
 import httpx
+
+import telemetry
+
+log = telemetry.get_logger("fpl_api")
 
 BASE = "https://fantasy.premierleague.com/api"
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".cache")
@@ -110,26 +115,38 @@ CACHE_ONLY = os.environ.get("FPL_CACHE_ONLY", "").strip().lower() in ("1", "true
 
 
 def get(path: str, cache_key: str, ttl_key: str) -> Any:
+    # Logs name the endpoint kind (`ttl_key`), never the path or cache key: both carry Team IDs.
     if CACHE_ONLY:
         stale = _stale_cache(cache_key)
         if stale is not None:
             return stale
+        telemetry.event(log, "fpl.cache_only_miss", logging.DEBUG, endpoint=ttl_key)
         raise RuntimeError("FPL_CACHE_ONLY is set and '%s' isn't cached" % cache_key)
     ttl = TTL.get(ttl_key, 600)
     cached = _read_cache(cache_key, ttl)
     if cached is not None:
         return cached
     url = BASE + path
+    start = time.perf_counter()
     try:
         with httpx.Client(timeout=25.0, headers=HEADERS, follow_redirects=True) as client:
             resp = client.get(url)
             resp.raise_for_status()
             data = resp.json()
-    except Exception:
+    except Exception as exc:
         stale = _stale_cache(cache_key)
+        status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+        # A 404 for an unknown team is the caller's 404, not an outage.
+        level = logging.INFO if status == 404 and stale is None else (
+            logging.WARNING if stale is not None else logging.ERROR)
+        telemetry.event(log, "fpl.fetch_failed", level, endpoint=ttl_key, status=status,
+                        error=type(exc).__name__, ms=telemetry.ms_since(start),
+                        served_stale=stale is not None)
         if stale is not None:
             return stale
         raise
+    telemetry.event(log, "fpl.fetch", endpoint=ttl_key, status=resp.status_code,
+                    ms=telemetry.ms_since(start))
     _write_cache(cache_key, data)
     return data
 
