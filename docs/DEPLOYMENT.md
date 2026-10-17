@@ -34,22 +34,24 @@ Railway builds with **Railpack** and redeploys on every push to `main` of
 1. `npm --prefix tests test` against a local server — 0 failures.
 2. Nothing to bump: CSS/JS URLs are content-hashed by the server, and open apps
    reload themselves when they notice the new build.
-3. Commit and `git push origin main`.
-4. Watch the deployment reach **SUCCESS** in Railway.
-5. Smoke test the live site:
+3. Open a pull request into `main` from a branch. **CI** (`.github/workflows/ci.yml`)
+   builds it with Railpack as Railway does, boots it, smoke-tests it and runs
+   the unit and frontend checks — `unit (py3.9)`, `unit (py3.12)`, `frontend`,
+   `build` must all be green (`docs/TESTING.md` → CI).
+4. Merge the pull request; Railway deploys the merge commit.
+5. Watch the deployment reach **SUCCESS** in Railway.
+6. Smoke test the live site:
    ```bash
    U=https://fpl-ai-production-966c.up.railway.app
-   curl -s $U/healthz
-   curl -s $U/version                                          # build id
-   curl -s $U/ | grep -o 'styles.css?v=[0-9a-f]*'               # content hash
-   curl -s -o /dev/null -w '%{http_code}\n' $U/api/entry/1          # 200
-   curl -s -o /dev/null -w '%{http_code}\n' $U/api/entry/999999999  # 404
+   scripts/smoke.sh $U --live                                  # health, page, build id, assets, unknown team → 404
+   curl -s -o /dev/null -w '%{http_code}\n' $U/api/entry/1     # 200
    ```
 
 ### Rolling back
 
-Redeploy the previous deployment from the Railway dashboard, or
-`git revert <sha> && git push`. Never force-push `main`.
+Redeploy the previous deployment from the Railway dashboard (instant, no CI),
+or `git revert <sha>` on a branch and merge it as a pull request. Never
+force-push `main`.
 
 ## Other hosts
 
