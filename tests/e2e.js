@@ -322,6 +322,21 @@ async function demoTeam(browser){
   ok('demo: no made-transfers card for a made-up team', !(await page.$('#v-home-squad .made')));
   ok('demo: nothing is saved on the device', await page.evaluate(() => localStorage.getItem('fplai_team') === null));
   ok('demo: fits the phone', await noOverflow(page), lastOverflow.join(', '));
+  {
+    // Home → My squad: the season rank chart, drawn from /api/entry's season
+    const season = await page.evaluate(() => fetch('/api/entry/0?horizon=5').then(r => r.json()).then(j => j.season));
+    await page.waitForSelector('#v-home-squad .season-card svg', { timeout: 15000 });
+    const drawn = await page.evaluate(() => ({
+      pts: (document.querySelector('.season-line')?.getAttribute('points') || '').trim().split(/\s+/).filter(Boolean).length,
+      end: document.querySelector('.season-svg .end')?.textContent || '', lead: document.querySelector('.season-lead')?.textContent || '',
+      rows: document.querySelectorAll('.season-table tbody tr').length }));
+    ok('demo: My squad charts the season, one point a gameweek, the current rank at the end', season && drawn.pts === season.weeks.length
+       && drawn.rows === season.weeks.length && /M|K|\d/.test(drawn.end) && drawn.lead.includes(season.latest.rank.toLocaleString()), JSON.stringify(drawn));
+    await page.focus('#seasonPlot'); await page.keyboard.press('End'); await page.keyboard.press('ArrowLeft');
+    const tip = await page.$eval('.season-tip', t => ({ hidden: t.hidden, gw: t.textContent }));
+    const prev = season.weeks[season.weeks.length - 2];
+    ok('demo: arrow keys step through the season chart week by week', !tip.hidden && prev && tip.gw.startsWith('GW' + prev.gw), JSON.stringify(tip));
+  }
   await page.screenshot({ path: `${OUT}/m-20-demo.png` });
   await page.click('.demo-tour .tour-go[data-go="home/grade"]');
   ok('demo: the tour opens Grade, which marks the demo squad', await settled(page, '#v-home-grade', 60000)
