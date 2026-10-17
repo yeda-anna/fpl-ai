@@ -30,12 +30,13 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 134 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
+npm --prefix tests test        # 136 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 ./.venv/bin/python tests/test_pending_transfers.py # transfers since the deadline, no server needed
 ./.venv/bin/python tests/test_demo.py             # the demo team is a legal squad, no server needed
 ./.venv/bin/python tests/test_model_rules.py      # form, chance to score, fitness, opponent form, no server needed
 ./.venv/bin/python tests/test_leagues.py          # a manager's mini-leagues, no server needed
+./.venv/bin/python tests/test_season.py            # the season rank chart's data, no server needed
 ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # every unit test at once (rules, solver, analysis, scout, API routes on a made-up league), no server or network
 ./.venv/bin/python tests/test_telemetry.py        # structured JSON logs, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the palette

@@ -186,6 +186,136 @@ function spark(vals){
   return `<div class="spark">${vals.map(v=>`<i style="height:${Math.max(8, v/mx*100)}%" title="${num(v)}"></i>`).join('')}</div>`;
 }
 
+/* ---------------- Season rank chart (Home → My squad) ---------------- */
+/* Overall rank by gameweek, drawn by hand as SVG (no chart library). Rank runs on a
+   log scale, best at the top: a climb from 2M to 1M is as big a move as 200K to 100K.
+   One series, so no legend; the end of the line carries the current rank and the best
+   week is marked. Hover, tap or arrow keys show a week; the table below has every value. */
+const ordinal = n => { const s = ['th','st','nd','rd'], v = n % 100; return n.toLocaleString() + (s[(v-20)%10] || s[v] || s[0]); };
+const compactRank = n => n >= 1e6 ? +(n/1e6).toFixed(n >= 1e7 ? 0 : 2) + 'M'
+                       : n >= 1e3 ? +(n/1e3).toFixed(n >= 1e5 ? 0 : 1) + 'K' : String(n);
+
+function rankTicks(lo, hi){
+  // Round values inside the range: the finest set of mantissas (× a power of ten) that gives
+  // two to five ticks. A range too narrow for any is nearly linear, so use an even round step.
+  const within = ms => { const out = [];
+    for(let p = Math.floor(Math.log10(lo)); p <= Math.ceil(Math.log10(hi)); p++)
+      for(const m of ms){ const v = m * 10 ** p; if(v >= lo && v <= hi) out.push(v); }
+    return out; };
+  for(const ms of [[1, 1.5, 2, 2.5, 3, 4, 5, 6, 8], [1, 2, 3, 5], [1, 2, 5], [1, 3], [1]]){
+    const t = within(ms); if(t.length >= 2 && t.length <= 5) return t;
+  }
+  const t = within([1]); if(t.length > 5) return t.filter((_, i) => i % 2 === 0);
+  const raw = (hi - lo) / 3, mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw) || 10 * mag;
+  const out = []; for(let v = Math.ceil(lo / step) * step; v <= hi; v += step) out.push(v);
+  return out;
+}
+
+function seasonCard(season){
+  const w = (season && season.weeks) || [];
+  if(!w.length) return '';
+  const last = season.latest, best = season.best;
+  const move = last.climb == null ? '' : last.climb > 0 ? `, up ${last.climb.toLocaleString()} places in GW${last.gw}`
+             : last.climb < 0 ? `, down ${(-last.climb).toLocaleString()} places in GW${last.gw}` : `, unchanged in GW${last.gw}`;
+  const bestTxt = best.gw === last.gw ? 'Your best rank of the season.' : `Best: ${ordinal(best.rank)} in GW${best.gw}.`;
+  return `<div class="card mb season-card">
+    <h3>Your season <span class="r">Overall rank, GW${w[0].gw}–${last.gw}</span></h3>
+    <p class="season-lead">Now <b>${ordinal(last.rank)}</b>${move}. ${bestTxt}</p>
+    ${w.length < 2 ? '<p class="legend">The line starts once a second gameweek has been ranked.</p>' : ''}
+    <div class="season-plot" id="seasonPlot" tabindex="0" role="img"
+         aria-label="Overall rank by gameweek: ${esc(w.map(x => 'GW' + x.gw + ' ' + x.rank.toLocaleString()).join(', '))}"></div>
+    <details class="adv season-table"><summary>Week by week</summary>
+      <div class="well"><table><thead><tr><th>GW</th><th class="num">Points</th><th class="num">Overall rank</th><th class="num">Move</th><th class="num">Hits</th></tr></thead><tbody>
+      ${w.slice().reverse().map(x => `<tr><td>GW${x.gw}</td><td class="num">${x.points}</td><td class="num">${x.rank.toLocaleString()}</td>
+        <td class="num">${x.climb == null ? '–' : x.climb > 0 ? `<span class="up">▲ ${x.climb.toLocaleString()}</span>`
+          : x.climb < 0 ? `<span class="down">▼ ${(-x.climb).toLocaleString()}</span>` : '0'}</td>
+        <td class="num">${x.hits ? '−' + x.hits : '–'}</td></tr>`).join('')}
+      </tbody></table></div></details>
+  </div>`;
+}
+
+function drawSeason(season){
+  const host = el('seasonPlot'); if(!host || !season || !season.weeks.length) return;
+  const w = season.weeks, n = w.length, SVG = 'http://www.w3.org/2000/svg';
+  const render = () => {
+    if(!host.isConnected) return;
+    const W = Math.max(260, Math.floor(host.clientWidth)), narrow = W < 460;
+    const H = narrow ? 200 : 250, L = narrow ? 44 : 52, R = narrow ? 50 : 76, T = 16, B = 28;
+    const ranks = w.map(x => x.rank);
+    let lo = Math.min(...ranks) / 1.18, hi = Math.max(...ranks) * 1.18;
+    lo = Math.max(1, lo);
+    const ly = v => T + (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) * (H - T - B);
+    const lx = i => n === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (n - 1);
+    const ticks = rankTicks(lo, hi);
+    const every = Math.max(1, Math.ceil(n / (narrow ? 6 : 12)));
+    const pts = w.map((x, i) => [lx(i), ly(x.rank)]);
+    const bi = w.findIndex(x => x.gw === season.best.gw), li = n - 1;
+    const endLbl = narrow ? compactRank(w[li].rank) : w[li].rank.toLocaleString();
+    host.innerHTML = `<svg class="season-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+      ${ticks.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${ly(v).toFixed(1)}" y2="${ly(v).toFixed(1)}"/>
+        <text class="ax" x="${L - 8}" y="${(ly(v) + 4).toFixed(1)}" text-anchor="end">${compactRank(v)}</text>`).join('')}
+      ${w.map((x, i) => (i % every === 0 || i === li) && !(i !== li && li - i < every / 2)
+        ? `<text class="ax" x="${lx(i).toFixed(1)}" y="${H - 8}" text-anchor="middle">${x.gw}</text>` : '').join('')}
+      ${n > 1 ? `<polyline class="season-line" points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"/>` : ''}
+      ${bi !== li ? `<circle class="season-best" cx="${pts[bi][0].toFixed(1)}" cy="${pts[bi][1].toFixed(1)}" r="4.5"/>
+        <text class="ax lbl" x="${(pts[bi][0] + (bi < n / 2 ? 9 : -9)).toFixed(1)}" y="${(pts[bi][1] + (pts[bi][1] < T + 16 ? 16 : -9)).toFixed(1)}"
+              text-anchor="${bi < n / 2 ? 'start' : 'end'}">Best</text>` : ''}
+      <circle class="season-dot" cx="${pts[li][0].toFixed(1)}" cy="${pts[li][1].toFixed(1)}" r="4.5"/>
+      <text class="end" x="${(pts[li][0] + 10).toFixed(1)}" y="${(pts[li][1] + 4).toFixed(1)}">${endLbl}</text>
+      <line class="season-cross" x1="0" x2="0" y1="${T}" y2="${H - B}" style="display:none"/>
+      <circle class="season-hover" r="5" style="display:none"/>
+      <rect class="season-hit" x="${L - 12}" y="0" width="${W - L - R + 24}" height="${H}"/>
+    </svg><div class="season-tip" role="status" aria-live="polite" hidden></div>`;
+    const svg = host.firstElementChild, tip = host.querySelector('.season-tip');
+    const cross = svg.querySelector('.season-cross'), dot = svg.querySelector('.season-hover');
+    const show = i => {
+      const x = w[i], [px, py] = pts[i];
+      cross.setAttribute('x1', px); cross.setAttribute('x2', px); cross.style.display = '';
+      dot.setAttribute('cx', px); dot.setAttribute('cy', py); dot.style.display = '';
+      tip.replaceChildren();
+      const line = (txt, cls) => { const d = document.createElement('div'); if(cls) d.className = cls; d.textContent = txt; tip.appendChild(d); };
+      line('GW' + x.gw, 'tip-gw');
+      line(ordinal(x.rank), 'tip-val');
+      if(x.climb != null) line(x.climb > 0 ? '▲ up ' + x.climb.toLocaleString() : x.climb < 0 ? '▼ down ' + (-x.climb).toLocaleString() : 'No change',
+                               x.climb > 0 ? 'up' : x.climb < 0 ? 'down' : '');
+      line(x.points + ' pts' + (x.hits ? ' (−' + x.hits + ' hit)' : ''));
+      tip.hidden = false;
+      const tw = tip.offsetWidth, left = Math.min(W - tw - 4, Math.max(4, px - tw / 2));
+      tip.style.left = left + 'px';
+      tip.style.top = Math.max(0, py - tip.offsetHeight - 14) + 'px';
+      host.dataset.at = i;
+    };
+    const hide = () => { cross.style.display = 'none'; dot.style.display = 'none'; tip.hidden = true; delete host.dataset.at; };
+    const nearest = ev => { const r = svg.getBoundingClientRect(), x = ev.clientX - r.left;
+      let k = 0; pts.forEach((p, i) => { if(Math.abs(p[0] - x) < Math.abs(pts[k][0] - x)) k = i; }); return k; };
+    const hit = svg.querySelector('.season-hit');
+    hit.addEventListener('pointermove', ev => show(nearest(ev)));
+    hit.addEventListener('pointerdown', ev => show(nearest(ev)));
+    hit.addEventListener('pointerleave', ev => { if(ev.pointerType === 'mouse') hide(); });
+    host.onkeydown = ev => {
+      const at = host.dataset.at == null ? li : +host.dataset.at;
+      if(ev.key === 'ArrowLeft'){ show(Math.max(0, at - 1)); ev.preventDefault(); }
+      else if(ev.key === 'ArrowRight'){ show(Math.min(li, at + 1)); ev.preventDefault(); }
+      else if(ev.key === 'Home'){ show(0); ev.preventDefault(); }
+      else if(ev.key === 'End'){ show(li); ev.preventDefault(); }
+      else if(ev.key === 'Escape') hide();
+    };
+    host.onfocus = () => { if(host.dataset.at == null) show(li); };
+    host.onblur = hide;
+  };
+  render();
+  if(window.ResizeObserver){
+    let last = host.clientWidth, t = 0;
+    const ro = new ResizeObserver(() => {
+      if(!host.isConnected){ ro.disconnect(); return; }
+      if(Math.abs(host.clientWidth - last) < 2) return;
+      last = host.clientWidth; clearTimeout(t); t = setTimeout(render, 80);
+    });
+    ro.observe(host);
+  }
+}
+
 /* ---------------- Shirts & pitch ---------------- */
 /* Plain shirt shapes tinted in each club's colours — no crests, sponsors or kit designs. */
 const KIT = {ARS:['#DB1F2B','#FFFFFF'], AVL:['#76203F','#9CC3E8'], BHA:['#1A5FBF','#FFFFFF'], BOU:['#C9252C','#1B1B1B'],
@@ -272,7 +402,9 @@ async function viewSquad(t){
             <td style="width:76px">${spark(p.per_gw.map(g=>g.xpts))}</td></tr>`).join('')}
           </tbody></table></div>
         </div>
-      </div>`;
+      </div>
+      ${seasonCard(e.season)}`;
+    drawSeason(e.season);
     if(isDemo()){ if(el('demoExit')) el('demoExit').onclick = exitDemo; }
     else wireMade(e);
     if(vsAvg != null && vsAvg >= 15 && !S.celebrated){ S.celebrated = true; FX.burst(innerWidth/2, 180, 120); }

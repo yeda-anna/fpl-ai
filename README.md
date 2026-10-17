@@ -53,7 +53,7 @@ calls the FPL API — useful for development on networks that can't reach it.
 
 | Tool | What it does |
 | --- | --- |
-| Dashboard | Rank, last gameweek vs average, best XI on the pitch, captain picks, differentials, value picks, dream team |
+| Dashboard | Rank, last gameweek vs average, best XI on the pitch, your season as a rank chart, captain picks, differentials, value picks, dream team |
 | Expected Points | Every player across the horizon. Click any minutes figure to set your own — every other tool then uses it |
 | Solver | Mixed-integer program over squad, XI, captain, vice and transfers for every gameweek at once; returns up to three distinct plans with a template rating |
 | Chip Strategies | Each chip scored in every gameweek, respecting FPL's two chip windows, then combined into the best plan |
@@ -143,7 +143,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 134 headless checks, phone + desktop + reduced motion + the demo
+    npm --prefix tests test            # 136 headless checks, phone + desktop + reduced motion + the demo
     ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # unit tests, no server needed
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
