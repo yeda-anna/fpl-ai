@@ -143,3 +143,6 @@ class Rules(object):
             "price_change_deadlines": self.price_change_deadlines,
             "price_change_last_updated": self.price_change_last_updated,
         }
+
+
+_CI_PROBE = int | None   # evaluated at import: TypeError on 3.9
