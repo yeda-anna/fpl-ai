@@ -3,7 +3,7 @@
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team and the leagues list. 134 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team and the leagues list. 136 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -75,6 +75,7 @@ network or the `.cache/` folder.
 | `test_solver.py` | Every plan is a squad FPL would accept in every week (15, 2-5-5-3, three a club, money in the bank) with a legal XI, captain ≠ vice, hits at 4 points, FPL's free-transfer roll-over, a different route when the best one is ruled out, Wildcards free and building from scratch spending nothing |
 | `test_analysis.py` | Best XI is legal and unbeaten; the Free Hit XI keeps the club limit and skips the injured; Rate My Team scores stay 0–100 and match the grade; compare, weekly picks, chips (used chips aren't offered, two chips never share a week) and mini-league odds (sum to 100, repeatable, a failed rival is skipped) |
 | `test_scout.py` | Copilot intent matching, price risers/fallers, set-piece takers, DEFCON thresholds, predicted XIs, and Copilot answers drawn from your own squad |
+| `test_season.py` | The season rank chart's data: a smaller rank is a climb, weeks in order, unranked weeks dropped, best/worst/latest, and `/api/entry` carrying `season` in step with `history` |
 | `test_api.py` | Every route through FastAPI's test client on the demo team: shapes the frontend reads, `no-store` headers, a minutes override and a hand-entered transfer flowing through, and unknown teams as readable 404s |
 | `test_telemetry.py` | Structured logs: every line is single-line JSON with Railway's level names, uvicorn shares the handler with its access log off, a request is logged by route template and never with the Team ID in its path (404 info, unhandled exception a 500 at error, `/healthz` debug), FPL fetches log their endpoint kind (an outage is a warning when a stale copy is served, an error when not), and a solve logs its time, status and `feasible` |
 
@@ -126,7 +127,9 @@ only uses players the model can project, is the same every time, and its
 invented season ends in a shocker so Home's roast has something to say.
 
 The e2e suite's demo run checks the landing's demo button, the roasted Home with
-its tour, that nothing is saved to `fplai_team`, that Grade works for team 0,
+its tour, that nothing is saved to `fplai_team`, that My squad charts the
+season (a point a gameweek, the current rank at the end, a row a week in the
+table, arrow keys stepping through the weeks), that Grade works for team 0,
 that an app reload stays in the demo and that leaving it returns to the landing.
 
 ## Transfers since the last deadline (no server needed)

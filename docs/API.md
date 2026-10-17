@@ -28,7 +28,7 @@ unreachable with nothing cached → `503`.
 | GET | `/api/meta` | — | current/next gameweek, teams, positions, rules summary, deadlines |
 | GET | `/api/players` | `horizon`=5, `position` (1–4), `team`, `max_price`, `min_minutes`=0, `search`, `available_only`=false, `sort`=`xpts_total`, `limit`=60, `offset`=0, `overrides` | paged projection rows with `total` |
 | GET | `/api/player/{id}` | `horizon`=6, `minutes` | one player's per-fixture breakdown and minutes model |
-| GET | `/api/entry/{team_id}` | `horizon`=5, `overrides`, `made`, `fresh`=false | manager, rank, bank, free transfers, `pending_transfers` (`manual` when entered by hand), squad with xPts, best XI, captain picks. `fresh=1` expires this manager's cached FPL data first (throttled to once per 20 s per team); the app sends it on the first read after a page load |
+| GET | `/api/entry/{team_id}` | `horizon`=5, `overrides`, `made`, `fresh`=false | manager, rank, bank, free transfers, `pending_transfers` (`manual` when entered by hand), squad with xPts, best XI, captain picks, `history` (FPL's per-gameweek points and rank) and `season` (the rank chart: `weeks` with each week's `climb` since the one before, positive = up the table, plus `best`, `worst`, `latest`; unranked weeks are left out). `fresh=1` expires this manager's cached FPL data first (throttled to once per 20 s per team); the app sends it on the first read after a page load |
 | GET | `/api/rate/{team_id}` | `horizon`=5, `overrides`, `made` | grade out of 100, sub-scores, strengths, weaknesses |
 | GET | `/api/picks` | `horizon`=5 | captains, differentials, value picks and dream team for next gameweek |
 | GET | `/api/compare` | `a`, `b`, `horizon`=6 | two players side by side, week by week |

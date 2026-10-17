@@ -71,6 +71,46 @@ def squad_split(squad_rows: List[Dict[str, Any]], gw_index: int = 0):
     }
 
 
+# --- season so far -----------------------------------------------------------
+
+def season_history(current: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """A manager's season, gameweek by gameweek, for the rank chart on Home.
+
+    `current` is FPL's /entry/{id}/history/ "current" list. Each week carries its
+    points, overall rank and the climb since the week before (positive = up the
+    table, since a smaller rank is better). Weeks FPL hasn't ranked yet (rank null
+    or 0, e.g. while a gameweek is still being processed) are dropped from the
+    chart. `best` and `worst` are the highest and lowest overall rank so far.
+    """
+    weeks: List[Dict[str, Any]] = []
+    prev = None
+    for ev in sorted(current or [], key=lambda e: e.get("event") or 0):
+        rank = ev.get("overall_rank")
+        if not rank or rank <= 0:
+            continue
+        weeks.append({
+            "gw": ev.get("event"),
+            "points": ev.get("points") or 0,
+            "total": ev.get("total_points"),
+            "rank": int(rank),
+            "climb": (prev - int(rank)) if prev is not None else None,
+            "transfers": ev.get("event_transfers") or 0,
+            "hits": ev.get("event_transfers_cost") or 0,
+            "bench": ev.get("points_on_bench") or 0,
+        })
+        prev = int(rank)
+    if not weeks:
+        return {"weeks": [], "best": None, "worst": None, "latest": None}
+    best = min(weeks, key=lambda w: (w["rank"], w["gw"]))
+    worst = max(weeks, key=lambda w: (w["rank"], -w["gw"]))
+    return {
+        "weeks": weeks,
+        "best": {"gw": best["gw"], "rank": best["rank"]},
+        "worst": {"gw": worst["gw"], "rank": worst["rank"]},
+        "latest": dict(weeks[-1]),
+    }
+
+
 # --- chip strategy ---------------------------------------------------------
 
 def chip_strategy(engine, rows, squad_rows, current_squad, bank, free_transfers,
