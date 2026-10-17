@@ -22,6 +22,7 @@ import fpl_api   # noqa: E402
 
 from fastapi.testclient import TestClient   # noqa: E402
 
+os.environ.setdefault("LOG_LEVEL", "WARNING")   # keep request logs out of the test output
 import main      # noqa: E402
 
 _CACHE = tempfile.TemporaryDirectory()

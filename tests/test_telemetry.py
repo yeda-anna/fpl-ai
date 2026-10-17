@@ -30,8 +30,15 @@ class Captured(unittest.TestCase):
 
     def setUp(self):
         self.buf = io.StringIO()
-        telemetry.setup(self.buf)
-        logging.getLogger("papa").setLevel(logging.DEBUG)
+        saved = os.environ.get("LOG_LEVEL")
+        os.environ["LOG_LEVEL"] = "DEBUG"          # other test files may have imported main quieter
+        try:
+            telemetry.setup(self.buf)
+        finally:
+            if saved is None:
+                os.environ.pop("LOG_LEVEL", None)
+            else:
+                os.environ["LOG_LEVEL"] = saved
 
     def lines(self):
         out = []
