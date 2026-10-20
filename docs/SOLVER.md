@@ -22,6 +22,9 @@ program, solved with CBC through PuLP.
 - Lineup ⊆ squad; one captain, one vice, different players, both starting.
 - Squad flow: `squad[t] = squad[t-1] + in − out`, no in-and-out of one player
   in the same week.
+- A Free Hit squad lasts one week: the week after it, the squad **and the bank**
+  start from the week before the Free Hit (or the manager's own squad, if it was
+  the first week), not from the Free Hit squad.
 - Budget: bank rolls forward; selling uses `selling_price()` (purchase price
   plus the rise less the sell-on fee, rounded down).
 - Free transfers: start from the manager's count, bank one per unused week up

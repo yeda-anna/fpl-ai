@@ -143,6 +143,14 @@ def solve(rows: List[Dict[str, Any]],
     start_bank = int(round(bank * 10))
     have_squad = len(owned) == SQUAD_SIZE
 
+    def base_week(t: int) -> int:
+        """The week whose squad and bank week t starts from. A Free Hit squad lasts one
+        week only: the week after, the manager is back to the squad (and money) they had
+        before it, so that week looks two back, past the Free Hit."""
+        if have_squad and t > 0 and free_hit_gw is not None and gws[t - 1] == free_hit_gw:
+            return t - 2
+        return t - 1
+
     for t in T:
         gw = gws[t]
         free_squad = (wildcard_gw == gw) or (free_hit_gw == gw) or (not have_squad and t == 0)
@@ -167,9 +175,9 @@ def solve(rows: List[Dict[str, Any]],
         prob += pulp.lpSum(vice[p][t] for p in ids) == 1
 
         # squad continuity
+        b = base_week(t)
         for p in ids:
-            prev = (squad[p][t - 1] if t > 0
-                    else (1 if p in owned else 0))
+            prev = squad[p][b] if b >= 0 else (1 if p in owned else 0)
             prob += squad[p][t] == prev + tin[p][t] - tout[p][t]
             prob += tin[p][t] + tout[p][t] <= 1
 
@@ -198,7 +206,7 @@ def solve(rows: List[Dict[str, Any]],
         # budget
         spend = pulp.lpSum(buy[p] * tin[p][t] for p in ids)
         raise_ = pulp.lpSum(sell[p] * tout[p][t] for p in ids)
-        prev_bank = bank_v[t - 1] if t > 0 else start_bank
+        prev_bank = bank_v[b] if b >= 0 else start_bank
         prob += bank_v[t] == prev_bank + raise_ - spend
 
     objective = []

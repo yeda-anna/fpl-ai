@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-20 — Free Hit plans revert after the chip week
+
+- A Free Hit squad lasts one gameweek, but the solver carried it into the weeks after,
+  so later transfers were measured against a squad the manager would no longer have.
+  The week after a Free Hit now starts from the squad and bank held before it.
+
 ## 2026-10-20 — Matches: who wins, and by how many
 
 - A new **Matches** tab (the sixth, at the owner's request): every match of a gameweek

@@ -134,6 +134,29 @@ class PlanTests(LegalPlanMixin, unittest.TestCase):
         self.assertEqual(gw9["hits"], 0)
         self.assertGreater(len(gw9["transfers_in"]), 1)
 
+    def test_a_free_hit_squad_lasts_one_week_only(self):
+        # Free Hit in the middle: the week after, the manager is back to the squad they had before it
+        plan = solver.solve(ROWS, owned(self.squad), self.bank, 1, 3, max_hits=0, free_hit_gw=10, **FAST)
+        self.assert_legal(plan)
+        before, hit, after = plan["gameweeks"]
+        ids = lambda g: {p["id"] for p in g["starting_xi"] + g["bench"]}
+        self.assertEqual(hit["chip"], "Free Hit")
+        self.assertEqual(hit["hits"], 0)
+        self.assertGreater(len(hit["transfers_in"]), 1)
+        self.assertEqual(ids(after), (ids(before) - {p["id"] for p in after["transfers_out"]})
+                         | {p["id"] for p in after["transfers_in"]})
+        self.assertLessEqual(len(after["transfers_in"]), 5)             # free transfers only, no rebuild
+        self.assertGreater(len(ids(hit) - ids(before)), len(ids(after) - ids(before)))
+
+    def test_a_free_hit_in_the_first_week_reverts_to_the_squad_you_hold(self):
+        plan = solver.solve(ROWS, owned(self.squad), self.bank, 1, 2, max_hits=0, free_hit_gw=9, **FAST)
+        self.assert_legal(plan)
+        mine = {r["id"] for r in self.squad}
+        nxt = plan["gameweeks"][1]
+        self.assertEqual({p["id"] for p in nxt["starting_xi"] + nxt["bench"]},
+                         (mine - {p["id"] for p in nxt["transfers_out"]}) | {p["id"] for p in nxt["transfers_in"]})
+        self.assertTrue({p["id"] for p in nxt["transfers_out"]} <= mine)
+
 
 class FromScratchTests(LegalPlanMixin, unittest.TestCase):
     def test_an_empty_squad_builds_a_legal_fifteen_within_budget(self):
