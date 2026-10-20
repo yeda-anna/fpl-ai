@@ -57,7 +57,8 @@ async function phone(browser){
        && typeof FX !== 'undefined' && typeof Magic !== 'undefined')));
   ok('phone: no opening film: no film markup, no Theatre.js, and the app is there at once', await page.evaluate(() =>
     !document.getElementById('intro') && typeof Intro === 'undefined' && !window.Theatre && !!document.getElementById('landing')));
-  ok('phone: the logo is the supplied portrait', await page.evaluate(() => /logo\.webp$/.test(document.querySelector('#logo image').getAttribute('href'))));
+  ok('phone: the logo is the supplied mark, and the favicon is its 32px icon', await page.evaluate(() => /logo\.webp$/.test(document.querySelector('#logo image').getAttribute('href'))
+     && /icon-32\.png$/.test(document.querySelector('link[rel=icon][sizes="32x32"]').getAttribute('href'))));
   // ---- first visit: the landing screen asks for the Team ID ----
   ok('phone: first visit opens the landing screen', await page.isVisible('#landing'));
   ok('phone: landing carries a line of house humour', (await page.textContent('#landQuip')).trim().length > 20);

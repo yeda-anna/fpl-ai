@@ -75,7 +75,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
 | `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators, the race bar), anime.js (icon drawing, the landing logo), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
 | `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Ripple, OrbitingCircles, BorderBeam, ShimmerButton (hidden), AnimatedBeam |
-| `frontend/logo.webp`, `icon-*.png` | The square face crop of the drone-portrait image the owner supplied (the logo) and the home-screen icons — generated |
+| `frontend/logo.webp`, `logo-mark.png`, `icon-*.png` | The hexagonal mark the owner supplied on its light tile (the logo), the mark alone (transparent), the favicon and home-screen icons — generated from `docs/brand/logo-source.png` |
 | `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, AutoAnimate 0.10, Chakra Petch (fonts/) — vendored, see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `tests/fakes.py` | A made-up 20-club league in FPL's own shape, for the unit tests (no network) |
@@ -86,7 +86,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `scripts/smoke.sh` | Smoke test for a running copy (CI's built image, a preview, live) |
 | `scripts/check_start_command.py` | `Procfile` and `railway.json` start the app the same way |
 | `.github/workflows/ci.yml` | CI on every PR and push to `main`: unit tests on 3.9 + 3.12, frontend checks, a Railpack build that boots and is smoke-tested |
-| `scripts/digitize.py` | From the supplied image: `logo.webp` and the PNG icons |
+| `scripts/digitize.py` | From the supplied logo image: `logo.webp`, `logo-mark.png`, the favicon and the PNG icons |
 | `docs/` | Architecture, model, solver, API, design, data, testing, deployment |
 | `.claude/agents/` | Specialist sub-agents for this repo |
 | `.claude/skills/` | Step-by-step procedures (run, test, calibrate, deploy, design, add a feature) |
@@ -176,11 +176,12 @@ suite at **0 failures** — see `docs/TESTING.md`.
 
 **Brand and content**
 - Name: **Papa Ranjeet**. Tagline: "Football’s a funny old game. Might as well do the
-  maths." Logo: the drone-portrait image the owner supplied, used as it is —
-  not regenerated or restyled. `scripts/digitize.py <image>` writes
-  `logo.webp` (a square face crop, the `#logo`
-  symbol) and the PNG icons. Never edit those by hand; rerun the script. Don't put any
-  other real person's likeness in the app without asking.
+  maths." Logo: the hexagonal mark the owner supplied (`docs/brand/logo-source.png`),
+  used as it is — not redrawn or restyled. `python3 scripts/digitize.py docs/brand/logo-source.png`
+  lifts it off its design-grid canvas and writes `logo.webp` (the mark on a light tile of
+  the canvas's colour, the `#logo` symbol), `logo-mark.png` (transparent), the favicon
+  `icon-32.png` and the home-screen icons. Never edit those by hand; rerun the script.
+  Don't put any real person's likeness in the app without asking.
 - Tone: light British humour and Indian dark humour on the landing screen and
   under the loader ("putting the kettle on", "Sharma ji’s son finished this ages
   ago"). Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —

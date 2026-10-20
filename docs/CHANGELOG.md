@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-20 — A new logo and favicon
+
+- The logo is now the owner's hexagonal mark (interlocking strokes, teal to navy), on a
+  light tile so it reads on the dark app: in the top bar, on the landing card, as the
+  avatar, as the browser-tab favicon (new `icon-32.png`) and as the home-screen icons.
+- `scripts/digitize.py` now lifts the mark off its design-grid canvas
+  (`docs/brand/logo-source.png`, kept in the repo so the icons can be remade) instead
+  of cropping the drone portrait's face.
+
 ## 2026-10-20 — Who's using it: anonymous usage stats
 
 - The owner can now see how the app is used, at **`/#stats`** (needs the server's

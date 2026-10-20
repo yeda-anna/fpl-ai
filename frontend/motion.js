@@ -60,7 +60,7 @@ const FX = (() => {
            .fromTo(q('.scene .goal, .scene .net'), {drawSVG:'0%'}, {drawSVG:'100%', duration:.6, stagger:.08}, .55);
     }
     intro.fromTo(q('.scene .spot'), {scale:0, transformOrigin:'50% 50%'}, {scale:1, duration:.4, ease:'back.out(3)'}, .9);
-    // the drone portrait powers up (anime.js)
+    // the logo powers up (anime.js)
     if(canA) A.animate(root.querySelector('.land-logo .neon-logo'), {opacity:[0, 1], scale:[.85, 1], duration:700, ease:'outBack', delay:300});
     landTls.push(intro);
 

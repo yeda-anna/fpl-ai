@@ -59,7 +59,7 @@ What it covers:
 - **The page loads:** it is named Papa Ranjeet; GSAP, both plugins, anime.js,
   Motion and AutoAnimate load from `/static/vendor`, with `FX` and `Magic`;
   there is no opening film (no film markup, no Theatre.js) and the app is there
-  at once; the logo is the supplied portrait (`logo.webp`).
+  at once; the logo is the supplied mark (`logo.webp`) and the favicon is `icon-32.png`.
 - **Landing:** a first visit opens it; it has the pitch scene and a quip;
   an empty ID and an unknown team each get a clear message; a real ID goes
   straight to Home → My squad, is saved in `localStorage`, names the team pill,
