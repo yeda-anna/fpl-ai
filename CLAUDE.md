@@ -29,13 +29,14 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 154 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
+npm --prefix tests test        # 164 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 ./.venv/bin/python tests/test_pending_transfers.py # transfers since the deadline, no server needed
 ./.venv/bin/python tests/test_demo.py             # the demo team is a legal squad, no server needed
 ./.venv/bin/python tests/test_model_rules.py      # form, chance to score, fitness, opponent form, no server needed
 ./.venv/bin/python tests/test_leagues.py          # a manager's mini-leagues, no server needed
 ./.venv/bin/python tests/test_matches.py          # match predictions: scorelines, the pick, a gameweek, no server needed
+./.venv/bin/python tests/test_usage.py             # anonymous usage counts, no server needed
 ./.venv/bin/python tests/test_season.py            # the season rank chart's data, no server needed
 ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # every unit test at once (rules, solver, analysis, scout, API routes on a made-up league), no server or network
 ./.venv/bin/python tests/test_telemetry.py        # structured JSON logs, no server needed
@@ -66,6 +67,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/matches.py` | Match predictions: each fixture's scoreline table (Poisson + Dixon-Coles) from the goal model, the likeliest result and score, clean sheets |
 | `backend/leagues.py` | A manager's mini-leagues from their FPL profile: every league, their place, the leader and the gap |
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
+| `backend/usage.py` | Anonymous usage counts (daily visitors, new vs returning, demo vs real, pages, features) in one JSON file under `STATS_DIR`; read on the owner's `#stats` page with `STATS_KEY` |
 | `backend/telemetry.py` | Structured logs: one JSON line per event on stdout for Railway, a line per request by route template; `LOG_LEVEL` |
 | `backend/demo.py` | The demo team (ID 0, "Gut Feeling FC") for visitors who don't play FPL: a legal squad picked on vibes and an invented season |
 | `frontend/index.html` | Shell: top bar, the page head with the season race bar, the six-tab dock, the landing screen (pitch scene), logo, scripts |
@@ -104,6 +106,11 @@ suite at **0 failures** — see `docs/TESTING.md`.
 - Log with `telemetry.event(log, "area.what", **fields)` (`log = telemetry.get_logger(__name__)`),
   never `print`. Never log a Team ID, league ID, URL path with an ID, or a request
   body: routes by template, FPL calls by endpoint kind (`docs/DEPLOYMENT.md` → Logs).
+- **Usage counts stay anonymous** (`backend/usage.py`): the browser sends one visit a
+  day (new or returning, team/demo/none) and page names from `usage.PAGES`; features
+  are counted by route template. Never add an ID, IP, user agent, cookie or free-form
+  text to them. Browsers asking not to be tracked (DNT, GPC) send nothing. The `#stats`
+  page needs `STATS_KEY` on the server; without it the stats are off (404).
 - The solver must check `feasible` before trusting a plan. A plan built from an
   empty squad must not spend free transfers (see `solver.py`).
 

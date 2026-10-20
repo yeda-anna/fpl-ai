@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-20 — Who's using it: anonymous usage stats
+
+- The owner can now see how the app is used, at **`/#stats`** (needs the server's
+  `STATS_KEY`): visitors a day, new vs returning, real team vs demo, and which pages
+  and features get used, over the last 30 days.
+- Anonymous by design: one visit a day per browser with three yes/no facts, page names
+  from the app's own list, features counted by route template. No Team ID, league ID,
+  IP, cookie or third-party script; browsers asking not to be tracked send nothing, and
+  "Don't count this browser" keeps the owner's own visits out. The same counts are log
+  events (`usage.visit`, `usage.view`) in Railway.
+- Counts live in `usage.json` under `STATS_DIR`; point it at a Railway volume to keep
+  them across deploys.
+
 ## 2026-10-20 — Transfer ideas wherever your squad shows
 
 - On a phone, tapping a player on **Plan → Transfers** opened his stats, not the

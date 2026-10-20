@@ -658,6 +658,19 @@ td.num{font-style:italic;font-weight:700}
 
 .landing > .scene,.landing > .land-card{position:relative;z-index:1}
 
+/* ============================ the owner's stats (#stats) ============================ */
+.st-bars{display:flex;align-items:flex-end;gap:3px;height:150px;padding:6px 2px 0}
+.st-bar{flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column-reverse;border-radius:3px 3px 0 0;background:var(--surface-2)}
+.st-bar i{display:block;width:100%}
+.st-bar i.ret{background:var(--green)}
+.st-bar i.new{background:var(--lime);border-radius:3px 3px 0 0}
+.st-axis{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;font-style:italic;color:var(--ink-3)}
+.st-key{display:inline-block;width:10px;height:10px;margin:0 5px 0 10px;border-radius:2px;vertical-align:-1px}
+.st-key.new{background:var(--lime)}
+.st-key.ret{background:var(--green)}
+.st-meter{display:block;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.st-meter i{display:block;height:100%;background:var(--purple)}
+
 /* ============================ Matches ============================ */
 .mt-nav{align-items:center;gap:14px}
 .mt-nav .gw-nav{font-size:19px}

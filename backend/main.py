@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import logging
 import os
 import re
@@ -12,8 +13,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 import analysis
@@ -26,6 +28,7 @@ import rules as rules_mod
 import scout as scout_mod
 import solver as solver_mod
 import telemetry
+import usage
 import xpts
 
 telemetry.setup()
@@ -40,6 +43,16 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 # One JSON log line per request (method, route template, status, ms) - see telemetry.py.
 telemetry.instrument(app)
+
+
+@app.middleware("http")
+async def _count_features(request: Request, call_next):
+    """Anonymous feature counts (usage.py): by route template, after the answer is known."""
+    response = await call_next(request)
+    template = telemetry.route_template(request.scope, request.url.path)
+    if template in usage.FEATURES:
+        await run_in_threadpool(usage.record_route, request.method, template, response.status_code)
+    return response
 
 _lock = threading.Lock()
 _engine = {"obj": None, "built": 0.0}
@@ -646,6 +659,39 @@ def copilot(req: CopilotRequest):
         except HTTPException:
             ctx = None
     return scout_mod.copilot(e, rows, req.question, ctx, req.horizon)
+
+
+# --- anonymous usage ---------------------------------------------------------------
+
+class UsageBeacon(BaseModel):
+    kind: str                          # "visit" (once a day per browser) or "view" (a page opened)
+    returning: bool = False            # visit: this browser had opened the app before
+    mode: str = "none"                 # visit: "team", "demo" or "none"
+    page: Optional[str] = None         # view: "tab/sub", one of usage.PAGES
+
+
+@app.post("/api/usage", status_code=204)
+def usage_beacon(b: UsageBeacon):
+    """Count one anonymous visit or page view. Nothing that identifies anyone is sent or kept."""
+    if b.kind == "visit":
+        usage.record_visit(b.returning, b.mode)
+    elif b.kind == "view":
+        usage.record_view(b.page or "")             # a page outside the app's list is ignored
+    else:
+        raise HTTPException(422, "kind must be 'visit' or 'view'")
+    return Response(status_code=204)
+
+
+@app.get("/api/stats")
+def stats(request: Request, days: int = Query(30, ge=7, le=usage.KEEP_DAYS)):
+    """The owner's stats page. Needs the STATS_KEY set on the server, sent as X-Stats-Key."""
+    key = os.environ.get("STATS_KEY", "")
+    if not key:
+        raise HTTPException(404, "Stats are off. Set STATS_KEY on the server to turn the stats page on.")
+    given = request.headers.get("x-stats-key", "")
+    if not hmac.compare_digest(given.encode("utf-8"), key.encode("utf-8")):
+        raise HTTPException(403, "That isn't the stats key.")
+    return JSONResponse(usage.summary(days), headers=NO_STORE)
 
 
 @app.get("/healthz")

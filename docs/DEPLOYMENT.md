@@ -72,6 +72,8 @@ FPL_CACHE_ONLY=1 ./run.sh
 | --- | --- | --- |
 | `PORT` | 8787 local / platform-set | listen port |
 | `FPL_CACHE_ONLY` | off | `1` = never call the FPL API; serve `.cache/` only |
+| `STATS_KEY` | unset | the key for the owner's stats page (`#stats`); unset = stats page off (404). Counting still happens |
+| `STATS_DIR` | `.cache/` | where `usage.json` (the anonymous counts) lives. Point it at a Railway volume (e.g. mount one at `/data` and set `STATS_DIR=/data`) so counts survive deploys; without one they start again on every deploy |
 | `LOG_LEVEL` | `INFO` | `DEBUG` adds static files, `/healthz` and offline cache misses; `WARNING` keeps only problems |
 
 ## Logs
@@ -98,6 +100,9 @@ Log Explorer or with `railway logs`:
 | `engine.built` | info | `ms`, `current_gw`, `next_gw`, `players`, `elo_prior`, `recent_gws` |
 | `engine.elo_prior_unavailable`, `engine.recent_live_unavailable` | warn | `error`, `detail` |
 | `engine.warmup_failed` | error | `error`, `traceback` |
+| `usage.visit` | info | `returning`, `mode` (`team`, `demo`, `none`) — one per browser per day |
+| `usage.view` | info | `page` (`tab/sub` from the app's own list) |
+| `usage.save_failed` | warn | `error` — the counts file couldn't be written |
 | `solver.solved` | info, warn if not feasible | `ms` (CBC time), `status`, `feasible`, `horizon`, `pool_size`, `time_limit`, `hit_time_limit`, `alternative` |
 
 uvicorn's own messages arrive as `logger: uvicorn.error` lines (with a
@@ -106,6 +111,17 @@ because the `http.request` line replaces it without the raw path.
 
 **Never log a Team ID, a league ID or a request body.** Log routes by template and
 FPL calls by endpoint kind; add new events with `telemetry.event(log, "area.what", **fields)`.
+
+### Who's using it
+
+Anonymous counts, no IDs (`backend/usage.py`): open the app at **`/#stats`** and enter
+the `STATS_KEY` you set in Railway → Variables. It shows visitors a day (new and
+returning), real team vs demo vs no team yet, which pages were opened and which features
+were used, for the last 30 days. The same visits and views are log events you can
+search: `@event:usage.visit`, `@event:usage.visit @mode:demo`, `@event:usage.view @page:matches/predictions`.
+To keep the counts across deploys, add a volume to the service (Railway → the service →
+Volumes, mount path `/data`) and set `STATS_DIR=/data`. "Don't count this browser" on the
+stats page keeps your own visits out.
 
 Railway has no built-in log drain. For retention beyond the plan's window,
 forward stdout with a collector (Vector, Fluent Bit) or an OpenTelemetry exporter.
