@@ -23,11 +23,7 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="icon" type="image/png" href="/static/icon-192.png">
-<link rel="preload" as="image" href="/static/portrait.webp">
 <link rel="apple-touch-icon" href="/static/icon-180.png">
-<!-- Before the first paint: skip the opening film when the visitor turned it off, prefers
-     reduced motion, or the app is reloading itself (a new build, back/forward restore). -->
-<script>(function(){try{var q=sessionStorage.getItem('fplai_quiet');sessionStorage.removeItem('fplai_quiet');document.documentElement.classList.add(q||localStorage.getItem('fplai_intro')==='"off"'||matchMedia('(prefers-reduced-motion: reduce)').matches?'no-intro':'intro-on')}catch(e){}})();</script>
 </head>
 <body>
 
@@ -44,25 +40,6 @@
   </defs>
   <symbol id="logo" viewBox="0 0 100 100"><image href="/static/logo.webp" width="100" height="100" preserveAspectRatio="xMidYMid slice"/></symbol>
 </svg>
-
-<!-- The opening film: a few seconds of titles while the app loads underneath.
-     Keyframed with Theatre.js (intro.js); tap anywhere or "Skip" to jump to the end. -->
-<div class="intro" id="intro">
-  <div class="in-scene" aria-hidden="true">
-    <div class="in-floor"><div class="retro"><div class="retro-plane"><div class="retro-grid"></div></div></div></div>
-    <canvas class="in-stars" id="inDrones"></canvas>
-    <div class="in-stage">
-      <div class="in-mark" id="inMark"><img class="in-photo" src="/static/portrait.webp" alt="" decoding="async"></div>
-      <div class="in-title mg-hyper" id="inTitle" data-text="Papa Ranjeet">Papa Ranjeet</div>
-      <div class="in-line"><span id="inType"></span><span class="cur"></span></div>
-    </div>
-    <div class="in-flash"></div>
-    <div class="in-bars"><i></i><i></i></div>
-    <div class="in-hud"><span class="in-rec">REC <span id="inCount"></span></span><span class="in-tc" id="inTc">00:00:00</span></div>
-    <div class="in-prog"><i></i></div>
-  </div>
-  <button class="in-skip" id="inSkip" type="button">Skip intro <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5v13l8-6.5zM12 5.5v13l8-6.5z" fill="currentColor"/></svg></button>
-</div>
 
 <!-- the night: a dark teal ground with a faint glow at the top -->
 <div class="backdrop" aria-hidden="true"></div>
@@ -168,18 +145,15 @@
 <div class="toast" id="toast" role="status" aria-live="polite"><span class="dotc" aria-hidden="true"></span><span id="toastTx"></span></div>
 
 <!-- Motion and animation libraries, vendored in /static/vendor — no CDN:
-     GSAP (+ DrawSVG, MotionPath), anime.js, Motion, Theatre.js core and AutoAnimate. -->
+     GSAP (+ DrawSVG, MotionPath), anime.js, Motion and AutoAnimate. -->
 <script src="/static/vendor/gsap.min.js"></script>
 <script src="/static/vendor/DrawSVGPlugin.min.js"></script>
 <script src="/static/vendor/MotionPathPlugin.min.js"></script>
 <script src="/static/vendor/anime.min.js"></script>
 <script src="/static/vendor/motion.min.js"></script>
-<script src="/static/vendor/theatre-core.min.js"></script>
 <script src="/static/vendor/auto-animate.min.js"></script>
 <script src="/static/magic.js"></script>
 <script src="/static/motion.js"></script>
-<script src="/static/portrait.js"></script>
-<script src="/static/intro.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

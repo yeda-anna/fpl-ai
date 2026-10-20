@@ -73,8 +73,7 @@ API request after boot may wait for that warm-up.
 
 ## Frontend
 
-No build, no framework, no CDN. `index.html` holds the shell (the opening
-film's stage, top bar, the page head with the season race bar, the dock, the landing screen and its pitch
+No build, no framework, no CDN. `index.html` holds the shell (the top bar, the page head with the season race bar, the dock, the landing screen and its pitch
 scene, the logo). `app.js`
 defines six tabs and their sub-pages in `TABS` and routes by hash
 (`#home/squad`, `#plan/chips`, `#players/compare` …; old addresses like
@@ -82,10 +81,7 @@ defines six tabs and their sub-pages in `TABS` and routes by hash
 its data and renders HTML strings into its own `<section>`. `motion.js` (`FX`)
 wraps the vendored GSAP, anime.js, Motion and AutoAnimate; a `MutationObserver`
 blur-fades new cards in as views render. `magic.js` (`Magic`) holds the Magic UI
-effects, rebuilt without React. `intro.js` (`Intro`) plays the opening film — a
-Theatre.js sequence — on launch, over the app as it loads; `app.js` starts it
-first, and `FX.hold(Intro.reveal)` keeps the entrances for the moment it opens
-onto the app. State that survives a reload lives in `localStorage` under `fplai_*`
+effects, rebuilt without React. State that survives a reload lives in `localStorage` under `fplai_*`
 keys (team ID, team name, minute overrides, last league). A saved team ID skips
 the landing screen; `loadSavedTeam()` reads it fresh (`fresh=1`) and team views
 `await teamReady()` before their own requests. See `DESIGN.md` for the visual
@@ -119,8 +115,7 @@ reload for home-screen apps that have no reload button. All `fetch` calls from
 The page carries `<meta name="app-build">`. `app.js` calls `/version` when the app
 returns to the foreground (`visibilitychange`, `focus`), at most once a minute,
 and reloads if the build has changed. A page restored from the back/forward
-cache is reloaded straight away. These reloads the app does by itself skip the
-opening film (`sessionStorage.fplai_quiet`, read by a script in `<head>`). The
+cache is reloaded straight away. The
 hashes are recomputed whenever a file's mtime or size changes, so local edits
 show up on reload without restarting the server.
 

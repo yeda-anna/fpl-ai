@@ -11,21 +11,20 @@ the version here.
 | `MotionPathPlugin.min.js` | GSAP MotionPathPlugin (`gsap/dist/MotionPathPlugin.min.js`) | 3.15.0 | same |
 | `anime.min.js` | [anime.js](https://animejs.com/documentation) UMD bundle (`animejs/dist/bundles/anime.umd.min.js`), global `anime` | 4.5.0 | MIT — `anime-LICENSE.md` |
 | `motion.min.js` | [Motion](https://motion.dev) for vanilla JS, UMD bundle (`motion/dist/motion.js`, already minified), global `Motion` | 13.4.3 | MIT — `motion-LICENSE.md` |
-| `theatre-core.min.js` | [Theatre.js](https://www.theatrejs.com/docs/latest) core, browser bundle (`@theatre/browser-bundles/dist/core-only.min.js`), global `Theatre.core` | 0.7.2 | Apache-2.0 — `theatre-LICENSE.txt`. Only the core is shipped; Theatre Studio (AGPL) is a development tool and is **not** vendored |
 | `fonts/chakra-petch-latin-*.woff2` | [Chakra Petch](https://fonts.google.com/specimen/Chakra+Petch) 400 · 500/600/700 upright and italic, latin subset (`@fontsource/chakra-petch/files/`), declared with `@font-face` at the top of `styles.css` | 5.3.0 | SIL OFL 1.1 — `fonts/chakra-petch-LICENSE.txt` |
 | `auto-animate.min.js` | [AutoAnimate](https://auto-animate.formkit.com) (`@formkit/auto-animate/index.min.js`), global `autoAnimate` | 0.10.0 | MIT — `auto-animate-LICENSE.txt` |
 
 [Magic UI](https://magicui.design) is a React + Tailwind component collection,
 so there is nothing to vendor: the effects we use (border beam, shimmer button,
-hyper text, typing animation, retro grid, ripple, orbiting circles,
+hyper text, typing animation, ripple, orbiting circles,
 number ticker, blur fade, animated list, animated beam, scroll progress) are re-implemented in plain CSS and JS in
 `frontend/magic.js` and the "Magic UI" block of `frontend/styles.css`, following
 the originals. MIT — `magicui-LICENSE.md`.
 
 ## Upgrading
 
-- **Motion, Theatre.js:** copy the file named above from the npm tarball
-  (`npm pack motion@<v>`, `npm pack @theatre/browser-bundles@<v>`).
+- **Motion:** copy the file named above from the npm tarball
+  (`npm pack motion@<v>`).
 - **AutoAnimate** ships only as an ES module, so its `index.min.js` is wrapped
   as a classic script: the trailing `export{…}` is removed and the code is put
   inside `(function(){"use strict"; … window.autoAnimate=R;})();` (`R` is the
@@ -33,5 +32,5 @@ the originals. MIT — `magicui-LICENSE.md`.
   upgrade). Nothing else is changed.
 
 All use goes through `frontend/motion.js` (`FX`), `frontend/magic.js` (`Magic`)
-and `frontend/intro.js` (`Intro`), each of which degrades to "no animation" if a
+each of which degrades to "no animation" if a
 library fails to load.

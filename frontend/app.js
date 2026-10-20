@@ -1,5 +1,5 @@
 /* Papa Ranjeet — frontend. Plain JS, no build step. Animation lives in motion.js (FX),
-   the Magic UI effects in magic.js (Magic) and the opening film in intro.js (Intro). */
+   and the Magic UI effects in magic.js (Magic). */
 'use strict';
 
 const store = {
@@ -68,17 +68,6 @@ const QUIPS = {
     'Fantasy football: an EMI of hope, repaid in heartbreak, with interest.',
     'This app does the maths. You bring the confidence.',
     'Rank in the millions? Don’t worry, beta. It’s a stable position.'
-  ],
-  // the opening film's tagline: one line, in the manner of a 70s Hindi-film villain, at the manager's
-  // expense. Written for this app — not quotes from any film or actor.
-  intro: [
-    'Free transfer? Yahan kuch bhi free nahi milta.',
-    'Tera captain blank karega. Likh ke le le.',
-    'Hit lega? Le le. Points main le jaaunga.',
-    'Deadline nikal gayi. Ab pachhtaane se kya hoga?',
-    'Wildcard khel le. Ab tujhe koi nahi bacha sakta.',
-    'Bench pe 15 points? Mujhe pata tha.',
-    'Is gameweek tera rank mera hai.'
   ]
 };
 const lastQuip = {};
@@ -176,9 +165,6 @@ function needTeam(){
     <button class="btn primary" onclick="openLanding()">Add my team</button></div>`;
 }
 const teamReady = () => S.ready || Promise.resolve(null);
-/* the opening film (intro.js) is optional: everything works if it never loaded */
-const hasFilm = () => typeof Intro !== 'undefined';
-const filmRevealed = () => hasFilm() ? Intro.reveal : Promise.resolve();
 
 /* ---------------- shared drawing ---------------- */
 function spark(vals){
@@ -1497,7 +1483,7 @@ function openLanding(){
     Magic.orbit(el('landOrbit'), [{cls:'sat', size:7}, {cls:'sat m', size:6}], {radius:52, duration:9});
   }
   L.hidden = false; document.body.classList.add('landing-open');
-  filmRevealed().then(()=>{ if(!L.hidden) FX.landingIn(L); });
+  FX.landingIn(L);
   if(window.matchMedia && matchMedia('(hover:hover)').matches) setTimeout(()=>{ try{ el('landId').focus({preventScroll:true}); }catch(e){} }, 250);
 }
 function closeLanding(){
@@ -1589,9 +1575,6 @@ function openMenu(){
       <button class="btn" id="mRefresh">${icon('refresh')}<span>Refresh app</span></button>
       <button class="btn" id="mForget" ${S.teamId ? '' : 'disabled'}>${icon('forget')}<span>${isDemo() ? 'Leave the demo' : 'Forget team'}</span></button>
     </div>
-    ${hasFilm() ? `<div class="menu-film"><span class="t">Opening film</span><div class="acts">
-      <button class="btn sm" id="mFilm" aria-pressed="${Intro.isOn() && !FX.reduced}" ${FX.reduced ? 'disabled' : ''}>${FX.reduced ? 'Off — your device asks for less motion' : Intro.isOn() ? 'Plays on every launch' : 'Off'}</button>
-      <button class="btn sm" id="mWatch">Watch it now</button></div></div>` : ''}
     <div id="menuModel"></div></div></div>`;
   const close = ()=>{ root.innerHTML = ''; document.removeEventListener('keydown', onKey); };
   const onKey = e=>{ if(e.key === 'Escape') close(); };
@@ -1601,12 +1584,6 @@ function openMenu(){
   el('mTeam').onclick = ()=>{ close(); openLanding(); };
   el('mRefresh').onclick = ()=>location.reload();       // the page is never stored, so this is always a clean load
   el('mForget').onclick = ()=>{ close(); if(isDemo()){ exitDemo(); return; } forgetTeam(); cur = {tab:'', seg:''}; go('home', 'picks'); openLanding(); };
-  if(hasFilm()) el('mFilm').onclick = ()=>{
-    const on = !Intro.isOn(); Intro.setEnabled(on);
-    el('mFilm').setAttribute('aria-pressed', String(on)); el('mFilm').textContent = on ? 'Plays on every launch' : 'Off';
-    toast(on ? 'The opening film plays each time the app opens.' : 'No opening film from now on, on this device.');
-  };
-  if(hasFilm()) el('mWatch').onclick = ()=>{ close(); Intro.replay(introLine); };
   viewModel(el('menuModel'));
 }
 el('menuBtn').addEventListener('click', openMenu);
@@ -1626,9 +1603,6 @@ document.querySelector('.brand').addEventListener('click', ()=>{
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !el('landing').hidden && S.teamId) closeLanding(); });
 
 /* ---------------- boot ---------------- */
-/* the tagline typed in the opening film */
-const introLine = () => '“' + quip('intro') + '”';
-if(hasFilm()){ try{ Intro.play({line:introLine}); }catch(e){ /* the app never waits on the film */ } FX.hold(Intro.reveal); }
 buildChrome();
 FX.start();
 FX.observe(el('views'));
@@ -1662,7 +1636,6 @@ FX.observe(el('views'));
    Come back after a long absence and your squad, bank and transfers are re-read
    from FPL too, so a transfer made on the FPL site is never missing. */
 const STALE_AFTER = 10 * 60 * 1000;
-function quietReload(){ try{ sessionStorage.setItem('fplai_quiet', '1'); }catch(e){} location.reload(); }   // no opening film for these
 async function softRefresh(){
   S.meta = null; S.fresh = true;
   if(S.teamId){
@@ -1681,7 +1654,7 @@ async function softRefresh(){
       const r = await fetch('/version', {cache:'no-store'});
       if(!r.ok) return;
       const {build} = await r.json();
-      if(build && build !== mine){ reloading = true; quietReload(); }
+      if(build && build !== mine){ reloading = true; location.reload(); }
     }catch(e){ /* offline: keep what we have */ }
   }
   function back(){
@@ -1693,7 +1666,7 @@ async function softRefresh(){
     else back();
   });
   window.addEventListener('pageshow', e=>{
-    if(e.persisted){ last = 0; quietReload(); }         // restored from the back/forward cache: start clean
+    if(e.persisted){ last = 0; location.reload(); }         // restored from the back/forward cache: start clean
   });
   window.addEventListener('focus', check);
 })();

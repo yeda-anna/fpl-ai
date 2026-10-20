@@ -39,7 +39,7 @@ every action by commit, in `ci.yml`; bump them there.
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team, the leagues list and the Matches page. 156 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team, the leagues list and the Matches page. 150 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -56,14 +56,10 @@ the first argument to `node tests/e2e.js` to put them elsewhere.
 
 What it covers:
 
-- **The opening film:** the page is named Papa Ranjeet; GSAP, both plugins,
-  anime.js, Motion, Theatre.js and AutoAnimate load from `/static/vendor`, with
-  `FX`, `Magic` and `Intro`; the film plays on launch with its timecode running
-  and flies the drones traced from the portrait (`PORTRAIT`), whose picture has
-  loaded, and the logo is the portrait (`logo.webp`);
-  **Skip** ends it, it plays again on a fresh launch and gets out of the way by
-  itself, the menu turns it off (and then the app opens straight away), it runs
-  to its end on desktop, and there is none under reduced motion.
+- **The page loads:** it is named Papa Ranjeet; GSAP, both plugins, anime.js,
+  Motion and AutoAnimate load from `/static/vendor`, with `FX` and `Magic`;
+  there is no opening film (no film markup, no Theatre.js) and the app is there
+  at once; the logo is the supplied portrait (`logo.webp`).
 - **Landing:** a first visit opens it; it has the pitch scene and a quip;
   an empty ID and an unknown team each get a clear message; a real ID goes
   straight to Home → My squad, is saved in `localStorage`, names the team pill,
