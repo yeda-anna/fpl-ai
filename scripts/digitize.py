@@ -6,8 +6,8 @@ The image (the hexagonal mark the owner supplied, drawn on a design tool's grid
 canvas) is used as it is — nothing is redrawn or restyled. The canvas and its grid
 lines are almost colourless while the mark is strongly coloured, so the mark is
 lifted off by saturation (its anti-aliased edges un-mixed from the canvas colour),
-squared up with a margin and set on a plain light tile of the canvas's own colour,
-so its dark navy parts still read on the app's dark surfaces:
+squared up with a margin and set on a dark tile of the app's own night colour
+(`--bg` in styles.css), so it sits in the dark UI like the rest of the app:
   frontend/logo.webp       the logo everywhere in the app (the <symbol id="logo">)
   frontend/logo-mark.png   the mark alone, transparent, for anywhere a tile won't do
   frontend/icon-32.png     the browser-tab favicon
@@ -27,6 +27,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONT = os.path.join(ROOT, "frontend")
 SAT_BG, SAT_FULL = 12, 40           # saturation: up to SAT_BG is canvas or grid, from SAT_FULL fully the mark
 MARGIN = 0.12                       # space round the mark, as a share of the tile's side
+TILE = (10, 18, 20)                 # the tile behind the mark: the app's --bg (#0a1214)
 
 
 def lift(im: Image.Image) -> Tuple[Image.Image, Tuple[int, int, int]]:
@@ -57,9 +58,9 @@ def main() -> None:
         sys.exit(__doc__)
     mark, canvas = lift(Image.open(sys.argv[1]))
     square(mark, 512, None).save(os.path.join(FRONT, "logo-mark.png"), optimize=True)
-    square(mark, 256, canvas).convert("RGB").save(os.path.join(FRONT, "logo.webp"), "WEBP", quality=90, method=6)
+    square(mark, 256, TILE).convert("RGB").save(os.path.join(FRONT, "logo.webp"), "WEBP", quality=90, method=6)
     for n in (32, 180, 192, 512):
-        square(mark, n, canvas).convert("RGB").save(os.path.join(FRONT, "icon-%d.png" % n), optimize=True)
+        square(mark, n, TILE).convert("RGB").save(os.path.join(FRONT, "icon-%d.png" % n), optimize=True)
     print("canvas", canvas, "mark", mark.size)
 
 

@@ -75,7 +75,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
 | `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators, the race bar), anime.js (icon drawing, the landing logo), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
 | `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Ripple, OrbitingCircles, BorderBeam, ShimmerButton (hidden), AnimatedBeam |
-| `frontend/logo.webp`, `logo-mark.png`, `icon-*.png` | The hexagonal mark the owner supplied on its light tile (the logo), the mark alone (transparent), the favicon and home-screen icons — generated from `docs/brand/logo-source.png` |
+| `frontend/logo.webp`, `logo-mark.png`, `icon-*.png` | The hexagonal mark the owner supplied on a dark tile (the logo), the mark alone (transparent), the favicon and home-screen icons — generated from `docs/brand/logo-source.png` |
 | `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, AutoAnimate 0.10, Chakra Petch (fonts/) — vendored, see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `tests/fakes.py` | A made-up 20-club league in FPL's own shape, for the unit tests (no network) |
@@ -178,8 +178,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 - Name: **Papa Ranjeet**. Tagline: "Football’s a funny old game. Might as well do the
   maths." Logo: the hexagonal mark the owner supplied (`docs/brand/logo-source.png`),
   used as it is — not redrawn or restyled. `python3 scripts/digitize.py docs/brand/logo-source.png`
-  lifts it off its design-grid canvas and writes `logo.webp` (the mark on a light tile of
-  the canvas's colour, the `#logo` symbol), `logo-mark.png` (transparent), the favicon
+  lifts it off its design-grid canvas and writes `logo.webp` (the mark on a dark tile of the app's `--bg`, the `#logo` symbol), `logo-mark.png` (transparent), the favicon
   `icon-32.png` and the home-screen icons. Never edit those by hand; rerun the script.
   Don't put any real person's likeness in the app without asking.
 - Tone: light British humour and Indian dark humour on the landing screen and

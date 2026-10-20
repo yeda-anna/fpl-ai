@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-20 — The logo on a dark tile
+
+- The logo, favicon and home-screen icons now sit on a dark tile, the app's own
+  night colour (`--bg`, #0a1214), instead of the light canvas colour, so the mark
+  sits in the dark UI. The home-screen app's background and theme colour match it.
+
 ## 2026-10-20 — A new logo and favicon
 
 - The logo is now the owner's hexagonal mark (interlocking strokes, teal to navy), on a
