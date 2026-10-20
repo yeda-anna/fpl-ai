@@ -731,8 +731,8 @@ window.openSwap = async function(id){
           : 'Nobody you can afford at his position beats him.'}</div>`
       : `<div class="note swap-verdict"><b>Best swap: ${esc(me.web_name)} → ${esc(best.web_name)}.</b>
           ${sign(best.gain_total,1)} xPts over ${H} gameweek${H>1?'s':''}${d.hit ? `, ${sign(best.net_total,1)} after a ${num(d.hit,0)}-point hit (no free transfer left)` : ', and it uses a free transfer'}.</div>`;
-    const row = o => `<tr onclick="openPlayer(${o.id})" style="cursor:pointer">
-        <td><span class="nm">${esc(o.web_name)}</span>${flag(o)}<div class="u2">${esc(o.team_short)} · ${esc(o.opp)}${o.chance_next<100 ? ' · '+o.chance_next+'% fit' : ''}</div></td>
+    const row = (o, i) => `<tr onclick="openPlayer(${o.id})" style="cursor:pointer">
+        <td><span class="rk">${i+1}</span><span class="nm">${esc(o.web_name)}</span>${flag(o)}<div class="u2">${esc(o.team_short)} · ${esc(o.opp)}${o.chance_next<100 ? ' · '+o.chance_next+'% fit' : ''}</div></td>
         <td class="num">${num(o.price,1)}<div class="u2">£${num(o.bank_after,1)}m left</div></td>
         <td class="num ${o.gain_next>=0?'up':'down'}">${sign(o.gain_next,1)}</td>
         <td class="num ${o.gain_total>=0?'up':'down'}"><b>${sign(o.gain_total,1)}</b></td>
@@ -743,7 +743,7 @@ window.openSwap = async function(id){
         ${pos(me.position)}<h2 style="font-size:24px">Swap ${esc(me.web_name)}</h2>
         <span class="sub">${esc(me.team_short)} · sells for £${num(me.sells_for,1)}m</span>
       </div>
-      <p class="menu-sub">The best ${POS[me.position]} you could bring in with £${num(d.budget,1)}m to spend, ranked by extra points over the next ${H} gameweek${H>1?'s':''}.</p>
+      <p class="menu-sub">Your top ${d.options.length>1 ? d.options.length+' ' : ''}${POS[me.position]} swap${d.options.length>1?'s':''} with £${num(d.budget,1)}m to spend, ranked by extra points over the next ${H} gameweek${H>1?'s':''}.</p>
       ${verdict}
       ${d.options.length ? `<div class="card mb"><div class="well"><table><thead><tr>
           <th>Bring in</th><th class="num">£</th><th class="num">GW${d.next_gw}</th><th class="num">${H}GW</th><th class="num">xPts</th>

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-20 — Transfer ideas: the top three
+
+- Tapping a player of your team now suggests his **top three** replacements (it listed up
+  to six), numbered 1–3, best first.
+
 ## 2026-10-20 — Tap a player, see who to swap him for
 
 - On **Home → My squad**, tapping a player on the pitch (or a row in "Your fifteen") opens

@@ -58,7 +58,7 @@ calls the FPL API — useful for development on networks that can't reach it.
 | Solver | Mixed-integer program over squad, XI, captain, vice and transfers for every gameweek at once; returns up to three distinct plans with a template rating |
 | Chip Strategies | Each chip scored in every gameweek, respecting FPL's two chip windows, then combined into the best plan |
 | Copilot | Plain-English questions answered straight from the model and solver |
-| Swap ideas | Tap any player of your team for the best affordable replacements and the points they add |
+| Swap ideas | Tap any player of your team for the top three affordable replacements and the points they add |
 | Rate My Team | Score out of 100 against the best squad your own budget could buy |
 | Compare | Two players side by side, week by week |
 | Matches | For every match in any gameweek: the likeliest result, the score to expect, win/draw/lose odds, clean-sheet chances and the likeliest scorelines |

@@ -210,7 +210,7 @@ async function phone(browser){
   await page.waitForSelector('#v-home-squad .pl-tok', { timeout: 20000 });
   await page.click('#v-home-squad .pl-tok');
   ok('phone: clicking a player of your team opens his transfer ideas', await page.waitForSelector('.sheet .swap-verdict', { timeout: 20000 }).then(() => true, () => false));
-  ok('phone: the swap sheet lists replacements with the points they add', await page.$$eval('.sheet tbody tr', rs => rs.length >= 1 && rs.length <= 6 && rs.every(r => /[+−-]?\d/.test(r.textContent))));
+  ok('phone: the swap sheet lists replacements with the points they add', await page.$$eval('.sheet tbody tr', rs => rs.length === 3 && rs.every(r => /[+−-]?\d/.test(r.textContent))));
   ok('phone: the swap sheet fits width', await noOverflow(page), lastOverflow.join(', '));
   await page.screenshot({ path: `${OUT}/m-03b-swap.png` });
   await page.click('.sheet tbody tr');
