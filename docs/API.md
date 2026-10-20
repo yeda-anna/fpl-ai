@@ -83,6 +83,8 @@ Rules-based; no language model involved.
 | Path | Purpose |
 | --- | --- |
 | `/version` | Current frontend build id, `no-store`; open apps poll it to reload after a deploy |
+| `POST /api/usage` | Anonymous usage beacon, 204. `{"kind":"visit","returning":bool,"mode":"team"/"demo"/"none"}` once a day per browser, or `{"kind":"view","page":"tab/sub"}` (a page outside `usage.PAGES` is ignored); any other kind → 422 |
+| `GET /api/stats` | The owner's counts (`days`=30, 7–120): `today`, `week`, `period` (visits, new, returning, `modes`, `views`, `features`), a row per day, `since`, `persistent`. Needs header `X-Stats-Key` equal to the server's `STATS_KEY`: wrong or missing → 403; no `STATS_KEY` set → 404 |
 | `/healthz` | Liveness. Instant, never builds the model: `{"ok": true, "model_ready": bool}` |
 | `/api/health` | Readiness. Builds the model if needed and reports gameweeks |
 | `/` | the single-page app (`no-store`, CSS/JS links content-hashed); other files under `/static/` |

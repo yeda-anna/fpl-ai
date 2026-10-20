@@ -39,7 +39,7 @@ every action by commit, in `ci.yml`; bump them there.
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team, the leagues list and the Matches page. 154 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team, the leagues list, the Matches page and the usage counts. 164 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -89,6 +89,13 @@ What it covers:
   counts up.
 - No console errors and no failed requests (besides the deliberate unknown
   team).
+- **Usage counts:** the first open of the day sends one visit (new, with a real
+  team) holding only `kind`, `returning` and `mode`; a page view sends only the
+  page name; the browser keeps just two dates; a second open the same day sends
+  no visit; `#stats` asks for the key and turns a wrong one away. With
+  `STATS_KEY=… npm --prefix tests test` (the key the server was started with) it
+  also checks the tiles, the 30-day chart, pages and features, the 390px fit and
+  "Don't count this browser".
 
 ## Unit tests, all at once (no server, no network)
 
@@ -115,6 +122,18 @@ network or the `.cache/` folder.
 
 `test_api.py` holds one `expectedFailure`: `/api/meta` returns a 500 when the
 Elo prior can't be fetched. Remove the decorator once that's fixed.
+
+## Usage counts (no server needed)
+
+```bash
+./.venv/bin/python tests/test_usage.py
+```
+
+Visits split new/returning and by team mode, only the app's own page names are
+counted, features by route template and only when they answer, the file holds counts
+and nothing else, old days drop off, a broken file starts again. `tests/test_api.py`
+adds the routes: the beacon (204, 422 for an unknown kind), feature counting through
+the middleware, and the key on `/api/stats` (404 when off, 403 wrong, 200 right).
 
 ## Match predictions (no server needed)
 

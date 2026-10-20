@@ -29,7 +29,12 @@ _CACHE = tempfile.TemporaryDirectory()
 E = fakes.engine(with_elo=True)
 
 
+_STATS = tempfile.TemporaryDirectory()
+
+
 def setUpModule():
+    os.environ["STATS_DIR"] = _STATS.name    # usage counts go to a throwaway folder
+    os.environ.pop("STATS_KEY", None)
     fpl_api.CACHE_ONLY = True                 # never touch the network
     fpl_api.CACHE_DIR = _CACHE.name           # and never read a developer's real cache
     main._engine.update(obj=E, built=time.time() + 10 ** 9)   # never rebuilt during the run
@@ -184,6 +189,37 @@ class SwapRouteTests(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
         self.assertIn("isn't in this squad", r.json()["detail"])
         self.assertEqual(client.get("/api/entry/987654321/swaps/1").status_code, 404)
+
+
+class UsageRouteTests(unittest.TestCase):
+    def tearDown(self):
+        os.environ.pop("STATS_KEY", None)
+
+    def test_a_visit_and_a_page_view_are_counted(self):
+        self.assertEqual(client.post("/api/usage", json={"kind": "visit", "returning": True, "mode": "demo"}).status_code, 204)
+        self.assertEqual(client.post("/api/usage", json={"kind": "view", "page": "plan/chips"}).status_code, 204)
+        self.assertEqual(client.post("/api/usage", json={"kind": "view", "page": "not/a-page"}).status_code, 204)   # ignored
+        self.assertEqual(client.post("/api/usage", json={"kind": "who"}).status_code, 422)
+        os.environ["STATS_KEY"] = "s3cret"
+        d = client.get("/api/stats", headers={"X-Stats-Key": "s3cret"}).json()
+        self.assertGreaterEqual(d["today"]["modes"].get("demo", 0), 1)
+        self.assertIn("plan/chips", {v["name"] for v in d["today"]["views"]})
+        self.assertNotIn("not/a-page", {v["name"] for v in d["today"]["views"]})
+
+    def test_features_are_counted_from_the_routes(self):
+        ok("/api/matches")
+        os.environ["STATS_KEY"] = "s3cret"
+        d = client.get("/api/stats", headers={"X-Stats-Key": "s3cret"}).json()
+        self.assertIn("Match predictions", {f["name"] for f in d["today"]["features"]})
+
+    def test_the_stats_need_the_key(self):
+        r = client.get("/api/stats")
+        self.assertEqual(r.status_code, 404)                           # no key set on the server: stats are off
+        self.assertIn("STATS_KEY", r.json()["detail"])
+        os.environ["STATS_KEY"] = "s3cret"
+        self.assertEqual(client.get("/api/stats").status_code, 403)
+        self.assertEqual(client.get("/api/stats", headers={"X-Stats-Key": "guess"}).status_code, 403)
+        self.assertEqual(client.get("/api/stats", headers={"X-Stats-Key": "s3cret"}).status_code, 200)
 
 
 class TeamRouteTests(unittest.TestCase):

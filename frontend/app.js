@@ -1389,6 +1389,7 @@ function go(tabId, segId){
   const seg = t.segs.find(s=>s.id===want) || t.segs[0];
   const tabChanged = cur.tab !== t.id;
   if(!tabChanged && cur.seg === seg.id && S.loaded[t.id+'/'+seg.id]) return;
+  if(tabChanged || cur.seg !== seg.id) countView(t.id + '/' + seg.id);
   cur = {tab:t.id, seg:seg.id}; S.lastSeg[t.id] = seg.id;
 
   document.querySelectorAll('#nav button, #dock button').forEach(b=>{
@@ -1454,6 +1455,7 @@ function raceBar(){
 function routeFromHash(){
   let h = location.hash.slice(1);
   if(h === 'model'){ h = ''; openMenu(); }
+  if(h === 'stats'){ h = ''; openStats(); }
   h = LEGACY[h] || h;
   const [t, s] = h.split('/');
   go(TABS.some(x=>x.id===t) ? t : 'home', s);
@@ -1607,6 +1609,96 @@ document.querySelector('.brand').addEventListener('click', ()=>{
 });
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !el('landing').hidden && S.teamId) closeLanding(); });
 
+/* ---------------- anonymous usage counts (backend/usage.py) ----------------
+   One visit a day per browser and the name of each page opened — nothing else. The only
+   thing kept on the device is the date it first opened the app (fplai_seen) and the day
+   it last said hello (fplai_day); no ID, no cookie, no third-party script. A browser that
+   asks not to be tracked (Do Not Track, Global Privacy Control) or that the owner switched
+   off on the stats page (fplai_nocount) sends nothing. */
+const noCount = () => !!store.get('fplai_nocount', false) || navigator.doNotTrack === '1' || navigator.globalPrivacyControl === true;
+function beacon(body){
+  if(noCount()) return;
+  try{ fetch('/api/usage', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), keepalive:true}).catch(()=>{}); }catch(e){}
+}
+function countVisit(){
+  const d = new Date(), today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  if(store.get('fplai_day', '') === today) return;
+  const seen = store.get('fplai_seen', '');
+  store.set('fplai_day', today);
+  if(!seen) store.set('fplai_seen', today);
+  beacon({kind:'visit', returning:!!seen, mode: isDemo() ? 'demo' : S.teamId ? 'team' : 'none'});
+}
+const countView = page => beacon({kind:'view', page});
+
+/* The owner's stats page: open the app at #stats. It needs the STATS_KEY set on the
+   server; the key is kept on this device once it works. Not a tab, not in the menu. */
+const pageName = id => { const [t, s] = id.split('/'); const tab = TABS.find(x=>x.id===t); const seg = tab && tab.segs.find(x=>x.id===s);
+  return tab ? tab.label + (tab.segs.length > 1 && seg ? ' › ' + seg.label : '') : id; };
+async function openStats(){
+  const root = el('sheet-root');
+  root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Stats"><div id="stBody"></div></div></div>`;
+  const close = ()=>{ root.innerHTML = ''; document.removeEventListener('keydown', onKey); };
+  const onKey = e=>{ if(e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  el('scrim').addEventListener('click', e=>{ if(e.target.id === 'scrim') close(); });
+  const body = el('stBody');
+  const head = sub => `<button class="btn sm x" id="closeSheet">Close ✕</button><h2 class="menu-h">Who’s using the app</h2><p class="menu-sub">${sub}</p>`;
+  const wire = ()=>{ el('closeSheet').onclick = close; };
+  const ask = msg => {
+    body.innerHTML = head('Anonymous counts for the owner. Enter the stats key set on the server (STATS_KEY).') +
+      `${msg ? `<div class="err">${esc(msg)}</div>` : ''}
+      <form class="controls" id="stForm" autocomplete="off"><label class="fld">Stats key<input id="stKey" type="password" autocomplete="current-password"></label>
+        <button class="btn primary" type="submit">Show stats</button></form>`;
+    wire();
+    el('stForm').onsubmit = ev=>{ ev.preventDefault(); const k = el('stKey').value.trim(); if(k){ store.set('fplai_stats_key', k); load(); } };
+    setTimeout(()=>{ try{ el('stKey').focus(); }catch(e){} }, 50);
+  };
+  const load = async ()=>{
+    const key = store.get('fplai_stats_key', '');
+    if(!key) return ask('');
+    body.innerHTML = head('Counting…') + loading('Reading the counts');
+    wire();
+    let d;
+    try{
+      const r = await fetch('/api/stats?days=30', {cache:'no-store', headers:{'X-Stats-Key': key}});
+      if(!r.ok){ let m = ''; try{ m = (await r.json()).detail; }catch(e){} if(r.status === 403) store.del('fplai_stats_key'); return ask(m || ('Request failed ('+r.status+')')); }
+      d = await r.json();
+    }catch(e){ body.innerHTML = head('') + errBox(e); wire(); return; }
+    const P = d.period, W = d.week, T = d.today, pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '–';
+    const max = Math.max(1, ...d.days.map(x=>x.visits));
+    const list = (rows, label) => rows.length ? `<div class="well"><table><tbody>${rows.map(r=>`<tr>
+        <td>${esc(label(r.name))}</td><td style="width:42%"><span class="st-meter"><i style="width:${Math.max(4, 100 * r.count / rows[0].count)}%"></i></span></td>
+        <td class="num"><b>${r.count.toLocaleString()}</b></td></tr>`).join('')}</tbody></table></div>` : '<p class="dim">Nothing yet.</p>';
+    const off = noCount();
+    body.innerHTML = head(`Anonymous counts since ${esc(d.since || '—')}: one visit a day per browser, no names, IDs or cookies.`) + `
+      <div class="grid g4 mb">
+        ${tile('Visitors today', T.visits, `${T.new} new · ${T.returning} returning`)}
+        ${tile('Last 7 days', W.visits, `${W.new} new · ${W.returning} returning`)}
+        ${tile(`Last ${d.period_days} days`, P.visits, `${pct(P.returning, P.visits)} returning`)}
+        ${tile('Real team vs demo', pct(P.modes.team || 0, P.visits), `${P.modes.team || 0} real · ${P.modes.demo || 0} demo · ${P.modes.none || 0} no team yet`)}
+      </div>
+      <div class="card mb"><h3>Visitors a day <span class="r"><i class="st-key new"></i>new <i class="st-key ret"></i>returning</span></h3>
+        <div class="st-bars" role="img" aria-label="Visitors a day for the last ${d.period_days} days">${d.days.map(x=>`
+          <div class="st-bar" title="${x.day}: ${x.visits} visitor${x.visits===1?'':'s'} (${x.new} new)"><i class="ret" style="height:${100 * (x.visits - x.new) / max}%"></i><i class="new" style="height:${100 * x.new / max}%"></i></div>`).join('')}
+        </div>
+        <div class="st-axis"><span>${esc(d.days[0].day)}</span><span>today</span></div></div>
+      <div class="grid g2 mb">
+        <div class="card"><h3>Pages opened <span class="r">${d.period_days} days</span></h3>${list(P.views, pageName)}</div>
+        <div class="card"><h3>Features used <span class="r">${d.period_days} days</span></h3>${list(P.features, n => n)}</div>
+      </div>
+      <div class="legend">${d.persistent ? 'Counts are kept on the server’s volume and survive deploys.'
+        : 'These counts start again on every deploy. To keep them, attach a Railway volume and set STATS_DIR to its path.'}
+        Days are UTC. Browsers that ask not to be tracked are never counted.</div>
+      <div class="controls" style="margin-top:14px">
+        <button class="btn" id="stSelf" aria-pressed="${off}">${off ? 'This browser isn’t counted' : 'Don’t count this browser'}</button>
+        <button class="btn" id="stForget">Forget the key</button></div>`;
+    wire();
+    el('stSelf').onclick = ()=>{ const now = !store.get('fplai_nocount', false); if(now) store.set('fplai_nocount', true); else store.del('fplai_nocount'); load(); };
+    el('stForget').onclick = ()=>{ store.del('fplai_stats_key'); ask(''); };
+  };
+  load();
+}
+
 /* ---------------- boot ---------------- */
 buildChrome();
 FX.start();
@@ -1623,6 +1715,7 @@ FX.observe(el('views'));
     S.ready = loadSavedTeam();              // straight to your team; no question asked
   }
   updateTeamPill();
+  countVisit();
   routeFromHash();
   if(!saved && !demo) openLanding();        // first visit on this device: who are you?
   try{

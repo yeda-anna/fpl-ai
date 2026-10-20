@@ -2,6 +2,7 @@
 // (1440x900) viewport. Start the app first, then:  npm --prefix tests test
 //   BASE_URL=http://127.0.0.1:9000/ npm --prefix tests test   (another server)
 //   TEAM_ID=1234567 npm --prefix tests test                    (a real team on live)
+//   STATS_KEY=… npm --prefix tests test                         (the server's stats key: checks the #stats page's counts too)
 // Screenshots are written to tests/screenshots/ (git-ignored).
 const fs = require('fs');
 const path = require('path');
@@ -426,6 +427,46 @@ async function myLeagues(browser){
   await ctx.close();
 }
 
+// Anonymous usage: one visit a day per browser and page names only; #stats needs the server's key.
+async function usageStats(browser){
+  const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
+  const page = await ctx.newPage();
+  const errs = []; page.on('pageerror', e => errs.push(e.message));
+  page.on('console', m => { if (m.type() === 'error' && !/40[34]/.test(m.text())) errs.push(m.text()); });
+  const sent = [];
+  page.on('request', r => { if (r.url().endsWith('/api/usage') && r.method() === 'POST') sent.push(r.postDataJSON()); });
+  await page.addInitScript(() => { localStorage.setItem('fplai_team', '"1"'); });
+  await page.goto(BASE + '#matches/predictions', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  const visit = sent.find(b => b.kind === 'visit'), view = sent.find(b => b.kind === 'view');
+  ok('usage: the first open of the day sends one anonymous visit: new, with a real team', !!visit && visit.returning === false && visit.mode === 'team'
+     && Object.keys(visit).sort().join() === 'kind,mode,returning', JSON.stringify(visit));
+  ok('usage: a page view sends the page name and nothing else', !!view && view.page === 'matches/predictions' && Object.keys(view).sort().join() === 'kind,page', JSON.stringify(view));
+  ok('usage: the browser keeps only the first-seen date and the last day, no ID', await page.evaluate(() =>
+    /^"\d{4}-\d\d-\d\d"$/.test(localStorage.getItem('fplai_seen')) && localStorage.getItem('fplai_seen') === localStorage.getItem('fplai_day')));
+  const before = sent.filter(b => b.kind === 'visit').length;
+  await page.reload({ waitUntil: 'networkidle' });
+  ok('usage: a second open the same day sends no second visit', sent.filter(b => b.kind === 'visit').length === before);
+
+  await page.goto(BASE + '#stats', { waitUntil: 'networkidle' });
+  ok('usage: #stats asks for the stats key', await page.waitForSelector('.sheet #stKey', { timeout: 10000 }).then(() => true, () => false));
+  await page.fill('#stKey', 'not-the-key'); await page.click('#stForm button[type=submit]');
+  ok('usage: a wrong key is turned away with a readable message', await page.waitForSelector('.sheet .err', { timeout: 10000 }).then(() => true, () => false)
+     && /stats key|STATS_KEY/.test(await page.textContent('.sheet .err')), await page.textContent('.sheet .err').catch(() => ''));
+  if (process.env.STATS_KEY) {
+    await page.fill('#stKey', process.env.STATS_KEY); await page.click('#stForm button[type=submit]');
+    ok('usage: the right key shows visitors, the daily chart, pages and features', await page.waitForSelector('.sheet .st-bars', { timeout: 15000 }).then(() => true, () => false)
+       && (await page.$$('.sheet .tile')).length === 4 && (await page.$$('.sheet .st-bar')).length === 30
+       && /Matches/.test(await page.textContent('.sheet')) && /Match predictions/.test(await page.textContent('.sheet')));
+    ok('usage: the stats page fits the phone', await noOverflow(page), lastOverflow.join(', '));
+    await page.screenshot({ path: `${OUT}/m-09-stats.png`, fullPage: true });
+    await page.click('#stSelf');
+    ok('usage: the owner can stop counting this browser', await page.evaluate(() => localStorage.getItem('fplai_nocount') === 'true'));
+  }
+  ok('usage: no console errors', errs.length === 0, errs.slice(0, 3).join(' || '));
+  await ctx.close();
+}
+
 (async () => {
   const browser = await chromium.launch();
   try { await phone(browser); } catch (e) { ok('phone run completed', false, e.message.split('\n')[0]); }
@@ -434,6 +475,7 @@ async function myLeagues(browser){
   try { await demoTeam(browser); } catch (e) { ok('demo run completed', false, e.message.split('\n')[0]); }
   try { await matchesTab(browser); } catch (e) { ok('matches run completed', false, e.message.split('\n')[0]); }
   try { await myLeagues(browser); } catch (e) { ok('leagues run completed', false, e.message.split('\n')[0]); }
+  try { await usageStats(browser); } catch (e) { ok('usage run completed', false, e.message.split('\n')[0]); }
   await browser.close();
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;

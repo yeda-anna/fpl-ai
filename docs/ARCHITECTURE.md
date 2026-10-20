@@ -87,6 +87,14 @@ the landing screen; `loadSavedTeam()` reads it fresh (`fresh=1`) and team views
 `await teamReady()` before their own requests. See `DESIGN.md` for the visual
 system and motion.
 
+## Usage counts
+
+`backend/usage.py` keeps anonymous daily counts in `usage.json` under `STATS_DIR`. The
+browser posts one visit a day (`fplai_seen`/`fplai_day` in `localStorage` decide new vs
+returning and once-a-day) and a page name on each navigation to `POST /api/usage`; a
+middleware in `main.py` counts features by route template after the answer. The owner
+reads them at `#stats` (`GET /api/stats`, `X-Stats-Key` = `STATS_KEY`).
+
 ## Freshness (cache policy)
 
 Every open must show the latest design and the latest squad, including
