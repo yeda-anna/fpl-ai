@@ -179,6 +179,12 @@ async function phone(browser){
   await page.waitForSelector('#svLeft .path', { timeout: 90000 });
   ok('phone: the solver returns plans', (await page.$$('#svLeft .path')).length >= 1);
   ok('phone: the plan says who it would not buy or captain on fitness', /under 75% to play/.test(await page.textContent('#svRight .legend')));
+  {
+    const kept = await page.$('#svLeft .pl-tok:not(:has(.badge.in))');
+    await kept.scrollIntoViewIfNeeded(); await kept.tap();
+    ok('phone: tapping a player you own on the plan\'s pitch opens his transfer ideas', await page.waitForSelector('.sheet .swap-verdict', { timeout: 20000 }).then(() => true, () => false));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  }
   await page.click('#gwNext'); await page.waitForTimeout(250);
   ok('phone: the pitch steps to the next gameweek', /GW\d+/.test(await page.textContent('.gw-nav span')));
 
@@ -207,9 +213,14 @@ async function phone(browser){
   await page.click('.sheet tbody tr');
   ok('phone: a replacement opens its player sheet', await page.waitForSelector('.sheet .tile', { timeout: 20000 }).then(() => true, () => false));
   ok('phone: the player sheet gives a chance to score and to play', /\d+% to score/.test(await page.textContent('.sheet')) && /% fit to play/.test(await page.textContent('.sheet')));
+  ok('phone: a player you don\'t own has no swap button', !(await page.$('#playerSwap')));
   await page.keyboard.press('Escape'); await page.waitForTimeout(200);
   await page.click('#v-home-squad .card:nth-of-type(2) tbody tr');
   ok('phone: a row in your fifteen opens transfer ideas too', await page.waitForSelector('.sheet .swap-verdict', { timeout: 20000 }).then(() => true, () => false));
+  await page.tap('#swapMe');
+  ok('phone: your own player\'s page offers transfer ideas', await page.waitForSelector('.sheet #playerSwap', { timeout: 20000 }).then(() => true, () => false));
+  await page.tap('#playerSwap');
+  ok('phone: and the button opens them', await page.waitForSelector('.sheet .swap-verdict', { timeout: 20000 }).then(() => true, () => false));
   await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 
   // ---- menu: how it works, refresh, forget ----

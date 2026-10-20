@@ -325,8 +325,8 @@ function pitch(xi, bench, captain, vice, opts){
   const rows = {1:[],2:[],3:[],4:[]};
   xi.forEach(p => rows[p.position] && rows[p.position].push(p));
   const isC = p => captain && p.id === captain.id, isV = p => vice && p.id === vice.id;
-  const open = opts.swap ? 'openSwap' : 'openPlayer';       // your own squad: a click shows who to swap him for
-  const tok = p => `<div class="pl-tok" onclick="${open}(${p.id})" title="${esc(p.web_name)} · £${num(p.price,1)}m${opts.swap ? ' — click for transfer ideas' : ''}">
+  const open = opts.swap ? 'tapPlayer' : 'openPlayer';      // your own squad: a tap shows who to swap him for
+  const tok = p => `<div class="pl-tok" onclick="${open}(${p.id})" title="${esc(p.web_name)} · £${num(p.price,1)}m${opts.swap && owns(p.id) ? ' — tap for transfer ideas' : ''}">
       ${isC(p) ? '<span class="badge c">C</span>' : isV(p) ? '<span class="badge v">V</span>' : ''}
       ${ins.has(p.id) ? '<span class="badge in">IN</span>' : ''}
       ${shirt(p.team_short, p.position === 1)}
@@ -383,7 +383,7 @@ async function viewSquad(t){
           <div class="well"><table><thead><tr>
             <th>Player</th><th></th><th class="num">£</th><th class="num">GW${e.next_gw}</th><th class="num">${S.horizon}GW</th><th>Trend</th>
           </tr></thead><tbody>
-          ${e.squad.slice().sort((a,b)=>b.xpts_total-a.xpts_total).map(p=>`<tr onclick="openSwap(${p.id})" style="cursor:pointer" title="Click for transfer ideas">
+          ${e.squad.slice().sort((a,b)=>b.xpts_total-a.xpts_total).map(p=>`<tr onclick="tapPlayer(${p.id})" style="cursor:pointer" title="Tap for transfer ideas">
             <td><span class="nm">${esc(p.web_name)}</span>${flag(p)}<div class="u2">${esc(p.team_short)}</div></td>
             <td>${pos(p.position)}</td><td class="num">${num(p.price,1)}</td>
             <td class="num accent"><b>${num(p.xpts)}</b></td><td class="num">${num(p.xpts_total,1)}</td>
@@ -666,6 +666,7 @@ window.openPlayer = async function(id){
         ${mm.returning?'<span class="tag y">Returning from injury</span>':''}
         ${ov!=null?`<span class="tag">Your minutes: ${ov}′</span>`:''}
       </div>
+      ${owns(p.id) ? `<div class="controls" style="margin:-4px 0 16px"><button class="btn primary" id="playerSwap">Who could replace ${esc(p.web_name)}?</button></div>` : ''}
       ${p.news?`<div class="note">${esc(p.news)}</div>`:''}
       <div class="grid g4 mb">
         ${tile('Next GW', num(p.xpts_next), 'FPL’s own estimate: '+num(p.fpl_ep_next))}
@@ -695,10 +696,14 @@ window.openPlayer = async function(id){
         </div>
       </div>`;
     el('closeSheet').onclick = close;
+    if(el('playerSwap')) el('playerSwap').onclick = ()=>{ close(); openSwap(p.id); };
   }catch(e){ root.querySelector('.sheet').innerHTML = errBox(e); }
 };
 
 /* ---------------- Swap sheet: who to bring in for one of your players ---------------- */
+/* a player in the loaded team's current squad: tapping him anywhere offers transfer ideas */
+const owns = id => S.teamId != null && !!(S.entry && S.entry.squad && S.entry.squad.some(p=>p.id===id));
+window.tapPlayer = id => owns(id) ? openSwap(id) : openPlayer(id);
 const SW = { seq:0 };
 window.openSwap = async function(id){
   const root = el('sheet-root'), mine = ++SW.seq;
@@ -829,7 +834,7 @@ async function viewSolver(t){
           <div class="pl">${x.label}</div><div class="pv">${num(x.total_xpts,1)}</div>
           <div class="ps">${i===0?'best found':(Math.abs(x.total_xpts-best)<0.05?'level':sign(x.total_xpts-best,1))} · ${x.total_hits?'−'+(x.total_hits*4):'no hits'}</div></button>`).join('')}
       </div>
-      ${pitch(g.starting_xi, g.bench, g.captain, g.vice_captain, {header, ins: g.transfers_in.map(x=>x.id)})}`;
+      ${pitch(g.starting_xi, g.bench, g.captain, g.vice_captain, {header, ins: g.transfers_in.map(x=>x.id), swap:true})}`;
     el('gwPrev').onclick = ()=>{ SV.gw = Math.max(0, SV.gw-1); draw(); };
     el('gwNext').onclick = ()=>{ SV.gw = Math.min(p.gameweeks.length-1, SV.gw+1); draw(); };
     el('svLeft').querySelector('.paths').addEventListener('click', ev=>{

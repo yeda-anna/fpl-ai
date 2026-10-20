@@ -39,7 +39,7 @@ every action by commit, in `ci.yml`; bump them there.
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team, the leagues list and the Matches page. 150 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team, the leagues list and the Matches page. 154 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
