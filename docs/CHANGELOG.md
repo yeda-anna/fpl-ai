@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-20 — The opening film is gone
+
+- Removed, at the owner's request: the drone-swarm film that played on every launch,
+  its "Skip intro" button, the menu's **Opening film** switch and "Watch it now", and
+  the villain one-liner it typed. The app now opens straight onto the landing screen or
+  your saved team.
+- Deleted with it: `intro.js`, `portrait.js`, `portrait.webp`, the vendored Theatre.js
+  core and licence, the film's CSS, the unused Retro Grid effect and the hold on
+  entrances that waited for the film. `scripts/digitize.py` now makes only the logo
+  and the icons. The app's own reloads no longer need a "quiet" flag.
+
 ## 2026-10-20 — Transfer ideas: the top three
 
 - Tapping a player of your team now suggests his **top three** replacements (it listed up

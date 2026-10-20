@@ -9,9 +9,8 @@ Papa Ranjeet is a Fantasy Premier League planner. A FastAPI backend pulls the
 official FPL API, projects expected points (xPts) for every player, and runs a
 mixed-integer solver over transfers, captaincy and chips. A no-build vanilla-JS
 single-page app renders it in a race-day look (dark teal, italic Chakra Petch,
-slanted lime buttons) — it opens with a short
-Theatre.js film of drones flying into the logo, and moves with GSAP, anime.js, Motion, AutoAnimate and effects
-rebuilt from Magic UI — with six tabs and a mobile app shell.
+slanted lime buttons) — that moves with GSAP, anime.js, Motion, AutoAnimate and effects
+rebuilt from Magic UI, with six tabs and a mobile app shell.
 
 Live: https://paparanjeet.up.railway.app · Repo: yeda-anna/fpl-ai
 
@@ -30,7 +29,7 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 156 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
+npm --prefix tests test        # 150 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 ./.venv/bin/python tests/test_pending_transfers.py # transfers since the deadline, no server needed
 ./.venv/bin/python tests/test_demo.py             # the demo team is a legal squad, no server needed
@@ -46,7 +45,7 @@ node scripts/screenshots.js --after http://127.0.0.1:8790 --view home/squad   # 
 ./.venv/bin/python tests/test_ci_scripts.py       # the CI gate's own scripts, no server needed
 python3 scripts/check_contrast.py                 # WCAG AA for the palette
 scripts/smoke.sh http://127.0.0.1:8787            # health, page, build id, assets on a running copy (--live: unknown team → 404)
-for f in app motion magic intro; do node --check frontend/$f.js; done   # quick syntax check
+for f in app motion magic; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
 ```
 
@@ -69,15 +68,13 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
 | `backend/telemetry.py` | Structured logs: one JSON line per event on stdout for Railway, a line per request by route template; `LOG_LEVEL` |
 | `backend/demo.py` | The demo team (ID 0, "Gut Feeling FC") for visitors who don't play FPL: a legal squad picked on vibes and an invented season |
-| `frontend/index.html` | Shell: the opening film's stage, top bar, the page head with the season race bar, the six-tab dock, the landing screen (pitch scene), logo, scripts |
-| `frontend/styles.css` | Design system: the tokens, the Chakra Petch faces, "the slant", components, the Magic UI effects, the film, landing, dock, breakpoints |
+| `frontend/index.html` | Shell: top bar, the page head with the season race bar, the six-tab dock, the landing screen (pitch scene), logo, scripts |
+| `frontend/styles.css` | Design system: the tokens, the Chakra Petch faces, "the slant", components, the Magic UI effects, landing, dock, breakpoints |
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
 | `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators, the race bar), anime.js (icon drawing, the landing logo), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
-| `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Ripple, OrbitingCircles, BorderBeam, ShimmerButton (hidden), AnimatedBeam, RetroGrid |
-| `frontend/intro.js` | `Intro`: the opening film, a Theatre.js sequence (keyframes in `KEYS`) played on launch: a drone swarm drawn on a canvas |
-| `frontend/portrait.js` | `PORTRAIT`: the film's drones, traced from the lights in the portrait — generated, don't edit |
-| `frontend/portrait.webp`, `logo.webp`, `icon-*.png` | The drone-portrait image the owner supplied, its square face crop (the logo) and the home-screen icons — generated |
-| `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, Theatre.js core 0.7, AutoAnimate 0.10, Chakra Petch (fonts/) — vendored, see its README |
+| `frontend/magic.js` | `Magic`: Magic UI components rebuilt in plain JS — HyperText, TypingAnimation, Ripple, OrbitingCircles, BorderBeam, ShimmerButton (hidden), AnimatedBeam |
+| `frontend/logo.webp`, `icon-*.png` | The square face crop of the drone-portrait image the owner supplied (the logo) and the home-screen icons — generated |
+| `frontend/vendor/` | GSAP 3.15 (+ DrawSVGPlugin, MotionPathPlugin), anime.js 4.5, Motion 13.4, AutoAnimate 0.10, Chakra Petch (fonts/) — vendored, see its README |
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `tests/fakes.py` | A made-up 20-club league in FPL's own shape, for the unit tests (no network) |
 | `scripts/calibrate.py` | Projection sanity check |
@@ -87,7 +84,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `scripts/smoke.sh` | Smoke test for a running copy (CI's built image, a preview, live) |
 | `scripts/check_start_command.py` | `Procfile` and `railway.json` start the app the same way |
 | `.github/workflows/ci.yml` | CI on every PR and push to `main`: unit tests on 3.9 + 3.12, frontend checks, a Railpack build that boots and is smoke-tested |
-| `scripts/digitize.py` | From the supplied image: `portrait.webp`, `logo.webp`, the PNG icons and `portrait.js` |
+| `scripts/digitize.py` | From the supplied image: `logo.webp` and the PNG icons |
 | `docs/` | Architecture, model, solver, API, design, data, testing, deployment |
 | `.claude/agents/` | Specialist sub-agents for this repo |
 | `.claude/skills/` | Step-by-step procedures (run, test, calibrate, deploy, design, add a feature) |
@@ -112,10 +109,10 @@ suite at **0 failures** — see `docs/TESTING.md`.
 
 **Frontend**
 - No build step, no framework, no CDN. Plain JS in `app.js`; animation in
-  `motion.js` (`FX`), `magic.js` (`Magic`) and `intro.js` (`Intro`), using the
+  `motion.js` (`FX`) and `magic.js` (`Magic`), using the
   vendored libraries in `frontend/vendor/`, each with its own job: GSAP (+
   DrawSVG, MotionPath) for SVG drawing and timelines, anime.js for icons, Motion for springs, in-view and scroll, AutoAnimate for lists that
-  change, Theatre.js core for the opening film. Magic UI is React, so its
+  change. Magic UI is React, so its
   effects are rebuilt in `magic.js` + CSS — never pull in React for it. Don't
   add another library without asking; upgrade by replacing the files and noting
   the version in `frontend/vendor/README.md`. The global `Motion` is the
@@ -166,27 +163,20 @@ suite at **0 failures** — see `docs/TESTING.md`.
   when an animation ends (GSAP `clearProps`, Motion `.then`) so hover effects
   keep working. Don't animate an element with two libraries at once (the
   Copilot log is AutoAnimate's, so it isn't in `FX`'s entrance list).
-- **The opening film** plays on every launch (not on in-app navigation, not on
-  the app's own reloads), is skippable at any moment (tap, Esc/Enter/Space,
-  "Skip intro"), can be turned off in the menu (`fplai_intro`), and never runs
-  under reduced motion. The app loads underneath and must never wait on it:
-  `Intro` is optional, and entrances are held only until the film opens onto
-  the app (`FX.hold(Intro.reveal)`). About 11½ seconds: the tagline is typed by
-  4.85 s and holds for six seconds before the push-in.
+- **There is no opening film.** The app opens straight onto the landing screen or
+  the saved team. The drone-swarm film (Theatre.js) was removed at the owner's
+  request; don't bring it back, or add another intro, without asking.
 
 **Brand and content**
 - Name: **Papa Ranjeet**. Tagline: "Football’s a funny old game. Might as well do the
   maths." Logo: the drone-portrait image the owner supplied, used as it is —
   not regenerated or restyled. `scripts/digitize.py <image>` writes
-  `portrait.webp` (the film), `logo.webp` (a square face crop, the `#logo`
-  symbol), the PNG icons and `portrait.js` (the film's drones, traced from the
-  image's own lights). Never edit those by hand; rerun the script. Don't put any
+  `logo.webp` (a square face crop, the `#logo`
+  symbol) and the PNG icons. Never edit those by hand; rerun the script. Don't put any
   other real person's likeness in the app without asking.
 - Tone: light British humour and Indian dark humour on the landing screen and
   under the loader ("putting the kettle on", "Sharma ji’s son finished this ages
-  ago"), and the opening film's tagline — a one-liner in the manner of a 70s
-  Hindi-film villain ("Free transfer? Yahan kuch bhi free nahi milta.") —
-  written for the app, never presented as a real actor's or film's dialogue. Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —
+  ago"). Lines live in `QUIPS` in `app.js`, aimed at the manager's own luck —
   never at a religion, caste, region, community, body or real person. **Never**
   in errors or anything a manager acts on.
 - **One roast, by request:** Home's title is the team's own name from FPL, and

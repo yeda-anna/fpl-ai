@@ -1,6 +1,6 @@
 /* Papa Ranjeet — motion (the FX layer). Plain JS, no build step.
 
-   Five libraries, each doing what it's best at (all vendored in /static/vendor):
+   Four libraries, each doing what it's best at (all vendored in /static/vendor):
    - GSAP (+ DrawSVGPlugin, MotionPathPlugin): the landing timeline, drawing the
      neon strokes, the ball's flight into the goal and the sliding indicators in
      the dock and the section switcher.
@@ -10,7 +10,6 @@
      pressed, lists drop in one by one and the scroll-progress line.
    - AutoAnimate: lists that change (the projections table re-sorting, the
      Copilot log) move their rows into place instead of jumping.
-   - Theatre.js drives the opening film; that lives in intro.js.
    Magic UI's components are rebuilt in magic.js; the ones that need springs or
    in-view triggers (Blur Fade, Number Ticker, Animated List) are here.
 
@@ -116,7 +115,7 @@ const FX = (() => {
     G.fromTo(segs, {scaleY:0}, {scaleY:1, duration:.4, ease:'back.out(2)', stagger:.012, clearProps:'transform'});
   }
   function viewIn(view){
-    if(!view || !canM || gate) return;
+    if(!view || !canM) return;
     M.animate(view, {opacity:[0, 1], y:[14, 0]}, {duration:.45, ease:EXPO}).then(()=>clearInline(view));
   }
   function navigated(o){
@@ -144,12 +143,11 @@ const FX = (() => {
 
   /* ---- content (Motion): new cards blur-fade in (Magic UI Blur Fade) — the ones on
          screen one after another, the ones further down as you scroll to them —
-         and figures tick up on a spring (Magic UI Number Ticker). While the opening
-         film runs, all of it waits and then plays as the film opens onto the app. ---- */
+         and figures tick up on a spring (Magic UI Number Ticker). ---- */
   const IN_SEL = '.tile, .card, .path, .plan, .gw-c, .stats-row > div, .need-team';   // the Copilot log is AutoAnimate's
   const CU_SEL = '.tile .val, .stat-v, .path .pv, .gw-score, .gw-c .v, .cu';
   const seen = new WeakSet();
-  let batch = [], queued = false, gate = null, waiting = [];
+  let batch = [], queued = false;
   const onScreen = n => { const r = n.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.width > 0; };
   function blurFade(nodes){
     if(!nodes.length) return;
@@ -158,7 +156,6 @@ const FX = (() => {
   }
   function flush(){
     queued = false;
-    if(gate) return;
     let nodes = batch.filter(n=>n.isConnected); batch = [];
     nodes = nodes.filter(n=>!nodes.some(o=>o !== n && o.contains(n)));          // a card inside a card moves with its parent
     if(!nodes.length || !canM) return;
@@ -192,8 +189,8 @@ const FX = (() => {
     };
     // the figure only drops to 0 once its tick is certain to start, so it can never be stranded at 0
     const tick = ()=>M.inView(node, run, {amount:.3});
-    if(gate) waiting.push(tick);
-    else { if(onScreen(node)) tn.nodeValue = fmt(0); tick(); }
+    if(onScreen(node)) tn.nodeValue = fmt(0);
+    tick();
   }
   function scan(root){
     const hit = sel => (root.matches && root.matches(sel) ? [root] : []).concat(Array.prototype.slice.call(root.querySelectorAll(sel)));
@@ -206,15 +203,6 @@ const FX = (() => {
     new MutationObserver(muts=>muts.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType === 1) scan(n); })))
       .observe(root, {childList:true, subtree:true});
   }
-  /* hold every entrance until `promise` settles (the opening film opening onto the app) */
-  function hold(promise){
-    if(!promise || !canM) return;
-    gate = promise;
-    const go = ()=>{ if(gate !== promise) return; gate = null; flush(); waiting.splice(0).forEach(f=>f()); };
-    promise.then(go, go);
-    setTimeout(go, 9000);                     // whatever happens to the film, the app makes its entrance
-  }
-
   /* ---- Magic UI Animated List: items drop in one after another, on springs ---- */
   function listIn(items){
     items = Array.prototype.slice.call(items || []);
@@ -298,5 +286,5 @@ const FX = (() => {
   }
 
   function start(){ presses(); pointerGlow(); scrollProgress(); window.addEventListener('resize', relayout); }
-  return {reduced, start, landingIn, landingOut, navigated, relayout, observe, hold, listIn, auto, shake, burst};
+  return {reduced, start, landingIn, landingOut, navigated, relayout, observe, listIn, auto, shake, burst};
 })();

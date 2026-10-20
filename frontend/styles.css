@@ -6,9 +6,8 @@
    green is information and progress, purple is the selected tab and the
    projection bars. No glass, no glow behind words: surfaces are flat and
    solid, colour lives on the things you press and the numbers that matter.
-   Motion comes from GSAP, anime.js and Motion (motion.js), Theatre.js
-   (intro.js, the opening film) and AutoAnimate; the Magic UI effects are
-   rebuilt in magic.js. prefers-reduced-motion stops all of it.
+   Motion comes from GSAP, anime.js and Motion (motion.js) and AutoAnimate;
+   the Magic UI effects are rebuilt in magic.js. prefers-reduced-motion stops all of it.
    ===================================================================== */
 
 /* Chakra Petch (OFL, vendor/fonts — from @fontsource/chakra-petch 5.3.0, latin subset) */
@@ -36,7 +35,7 @@
   --grad-cta:linear-gradient(105deg,#efffc4 0 68%,#d2ff2e 68% 100%);
   --grad-race:linear-gradient(90deg,#d2ff2e,#2ee88f);
   --grad-bar:linear-gradient(90deg,#6d5cff,#8b7bff);
-  /* the film and a few effects still speak of "neon": the same colours, renamed */
+  /* a few effects still speak of "neon": the same colours, renamed */
   --neon-l:#d2ff2e; --neon-c:#2ee88f; --neon-m:#8b7bff;
   /* semantic */
   --up:#2ee88f;  --up-wash:rgba(46,232,143,.13);
@@ -89,15 +88,15 @@ button{font:inherit;color:inherit}
 /* ============================ the slant ============================ */
 /* Buttons lean like a speed stripe. The shape is a skewed ::before behind the label, so the
    label stays upright and the focus ring follows the slant. Set --fill to colour it. */
-.btn,.cta,.chipset button,.tour-go,.land-demo,.in-skip,.links button,.menu-actions .btn,.adv summary{
+.btn,.cta,.chipset button,.tour-go,.land-demo,.links button,.menu-actions .btn,.adv summary{
   position:relative;isolation:isolate;background:none;border:0;--fill:var(--surface-2)}
-.btn:before,.cta:before,.chipset button:before,.tour-go:before,.land-demo:before,.in-skip:before,.links button:before,.adv summary:after{
+.btn:before,.cta:before,.chipset button:before,.tour-go:before,.land-demo:before,.links button:before,.adv summary:after{
   content:'';position:absolute;inset:0;z-index:-1;border-radius:4px;background:var(--fill);transform:skewX(var(--skew));
   transition:background .2s,box-shadow .2s}
-.btn:focus-visible,.cta:focus-visible,.chipset button:focus-visible,.tour-go:focus-visible,.land-demo:focus-visible,.in-skip:focus-visible,
+.btn:focus-visible,.cta:focus-visible,.chipset button:focus-visible,.tour-go:focus-visible,.land-demo:focus-visible,
 .links button:focus-visible,.adv summary:focus-visible{outline:none}
 .btn:focus-visible:before,.cta:focus-visible:before,.chipset button:focus-visible:before,.tour-go:focus-visible:before,
-.land-demo:focus-visible:before,.in-skip:focus-visible:before,.links button:focus-visible:before,.adv summary:focus-visible:after{
+.land-demo:focus-visible:before,.links button:focus-visible:before,.adv summary:focus-visible:after{
   box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--lime)}
 
 /* ============================ logo ============================ */
@@ -641,14 +640,6 @@ td.num{font-style:italic;font-weight:700}
 .mg-progress{position:absolute;left:0;right:0;bottom:-1px;z-index:2;height:2px;pointer-events:none;transform-origin:0 50%;transform:scaleX(0);
   background:var(--grad-race)}
 
-/* Retro Grid: a perspective floor scrolling towards you (the opening film's launch pad) */
-.retro{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.retro-plane{position:absolute;inset:0;overflow:hidden;transform:perspective(420px) rotateX(62deg);transform-origin:50% 100%}
-.retro-grid{position:absolute;left:0;right:0;top:-60px;bottom:0;
-  background-image:linear-gradient(90deg,rgba(46,232,143,.22) 1px,transparent 0),linear-gradient(0deg,rgba(210,255,46,.18) 1px,transparent 0);
-  background-size:58px 60px;animation:retro-scroll 2.4s linear infinite}
-@keyframes retro-scroll{from{transform:translateY(0)}to{transform:translateY(60px)}}
-
 /* ---- the Copilot log: every answer is an entry, newest first (AutoAnimate moves the rest down) ---- */
 .qa-log{display:flex;flex-direction:column;gap:14px}
 .qa{position:relative;padding:16px 18px;border-radius:var(--r-lg);background:var(--surface)}
@@ -666,59 +657,6 @@ td.num{font-style:italic;font-weight:700}
 #xpTable tbody tr{transition:background .15s}
 
 .landing > .scene,.landing > .land-card{position:relative;z-index:1}
-
-/* ============================ the opening film ============================ */
-/* Theatre.js (intro.js) writes the custom properties below on every frame. */
-.intro{position:fixed;inset:0;z-index:300;overflow:hidden;background:#05090a;cursor:pointer;touch-action:none;overscroll-behavior:contain;
-  --bars:0;--hud-a:0;--floor:0;--floor-a:0;--flash:0;--photo:0;--title-a:0;--track:.55;--line-a:0;
-  --zoom:1.25;--cam-y:5;--hole:0;--p:0}
-.intro[hidden],.no-intro .intro{display:none}
-.intro-on .intro{animation:in-failsafe .01s 20s forwards}
-@keyframes in-failsafe{to{visibility:hidden;pointer-events:none}}
-.intro.hole{
-  -webkit-mask-image:radial-gradient(circle at 50% 44%,transparent calc(var(--hole) * 150vmax),#000 calc(var(--hole) * 150vmax + 1.5px));
-  mask-image:radial-gradient(circle at 50% 44%,transparent calc(var(--hole) * 150vmax),#000 calc(var(--hole) * 150vmax + 1.5px))}
-.in-scene{position:absolute;inset:0}
-.in-stars{position:absolute;inset:0;width:100%;height:100%}
-.in-floor{position:absolute;left:-30%;right:-30%;bottom:0;height:66%;opacity:var(--floor-a);transform:translateY(calc((1 - var(--floor)) * 60%));
-  -webkit-mask-image:linear-gradient(0deg,#000 35%,transparent 92%);mask-image:linear-gradient(0deg,#000 35%,transparent 92%)}
-.in-floor .retro-plane{transform:perspective(380px) rotateX(55deg)}
-.in-floor .retro-grid{background-image:linear-gradient(90deg,rgba(46,232,143,.6) 1.5px,transparent 0),linear-gradient(0deg,rgba(210,255,46,.55) 1.5px,transparent 0);
-  animation-duration:.8s}
-.in-stage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,2vh,20px);
-  padding:0 16px 8vh;transform:translateY(calc(var(--cam-y) * 1vh)) scale(var(--zoom));transform-origin:50% 44%}
-/* the drones are drawn on the canvas into this box (intro.js reads its place); the box itself is empty */
-.in-mark{position:relative;width:min(92vw,600px,72vh);aspect-ratio:1446/1088}
-.in-photo{display:block;width:100%;height:100%;opacity:var(--photo);pointer-events:none;
-  /* feather the picture's black edges into the night, so it has no frame */
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
-  -webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
-  mask-composite:intersect}
-.in-title{font:italic 700 clamp(30px,9.4vw,74px)/1.05 var(--display);letter-spacing:calc(var(--track) * 1em);margin-right:calc(var(--track) * -1em);
-  text-transform:uppercase;text-align:center;white-space:nowrap;color:var(--ink);opacity:var(--title-a);text-shadow:0 0 30px rgba(210,255,46,.35)}
-.in-line{min-height:1.5em;max-width:min(92vw,640px);font:italic 600 clamp(12px,3.4vw,17px)/1.5 var(--font);letter-spacing:.04em;
-  text-align:center;color:var(--lime);opacity:var(--line-a)}
-.in-line .cur{display:inline-block;width:.55em;height:1em;margin-left:3px;vertical-align:-2px;background:var(--lime);animation:blink 1s steps(2,end) infinite}
-.in-flash{position:absolute;inset:0;pointer-events:none;opacity:var(--flash);
-  background:radial-gradient(circle at 50% 44%,rgba(255,255,255,.95),rgba(210,255,46,.5) 22%,rgba(46,232,143,.16) 46%,transparent 70%)}
-.in-bars i{position:absolute;z-index:2;left:0;right:0;height:calc(var(--bars) * 10vh);background:#000}
-.in-hud{position:absolute;z-index:3;left:16px;right:16px;top:calc(var(--safe-t) + var(--bars) * 10vh + 12px);display:flex;justify-content:space-between;
-  font:italic 700 12px/1 var(--font);letter-spacing:.12em;color:var(--ink-2);opacity:var(--hud-a);font-variant-numeric:tabular-nums}
-.in-rec{display:flex;align-items:center;gap:7px;text-transform:uppercase}
-.in-rec:before{content:'';width:8px;height:8px;border-radius:50%;background:var(--down);animation:blink 1s steps(2,end) infinite}
-.in-prog{position:absolute;z-index:3;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.07)}
-.in-prog i{display:block;height:100%;transform-origin:0 50%;transform:scaleX(var(--p));background:var(--grad-race)}
-.in-skip{position:absolute;z-index:4;right:20px;bottom:calc(var(--safe-b) + var(--bars) * 10vh + 14px);display:flex;align-items:center;gap:8px;
-  padding:10px 16px;color:var(--ink);cursor:pointer;--fill:rgba(31,46,51,.9);
-  font-size:13px;font-style:italic;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.in-skip svg{width:14px;height:14px;color:var(--lime)}
-.in-skip:hover{--fill:var(--surface-3)}
-
-/* the menu: the opening film's switch */
-.menu-film{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;margin:-8px 0 22px;padding:12px 14px;
-  border-radius:var(--r);background:var(--surface)}
-.menu-film .t{font-size:14px;font-style:italic;font-weight:700;color:var(--ink-2)}
-.menu-film .acts{display:flex;gap:12px;flex-wrap:wrap;padding:0 4px}
 
 /* ============================ Matches ============================ */
 .mt-nav{align-items:center;gap:14px}

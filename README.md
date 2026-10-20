@@ -108,15 +108,6 @@ tab, your captain), green is progress (the season race bar under every title),
 purple is the selected sub-page and the projection bars. Every text colour
 passes WCAG AA (`python3 scripts/check_contrast.py`).
 
-- **An opening film** on every launch, skippable: a couple of
-  thousand drones wait in rows on a grid floor, lift off in a wave, swarm
-  and lock into place as the logo portrait, light up in its colours and
-  dissolve into the picture itself. The name decodes, a villain's one-liner
-  types itself as the tagline ("Free transfer? Yahan kuch bhi free nahi
-  milta.") and holds for six seconds, then the camera pushes in as the film irises open onto the app,
-  which has loaded underneath. Keyframed with
-  [Theatre.js](https://www.theatrejs.com/docs/latest); it can be turned off in
-  the menu and never plays under reduced motion.
 - **Landing:** the first visit on a device asks for your FPL Team ID over a
   pitch that draws itself while the ball flies into the net. The ID is saved in your browser, so every later visit goes straight
   to your team.
@@ -136,7 +127,7 @@ passes WCAG AA (`python3 scripts/check_contrast.py`).
   [AutoAnimate](https://auto-animate.formkit.com) glides the projections table
   into its new order when you sort or filter, and slides the Copilot's log down
   as new answers arrive. [Magic UI](https://magicui.design)'s effects — hyper
-  text, typing, ripple, orbiting circles, border beams, animated beams from player out to player in, the retro grid floor —
+  text, typing, ripple, orbiting circles, border beams, animated beams from player out to player in —
   are rebuilt in plain JS and CSS. `prefers-reduced-motion` turns all of it off.
 
 The full system — tokens, motion, navigation, breakpoints, the drone-portrait logo
@@ -146,7 +137,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 156 headless checks, phone + desktop + reduced motion + the demo
+    npm --prefix tests test            # 150 headless checks, phone + desktop + reduced motion + the demo
     ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # unit tests, no server needed
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
@@ -192,7 +183,7 @@ See [`docs/TESTING.md`](docs/TESTING.md).
     backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
     backend/main.py      FastAPI routes + static hosting
     frontend/            single-page app, no build step: app.js (views, tabs), motion.js (FX: GSAP, anime.js, Motion,
-                         AutoAnimate), magic.js (Magic UI, rebuilt), intro.js (the Theatre.js opening film), vendor/
+                         AutoAnimate), magic.js (Magic UI, rebuilt), vendor/
     scripts/check_contrast.py  WCAG AA check for the palette
     tests/               Playwright end-to-end suite
     scripts/calibrate.py projection sanity check

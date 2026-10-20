@@ -12,7 +12,6 @@
      borderBeam    BorderBeam         a beam of light running round an element's edge
      shimmer       ShimmerButton      a spark racing round a button's edge
      beamArrow     AnimatedBeam       a beam of light flowing from one thing to another
-     retroGrid     RetroGrid          a perspective grid floor, scrolling towards you
      (CSS only)    ScrollProgress (.mg-progress)
 
    Number Ticker, Blur Fade and Animated List need springs and in-view triggers,
@@ -113,8 +112,5 @@ const Magic = (() => {
   const beamArrow = () => `<svg class="mg-beam-arr" viewBox="0 0 46 12" aria-hidden="true">
     <path class="trk" d="M2 8Q23 1 40 8"/><path class="flow" d="M2 8Q23 1 40 8"/><path class="tip" d="M38.6 4.6 44 8.4l-6.2 1.3z"/></svg>`;
 
-  /* RetroGrid: markup for a perspective grid floor (the CSS does the rest). */
-  const retroGrid = () => '<div class="retro"><div class="retro-plane"><div class="retro-grid"></div></div></div>';
-
-  return {reduced, scramble, hyperText, typing, ripple, orbit, borderBeam, shimmer, beamArrow, retroGrid};
+  return {reduced, scramble, hyperText, typing, ripple, orbit, borderBeam, shimmer, beamArrow};
 })();

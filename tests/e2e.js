@@ -47,25 +47,16 @@ async function phone(browser){
   const entryReads = [];
   page.on('request', r => { if (r.url().includes(`/api/entry/${TEAM}?`)) entryReads.push(r.url()); });
 
-  // ---- the opening film plays on launch (Theatre.js), and Skip ends it ----
+  // ---- the page loads ----
   await page.goto(BASE, { waitUntil: 'networkidle' });
   ok('phone: the page is named Papa Ranjeet', /^Papa Ranjeet\b/.test(await page.title()), await page.title());
-  ok('phone: animation libraries load from /static/vendor (GSAP, anime.js, Motion, Theatre.js, AutoAnimate)', await page.evaluate(() =>
+  ok('phone: animation libraries load from /static/vendor (GSAP, anime.js, Motion, AutoAnimate)', await page.evaluate(() =>
     !!(window.gsap && window.DrawSVGPlugin && window.MotionPathPlugin && window.anime && window.Motion && window.Motion.animate && window.Motion.inView
-       && window.Theatre && window.Theatre.core && typeof window.autoAnimate === 'function'
-       && typeof FX !== 'undefined' && typeof Magic !== 'undefined' && typeof Intro !== 'undefined')));
-  {
-    const tc0 = await page.textContent('#inTc'); await page.waitForTimeout(450); const tc1 = await page.textContent('#inTc');
-    ok('phone: the opening film plays on launch, its timecode running', await page.isVisible('#intro') && tc0 !== tc1, `${tc0} → ${tc1}`);
-    ok('phone: the film flies the drones traced from the logo portrait, and the logo is that portrait', await page.evaluate(() =>
-      typeof PORTRAIT !== 'undefined' && PORTRAIT.d.length / 4 > 300 && /^\d+ drones$/i.test(document.getElementById('inCount').textContent.trim())
-      && /logo\.webp$/.test(document.querySelector('#logo image').getAttribute('href'))
-      && document.querySelector('#inMark .in-photo').complete), await page.textContent('#inCount'));
-    await page.waitForTimeout(1800);
-    await page.screenshot({ path: `${OUT}/m-00-film.png` });
-    await page.click('#inSkip');
-    ok('phone: Skip ends the opening film', await page.waitForSelector('#intro', { state: 'hidden', timeout: 3000 }).then(() => true, () => false));
-  }
+       && typeof window.autoAnimate === 'function'
+       && typeof FX !== 'undefined' && typeof Magic !== 'undefined')));
+  ok('phone: no opening film: no film markup, no Theatre.js, and the app is there at once', await page.evaluate(() =>
+    !document.getElementById('intro') && typeof Intro === 'undefined' && !window.Theatre && !!document.getElementById('landing')));
+  ok('phone: the logo is the supplied portrait', await page.evaluate(() => /logo\.webp$/.test(document.querySelector('#logo image').getAttribute('href'))));
   // ---- first visit: the landing screen asks for the Team ID ----
   ok('phone: first visit opens the landing screen', await page.isVisible('#landing'));
   ok('phone: landing carries a line of house humour', (await page.textContent('#landQuip')).trim().length > 20);
@@ -228,10 +219,7 @@ async function phone(browser){
   await page.screenshot({ path: `${OUT}/m-04-menu.png` });
   await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }), page.click('#mRefresh')]);
   ok('phone: Refresh app reloads, and the saved team skips the landing screen', !(await page.isVisible('#landing')) && !/add team/i.test(await page.textContent('#teamLabel')));
-  ok('phone: the opening film plays again on a fresh launch, then gets out of the way by itself', await page.isVisible('#intro')
-     && await page.waitForSelector('#intro', { state: 'hidden', timeout: 17000 }).then(() => true, () => false));
   ok('phone: old addresses still work (#solver → #plan/transfers)', await page.goto(BASE + '#solver', { waitUntil: 'networkidle' }).then(() => page.evaluate(() => location.hash)) === '#plan/transfers');
-  await page.click('#inSkip').catch(() => {}); await page.waitForSelector('#intro', { state: 'hidden', timeout: 3000 }).catch(() => {});
   await page.click('#menuBtn'); await page.waitForSelector('#mForget');
   await page.click('#mForget'); await page.waitForTimeout(600);
   ok('phone: Forget team clears the device and asks again', await page.isVisible('#landing') && await page.evaluate(() => localStorage.getItem('fplai_team') === null));
@@ -241,13 +229,6 @@ async function phone(browser){
   ok('phone: a team-only page offers to add a team', await page.waitForSelector('#v-home-grade .need-team', { timeout: 10000 }).then(() => true, () => false));
 
   const realErrors = consoleErrors.filter(m => !/Failed to load resource/.test(m));
-  // the menu can turn the film off for this device
-  await page.click('#menuBtn'); await page.waitForSelector('#mFilm');
-  await page.click('#mFilm');
-  ok('phone: the menu turns the opening film off', await page.evaluate(() => localStorage.getItem('fplai_intro') === '"off"'));
-  await page.keyboard.press('Escape');
-  await page.reload({ waitUntil: 'networkidle' });
-  ok('phone: with the film off, the app opens straight away', !(await page.isVisible('#intro')));
   ok('phone: no console errors', realErrors.length === 0, realErrors.slice(0, 4).join(' || '));
   ok('phone: no failed requests (besides the deliberate unknown team)', badResponses.length === 0, badResponses.slice(0, 4).join(' || '));
   await ctx.close();
@@ -260,9 +241,6 @@ async function desktop(browser){
   page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
   page.on('pageerror', e => consoleErrors.push('pageerror: ' + e.message));
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(1900);
-  await page.screenshot({ path: `${OUT}/d-00-film.png` });
-  ok('desktop: the opening film runs to its end and opens onto the app', await page.waitForSelector('#intro', { state: 'hidden', timeout: 17000 }).then(() => true, () => false));
   ok('desktop: first visit opens the landing screen', await page.isVisible('#landing'));
   await page.waitForTimeout(1800);
   await page.screenshot({ path: `${OUT}/d-01-landing.png` });
@@ -302,7 +280,6 @@ async function reducedMotion(browser){
   const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  ok('reduced motion: no opening film', !(await page.isVisible('#intro')));
   ok('reduced motion: no meteor shower', (await page.$$('.mg-meteor')).length === 0);
   await page.fill('#landId', TEAM); await page.click('#landGo');
   await page.waitForSelector('#v-home-squad .tile', { timeout: 30000 });
@@ -362,7 +339,7 @@ async function matchesTab(browser){
   const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/422/.test(m.text())) errs.push(m.text()); });
-  await page.addInitScript(() => { localStorage.setItem('fplai_intro', '"off"'); localStorage.setItem('fplai_team', '"1"'); });   // a returning visitor, so no landing screen
+  await page.addInitScript(() => { localStorage.setItem('fplai_team', '"1"'); });   // a returning visitor, so no landing screen
   await page.goto(BASE + '#matches/predictions', { waitUntil: 'networkidle' });
   await page.waitForSelector('#v-matches-predictions .mt', { timeout: 30000 });
   const api = await page.evaluate(async () => {
@@ -394,7 +371,7 @@ async function matchesTab(browser){
   // the top bar at tablet width: six links and the team pill must not run out of room
   const wide = await browser.newContext({ viewport:{width:1024,height:800}, reducedMotion:'reduce' });
   const p2 = await wide.newPage();
-  await p2.addInitScript(() => { localStorage.setItem('fplai_intro', '"off"'); localStorage.setItem('fplai_team', '"1"'); });
+  await p2.addInitScript(() => { localStorage.setItem('fplai_team', '"1"'); });
   await p2.goto(BASE, { waitUntil: 'networkidle' }); await p2.waitForSelector('#nav button');
   const bar = await p2.evaluate(() => { const nav = document.querySelector('.nav-in'); const kids = [...document.querySelectorAll('#nav button, .brand, .team-pill, #menuBtn')].map(e => e.getBoundingClientRect());
     return { scroll: document.documentElement.scrollWidth, inner: innerWidth, maxRight: Math.max(...kids.map(r => r.right)), overlap: kids.some((a, i) => kids.some((b, j) => i < j && a.right > b.left + 1 && a.left < b.right - 1 && a.top < b.bottom && a.bottom > b.top)) }; });
@@ -407,7 +384,7 @@ async function myLeagues(browser){
   const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', e => errs.push(e.message));
-  await page.addInitScript(() => { localStorage.setItem('fplai_intro', '"off"'); localStorage.setItem('fplai_team', '"1"'); });
+  await page.addInitScript(() => { localStorage.setItem('fplai_team', '"1"'); });
   await page.goto(BASE, { waitUntil: 'networkidle' });
   const api = await page.evaluate(async () => {
     const get = u => fetch(u).then(async r => ({ s: r.status, j: await r.json() }));

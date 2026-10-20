@@ -49,7 +49,6 @@ async function shoot(browser, label, base, [dev, opts], problems) {
   page.on('pageerror', e => errs.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   await page.addInitScript(team => {
-    localStorage.setItem('fplai_intro', '"off"');                         // skip the opening film
     if (team !== '0') localStorage.setItem('fplai_team', JSON.stringify(team));
   }, TEAM);
   const url = base.replace(/\/?$/, '/');
