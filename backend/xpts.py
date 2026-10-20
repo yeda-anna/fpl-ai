@@ -692,6 +692,10 @@ class Engine(object):
             "xpts": round(max(0.0, total), 3),
         }
 
+    def fixtures_in(self, gw: int) -> List[Dict[str, Any]]:
+        """Every fixture scheduled in a gameweek."""
+        return list(self._fixtures_by_gw.get(gw, []))
+
     def fixtures_for_team(self, team_id: int, gw: int) -> List[Dict[str, Any]]:
         out = []
         for f in self._fixtures_by_gw.get(gw, []):

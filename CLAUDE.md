@@ -11,7 +11,7 @@ mixed-integer solver over transfers, captaincy and chips. A no-build vanilla-JS
 single-page app renders it in a race-day look (dark teal, italic Chakra Petch,
 slanted lime buttons) — it opens with a short
 Theatre.js film of drones flying into the logo, and moves with GSAP, anime.js, Motion, AutoAnimate and effects
-rebuilt from Magic UI — with five tabs and a mobile app shell.
+rebuilt from Magic UI — with six tabs and a mobile app shell.
 
 Live: https://paparanjeet.up.railway.app · Repo: yeda-anna/fpl-ai
 
@@ -30,12 +30,13 @@ mode works for anything you've already loaded (a team, a league).
 
 ```bash
 npm --prefix tests ci          # once: installs Playwright
-npm --prefix tests test        # 136 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
+npm --prefix tests test        # 152 checks, phone 390×844 + desktop 1440×900 + reduced motion + the demo
 ./.venv/bin/python tests/test_free_transfers.py   # free-transfer rules, no server needed
 ./.venv/bin/python tests/test_pending_transfers.py # transfers since the deadline, no server needed
 ./.venv/bin/python tests/test_demo.py             # the demo team is a legal squad, no server needed
 ./.venv/bin/python tests/test_model_rules.py      # form, chance to score, fitness, opponent form, no server needed
 ./.venv/bin/python tests/test_leagues.py          # a manager's mini-leagues, no server needed
+./.venv/bin/python tests/test_matches.py          # match predictions: scorelines, the pick, a gameweek, no server needed
 ./.venv/bin/python tests/test_season.py            # the season rank chart's data, no server needed
 ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # every unit test at once (rules, solver, analysis, scout, API routes on a made-up league), no server or network
 ./.venv/bin/python tests/test_telemetry.py        # structured JSON logs, no server needed
@@ -63,11 +64,12 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `backend/xpts.py` | The expected-points engine |
 | `backend/solver.py` | Multi-gameweek MIP (PuLP/CBC), alternative paths via no-good cuts |
 | `backend/analysis.py` | Chips, Rate My Team, compare, weekly picks, mini-league analysis |
+| `backend/matches.py` | Match predictions: each fixture's scoreline table (Poisson + Dixon-Coles) from the goal model, the likeliest result and score, clean sheets |
 | `backend/leagues.py` | A manager's mini-leagues from their FPL profile: every league, their place, the leader and the gap |
 | `backend/scout.py` | Price changes, set pieces, DEFCON, predicted line-ups, rules-based Copilot |
 | `backend/telemetry.py` | Structured logs: one JSON line per event on stdout for Railway, a line per request by route template; `LOG_LEVEL` |
 | `backend/demo.py` | The demo team (ID 0, "Gut Feeling FC") for visitors who don't play FPL: a legal squad picked on vibes and an invented season |
-| `frontend/index.html` | Shell: the opening film's stage, top bar, the page head with the season race bar, the five-tab dock, the landing screen (pitch scene), logo, scripts |
+| `frontend/index.html` | Shell: the opening film's stage, top bar, the page head with the season race bar, the six-tab dock, the landing screen (pitch scene), logo, scripts |
 | `frontend/styles.css` | Design system: the tokens, the Chakra Petch faces, "the slant", components, the Magic UI effects, the film, landing, dock, breakpoints |
 | `frontend/app.js` | Tabs and sub-pages, routing, the remembered Team ID, every view, the menu, minute edits |
 | `frontend/motion.js` | `FX`, the animation layer: GSAP (landing timeline, DrawSVG, MotionPath, indicators, the race bar), anime.js (icon drawing, the landing logo), Motion (blur-fade entrances, number tickers, springs, scroll progress, animated lists), AutoAnimate (lists that re-order) |
@@ -137,9 +139,11 @@ suite at **0 failures** — see `docs/TESTING.md`.
   glass, no glow behind words, no borders on cards. There is no meteor shower,
   no sky animation, no scanlines and no corner brackets; don't bring them back
   without asking.
-- **Five tabs** (Home, Plan, Players, Leagues, Ask) with sub-pages in the section
-  switcher — add a new page as a sub-page in `TABS` (`app.js`), not as a sixth
-  tab, and give it an address (`#tab/sub`). Keep old addresses mapped in `LEGACY`.
+- **Six tabs** (Home, Plan, Players, Matches, Leagues, Ask) with sub-pages in the
+  section switcher. Matches became the sixth at the owner's request; the dock and
+  the top bar are sized for six (checked at 390px and 1024px), so add a new page as
+  a sub-page in `TABS` (`app.js`), not as a seventh tab, and give it an address
+  (`#tab/sub`). Keep old addresses mapped in `LEGACY`.
 - **The Team ID is asked once per device** on the landing screen and kept in
   `localStorage` (`fplai_team`); returning visitors go straight to their team.
   Team views `await teamReady()` so the first read after a page load is fresh.

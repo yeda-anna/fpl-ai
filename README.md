@@ -40,7 +40,7 @@ scores.
 ### On your phone
 
 The layout becomes an app below 1024px wide: a floating dock with all
-five tabs (Home, Plan, Players, Leagues, Ask), sub-pages in a switcher under the
+six tabs (Home, Plan, Players, Matches, Leagues, Ask), sub-pages in a switcher under the
 title, and details opening as bottom sheets. Use **Add to Home Screen** to launch
 it full-screen like a native app.
 
@@ -60,6 +60,7 @@ calls the FPL API — useful for development on networks that can't reach it.
 | Copilot | Plain-English questions answered straight from the model and solver |
 | Rate My Team | Score out of 100 against the best squad your own budget could buy |
 | Compare | Two players side by side, week by week |
+| Matches | For every match in any gameweek: the likeliest result, the score to expect, win/draw/lose odds, clean-sheet chances and the likeliest scorelines |
 | Minileagues | Enter any Team ID and see every league that manager is in: place, points, the leader and the gap. Then, per league: rival ownership, effective ownership, and Monte Carlo win probability |
 | Scout | Price-change odds, set-piece takers, defensive-contribution leaders, predicted line-ups |
 
@@ -118,9 +119,10 @@ passes WCAG AA (`python3 scripts/check_contrast.py`).
 - **Landing:** the first visit on a device asks for your FPL Team ID over a
   pitch that draws itself while the ball flies into the net. The ID is saved in your browser, so every later visit goes straight
   to your team.
-- **Five tabs**, nothing hidden behind "More": **Home** (My squad · Grade ·
+- **Six tabs**, nothing hidden behind "More": **Home** (My squad · Grade ·
   Picks), **Plan** (Transfers · Chips), **Players** (Projections · Compare ·
-  Prices · Line-ups · Set pieces · DEFCON), **Leagues** and **Ask**.
+  Prices · Line-ups · Set pieces · DEFCON), **Matches** (who wins each match
+  and the score to expect), **Leagues** and **Ask**.
 - **Your name up in lights:** Home is titled with your team's name from FPL, and
   My squad opens with a dark football roast of your last gameweek's score.
 - **The season as a race:** under every title, a bar with a segment for each
@@ -143,7 +145,7 @@ and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
     FPL_CACHE_ONLY=1 ./run.sh          # in one terminal
     npm --prefix tests ci              # once
-    npm --prefix tests test            # 136 headless checks, phone + desktop + reduced motion + the demo
+    npm --prefix tests test            # 152 headless checks, phone + desktop + reduced motion + the demo
     ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # unit tests, no server needed
     ./.venv/bin/python scripts/calibrate.py --players "Haaland:MCI,Saka:ARS"
 
@@ -184,6 +186,7 @@ See [`docs/TESTING.md`](docs/TESTING.md).
     backend/xpts.py      expected-points engine
     backend/solver.py    multi-gameweek MIP optimiser
     backend/analysis.py  chips, rating, compare, picks, mini-league analysis
+    backend/matches.py   match predictions: scoreline odds, likeliest result and score
     backend/leagues.py   a manager's mini-leagues: every league, their place and the gap in each
     backend/scout.py     prices, set pieces, DEFCON, line-ups, Copilot
     backend/main.py      FastAPI routes + static hosting

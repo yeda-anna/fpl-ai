@@ -131,7 +131,7 @@ following the originals (MIT, `frontend/vendor/magicui-LICENSE.md`).
 
 ## Navigation
 
-Five tabs, nothing hidden behind "More". Sub-pages are picked from the section
+Six tabs, nothing hidden behind "More". Sub-pages are picked from the section
 switcher under the title.
 
 | Tab | Sub-pages |
@@ -139,10 +139,11 @@ switcher under the title.
 | **Home** (titled with your team's name) | My squad · Grade · Picks |
 | **Plan** | Transfers · Chips |
 | **Players** | Projections · Compare · Prices · Line-ups · Set pieces · DEFCON |
+| **Matches** | Predictions (a gameweek's matches, with a stepper for any gameweek) |
 | **Leagues** | Mini-league |
 | **Ask** | Copilot |
 
-- Desktop: the tabs sit in the top bar. Phone (≤ 1023px): a floating dock.
+- Desktop: the tabs sit in the top bar. Phone (≤ 1023px): a floating dock; its labels are 10.5px so six fit a 390px phone with room to tap (≥ 44px each), and the top bar is checked at 1024px.
 - Every sub-page has its own address (`#plan/chips`). Old single-view addresses
   (`#solver`, `#xpts`, `#rate` …) are mapped to the new places, and `#model`
   opens the menu.
@@ -214,7 +215,7 @@ once, and clear inline styles when an animation ends (GSAP `clearProps`, Motion
 | Width | Behaviour |
 | --- | --- |
 | ≤ 1180px | multi-column grids collapse; the team pill shows only its avatar |
-| ≤ 1023px | **app shell**: top bar, floating dock with five tabs, bottom-sheet details |
+| ≤ 1023px | **app shell**: top bar, floating dock with six tabs, bottom-sheet details |
 | ≤ 760px | phone sizing: tighter padding, smaller type, fluid pitch; the section switcher spans the width and scrolls |
 | ≤ 380px | small-phone tweaks |
 

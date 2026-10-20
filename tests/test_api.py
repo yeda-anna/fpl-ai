@@ -140,6 +140,29 @@ class ReadRouteTests(unittest.TestCase):
         self.assertEqual(len(ok("/api/lineups")["teams"]), 20)
 
 
+class MatchRouteTests(unittest.TestCase):
+    def test_the_next_gameweek_by_default_with_every_match_predicted(self):
+        d = ok("/api/matches")
+        self.assertEqual((d["gw"], d["next_gw"], d["current_gw"]), (9, 9, 8))
+        self.assertEqual(len(d["matches"]), 10)                        # 20 clubs
+        self.assertEqual(d["summary"]["matches"], 10)
+        self.assertEqual(sum(d["summary"][k] for k in ("home_wins", "draws", "away_wins")), 10)
+        for m in d["matches"]:
+            self.assertAlmostEqual(m["p_home"] + m["p_draw"] + m["p_away"], 1.0, places=2)
+            sh, sa = m["score"]
+            self.assertEqual(m["pick"], "home" if sh > sa else "away" if sh < sa else "draw")
+            self.assertIsNone(m["actual"])                             # not played yet
+
+    def test_a_played_gameweek_carries_the_real_scores(self):
+        d = ok("/api/matches", params={"gw": 3})
+        self.assertTrue(d["finished"])
+        self.assertTrue(all(m["actual"] is not None and m["finished"] for m in d["matches"]))
+
+    def test_the_gameweek_must_exist(self):
+        for gw in (0, 99, "x"):
+            self.assertEqual(client.get("/api/matches", params={"gw": gw}).status_code, 422)
+
+
 class TeamRouteTests(unittest.TestCase):
     def test_the_demo_team_loads_without_fpl(self):
         t = ok("/api/entry/0", params={"horizon": 3, "fresh": 1})

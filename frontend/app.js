@@ -1015,6 +1015,59 @@ async function viewCompare(t){
 }
 
 /* ---------------- Mini-leagues ---------------- */
+/* ---------------- Matches: who is likeliest to win, and by how many goals ---------------- */
+const MT = {gw:null, seq:0};
+const pct = v => Math.round(v * 100) + '%';
+async function viewMatches(t){
+  const mine = ++MT.seq;
+  t.innerHTML = loading('Simulating every match');
+  try{
+    const r = await api('/api/matches' + (MT.gw ? '?gw='+MT.gw : ''));
+    if(mine !== MT.seq) return;
+    MT.gw = r.gw;
+    const s = r.summary || {}, fav = s.biggest_favourite, dr = s.likeliest_draw;
+    const day = m => m.kickoff ? new Date(m.kickoff).toLocaleDateString([], {weekday:'long', day:'numeric', month:'short'}) : 'Date to be confirmed';
+    const clock = m => m.kickoff ? new Date(m.kickoff).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+    const card = m => {
+      const played = !!m.actual, win = m.pick === 'home' ? m.home.name+' to win' : m.pick === 'away' ? m.away.name+' to win' : 'Draw';
+      const shown = played ? m.actual : m.score;
+      return `<article class="card mt ${played ? 'played' : ''}">
+        <div class="mt-top"><span>${clock(m)}</span>${played ? `<span class="tag ${m.finished ? 'g' : 'y'}">${m.finished ? 'Full time' : 'Live'}</span>` : `<span class="dim">${esc(win)}</span>`}</div>
+        <div class="mt-row">
+          <div class="mt-team ${!played && m.pick === 'home' ? 'fav' : ''}"><b>${esc(m.home.short)}</b><span class="u2">${esc(m.home.name)}</span></div>
+          <div class="mt-score" aria-label="${played ? 'Result' : 'Predicted score'} ${shown[0]} to ${shown[1]}"><b>${shown[0]}</b><i>–</i><b>${shown[1]}</b>
+            <small>${played ? 'model: '+m.score[0]+'–'+m.score[1] : 'xG '+num(m.xg_home,1)+' – '+num(m.xg_away,1)}</small></div>
+          <div class="mt-team away ${!played && m.pick === 'away' ? 'fav' : ''}"><b>${esc(m.away.short)}</b><span class="u2">${esc(m.away.name)}</span></div>
+        </div>
+        <div class="mt-bar" role="img" aria-label="${esc(m.home.name)} ${pct(m.p_home)}, draw ${pct(m.p_draw)}, ${esc(m.away.name)} ${pct(m.p_away)}">
+          <i class="${m.pick === 'home' ? 'pick' : ''}" style="flex:${m.p_home}"></i><i class="d ${m.pick === 'draw' ? 'pick' : ''}" style="flex:${m.p_draw}"></i><i class="${m.pick === 'away' ? 'pick' : ''}" style="flex:${m.p_away}"></i></div>
+        <div class="mt-odds"><span>${esc(m.home.short)} ${pct(m.p_home)}</span><span>Draw ${pct(m.p_draw)}</span><span>${esc(m.away.short)} ${pct(m.p_away)}</span></div>
+        <div class="mt-facts">Clean sheet: ${esc(m.home.short)} ${pct(m.p_cs_home)} · ${esc(m.away.short)} ${pct(m.p_cs_away)}<br>Both score ${pct(m.p_btts)} · 3+ goals ${pct(m.p_over25)}</div>
+        <details class="mt-more"><summary>Scoreline odds</summary><div class="mt-chips">${m.top_scores.map(x=>`<span class="tag ${x.home === m.score[0] && x.away === m.score[1] ? '' : 'g'}">${x.home}–${x.away} <b>${pct(x.p)}</b></span>`).join('')}</div></details>
+      </article>`;
+    };
+    const days = [];
+    r.matches.forEach(m=>{ const d = day(m), last = days[days.length-1]; if(last && last.d === d) last.ms.push(m); else days.push({d, ms:[m]}); });
+    t.innerHTML = `
+      <div class="card mb"><div class="controls mt-nav">
+        <div class="gw-nav"><button id="mtPrev" aria-label="Previous gameweek" ${r.gw <= r.first ? 'disabled' : ''}>‹</button><span>GW${r.gw}</span><button id="mtNext" aria-label="Next gameweek" ${r.gw >= r.last ? 'disabled' : ''}>›</button></div>
+        <button class="btn sm" id="mtNow" ${r.gw === r.next_gw ? 'hidden' : ''}>Back to GW${r.next_gw}</button>
+        <span class="dim mt-when">${r.finished ? 'Played' : r.gw === r.next_gw ? 'Next up' : r.gw < r.next_gw ? 'Played' : 'Coming up'}</span></div></div>
+      ${r.matches.length ? `<div class="grid g4 mb">
+        ${tile('Matches', s.matches, s.home_wins+' home · '+s.draws+' draw'+(s.draws === 1 ? '' : 's')+' · '+s.away_wins+' away')}
+        ${tile('Goals a match', num(s.goals_per_match,1), 'expected, on average')}
+        ${tile('Biggest favourite', esc(fav.short), pct(fav.p)+' to beat '+esc(fav.against)+(fav.home ? ' at home' : ' away'))}
+        ${tile('Likeliest draw', esc(dr.home)+' v '+esc(dr.away), pct(dr.p))}
+      </div>` : `<div class="note">No matches are scheduled in GW${r.gw}.</div>`}
+      ${days.map(d=>`<h2 class="mt-day">${esc(d.d)}</h2><div class="mt-list">${d.ms.map(card).join('')}</div>`).join('')}
+      <div class="legend">Predictions come from each club’s Elo rating, this season’s chances created and conceded, its last six games and home advantage — the same goal model as the player projections. The headline score is the likeliest scoreline <i>once the likeliest result is chosen</i>. Football is noisy: a 60% favourite still fails to win four times in ten. For planning and fun, not a betting tip.</div>`;
+    const to = g => { MT.gw = g; viewMatches(t); };
+    el('mtPrev').onclick = ()=>to(Math.max(r.first, r.gw - 1));
+    el('mtNext').onclick = ()=>to(Math.min(r.last, r.gw + 1));
+    el('mtNow').onclick = ()=>to(r.next_gw);
+  }catch(e){ if(mine === MT.seq) t.innerHTML = errBox(e); }
+}
+
 /* Every league a manager is in (any Team ID), with their place, the leader and the gap. */
 const LG = {team:''};         // the manager whose leagues are listed (their row is always in the analysis)
 const ord = n => n == null ? '–' : n.toLocaleString();
@@ -1242,13 +1295,14 @@ async function viewModel(t){
 }
 
 /* ---------------- tabs ----------------
-   Five tabs, no "More". Each tab holds one or more sub-pages, picked from the
+   Six tabs, no "More". Each tab holds one or more sub-pages, picked from the
    switcher under the title. Every tab and sub-page has its own address
    (#plan/chips), and the old single-view addresses still land in the right place. */
 const ICONS = {
   home:'M3.5 10.5 12 3.8l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-6h-5.6v6H5A1.5 1.5 0 0 1 3.5 19z',
   plan:'M5.5 15.8a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 1 0 0-4.4zM18.5 3.8a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 1 0 0-4.4zM7.6 17.2c5.5-1 3.2-9.6 8.8-10.4',
   players:'M8.5 4 4 6.2 2.5 10.5l3 1.2V20h13v-8.3l3-1.2L20 6.2 15.5 4a3.6 3.6 0 0 1-7 0z',
+  matches:'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM12 8.4l3.1 2.2-1.2 3.7h-3.8l-1.2-3.7zM12 3.8v4.6M15.1 10.6l4.2-1.4M13.9 14.3l2.6 3.5M10.1 14.3l-2.6 3.5M8.9 10.6 4.7 9.2',
   leagues:'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4',
   ask:'M20 12.2c0 4-3.6 7-8 7-1.2 0-2.3-.2-3.3-.6L4 20l1.3-3.6A6.7 6.7 0 0 1 4 12.2c0-4 3.6-7.2 8-7.2s8 3.2 8 7.2zM8.5 12h.01M12 12h.01M15.5 12h.01',
   refresh:'M20 12a8 8 0 1 1-2.6-5.9M20 4v4.6h-4.6',
@@ -1271,6 +1325,8 @@ const TABS = [
     {id:'lineups',     label:'Line-ups',    view:scoutView('lineups'), sub:'Predicted starting elevens, with rotation risks and doubts.'},
     {id:'setpieces',   label:'Set pieces',  view:scoutView('setpieces'), sub:'Who takes the penalties, free kicks and corners at every club.'},
     {id:'defcon',      label:'DEFCON',      view:scoutView('defcon'), sub:'Who is most likely to earn defensive-contribution points next gameweek.'}]},
+  {id:'matches', label:'Matches', icon:'matches', title:'Matches', segs:[
+    {id:'predictions', label:'Predictions', view:viewMatches, sub:'Who’s likeliest to win each match and the score to expect, from the same goal model as the projections.'}]},
   {id:'leagues', label:'Leagues', icon:'leagues', title:'Mini-leagues', segs:[
     {id:'league', label:'Mini-league', view:viewLeague, sub:'Your place in every league you’re in, the gap to the leader, and who’s likeliest to win.'}]},
   {id:'ask', label:'Ask', icon:'ask', title:'Ask', segs:[

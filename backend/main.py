@@ -20,6 +20,7 @@ import analysis
 import demo as demo_mod
 import fpl_api
 import leagues as leagues_mod
+import matches as matches_mod
 import priors
 import rules as rules_mod
 import scout as scout_mod
@@ -578,6 +579,18 @@ def team_leagues(team_id: int):
     except Exception:
         raise HTTPException(404, "No FPL team with ID %d." % team_id)
     return leagues_mod.my_leagues(profile, team_id, fpl_api.league_standings)
+
+
+@app.get("/api/matches")
+def match_predictions(gw: Optional[int] = Query(None, ge=1, le=38)):
+    """Every match in a gameweek: who is likeliest to win, the likeliest score, and the odds."""
+    e = engine()
+    week = gw or e.next_gw
+    out = matches_mod.gameweek(e, week)
+    ev = next((x for x in e.events if x["id"] == week), {})
+    out.update(first=1, last=len(e.events) or 38, current_gw=e.current_gw, next_gw=e.next_gw,
+               deadline=ev.get("deadline_time"), finished=bool(ev.get("finished")))
+    return out
 
 
 @app.get("/api/scout")

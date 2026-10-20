@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-20 — Matches: who wins, and by how many
+
+- A new **Matches** tab (the sixth, at the owner's request): every match of a gameweek
+  with the **result and score to expect**, win/draw/lose chances, expected goals,
+  clean-sheet chances, both-to-score and 3+ goals, and the six likeliest scorelines.
+  Step through any gameweek; it opens on the next one. Played matches show the real
+  score with the model's call beside it.
+- The prediction uses the same goal model as the player projections, with a
+  Dixon-Coles correction for low-scoring draws. The predicted score is chosen *inside*
+  the likeliest result, so "Arsenal to win" never shows 1-1.
+- The phone dock is resized for six tabs (labels 10.5px, each tab ≥ 44px wide), and
+  the top bar is checked at 1024px. New `GET /api/matches`.
+
 ## 2026-10-17 — Your season, as a rank chart
 
 - **Home → My squad** ends with **Your season**: your overall rank after every
