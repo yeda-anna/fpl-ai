@@ -100,8 +100,8 @@ button{font:inherit;color:inherit}
   box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--lime)}
 
 /* ============================ logo ============================ */
-/* The drone portrait (logo.webp, cut from portrait.webp by scripts/digitize.py),
-   in the <symbol id="logo"> in index.html. Every logo is a <use> of it. */
+/* The hexagonal mark on its light tile (logo.webp, made by scripts/digitize.py from
+   docs/brand/logo-source.png), in the <symbol id="logo"> in index.html. Every logo is a <use> of it. */
 .neon-logo{display:block;overflow:visible}
 
 /* ============================ top bar ============================ */

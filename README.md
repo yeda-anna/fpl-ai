@@ -131,7 +131,7 @@ passes WCAG AA (`python3 scripts/check_contrast.py`).
   text, typing, ripple, orbiting circles, border beams, animated beams from player out to player in —
   are rebuilt in plain JS and CSS. `prefers-reduced-motion` turns all of it off.
 
-The full system — tokens, motion, navigation, breakpoints, the drone-portrait logo
+The full system — tokens, motion, navigation, breakpoints, the logo
 and the house voice — is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Tests

@@ -179,10 +179,14 @@ strings). The e2e suite scans for this.
 
 ## Logo
 
-The **drone portrait** the owner supplied — a face made of points of light in
-magenta, violet and blue — used as it is. `scripts/digitize.py <image>` writes
-`logo.webp` (a square crop round the face), `icon-180.png` (iOS home screen)
-and `icon-192/512.png` (the manifest and favicon). The `<symbol id="logo">` in `index.html` holds
+The **hexagonal mark** the owner supplied — interlocking strokes in a teal-to-navy
+gradient, drawn on a design tool's grid canvas (`docs/brand/logo-source.png`) — used
+as it is. `python3 scripts/digitize.py docs/brand/logo-source.png` lifts the mark off
+the canvas by saturation (the grid and canvas are almost colourless) and writes
+`logo.webp` (the mark on a light tile of the canvas's own colour, so its navy strokes
+read on the dark app), `logo-mark.png` (the mark alone, transparent), `icon-32.png`
+(the favicon), `icon-180.png` (iOS home screen) and `icon-192/512.png` (the manifest).
+The `<symbol id="logo">` in `index.html` holds
 `logo.webp`; every logo in the app is a `<use>` of it, clipped to its slot (a
 rounded square in the top bar, a circle on the landing card and the avatar),
 without a glow (`.neon-logo`). Don't edit the generated files by hand.
