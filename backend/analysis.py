@@ -75,7 +75,7 @@ def squad_split(squad_rows: List[Dict[str, Any]], gw_index: int = 0):
 
 def swap_options(rows: List[Dict[str, Any]], squad_rows: List[Dict[str, Any]],
                  current_squad: List[Dict[str, Any]], bank: float, out_id: int,
-                 free_transfers: int, top: int = 6,
+                 free_transfers: int, top: int = 3,
                  min_chance: Optional[int] = None) -> Optional[Dict[str, Any]]:
     """The best single-transfer replacements for one player in a manager's squad.
 

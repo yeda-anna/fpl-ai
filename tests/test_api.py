@@ -170,7 +170,7 @@ class SwapRouteTests(unittest.TestCase):
         d = ok("/api/entry/0/swaps/%d" % mid["id"], params={"horizon": 3})
         self.assertEqual(d["player"]["id"], mid["id"])
         self.assertEqual(d["horizon"], 3)
-        self.assertLessEqual(len(d["options"]), 6)
+        self.assertEqual(len(d["options"]), 3)                         # the top three
         owned = {p["id"] for p in squad}
         for o in d["options"]:
             self.assertEqual(o["position"], 3)
