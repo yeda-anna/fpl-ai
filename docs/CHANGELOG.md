@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-20 — Tap a player, see who to swap him for
+
+- On **Home → My squad**, tapping a player on the pitch (or a row in "Your fifteen") opens
+  **transfer ideas**: the best same-position replacements you can afford, with the extra
+  points each adds next gameweek and over the horizon, and the money left. A verdict says
+  "Keep him" when nobody beats him, and takes the 4-point hit off when you have no free
+  transfer. The player's own page is one tap further. New
+  `GET /api/entry/{team_id}/swaps/{player_id}`; `analysis.swap_options` does the work.
+
 ## 2026-10-20 — Free Hit plans revert after the chip week
 
 - A Free Hit squad lasts one gameweek, but the solver carried it into the weeks after,

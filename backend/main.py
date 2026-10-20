@@ -423,6 +423,20 @@ def team(team_id: int, horizon: int = Query(5, ge=1, le=10), overrides: Optional
     }
 
 
+@app.get("/api/entry/{team_id}/swaps/{player_id}")
+def swaps(team_id: int, player_id: int, horizon: int = Query(5, ge=1, le=10),
+          overrides: Optional[str] = None, made: Optional[str] = None):
+    """Who to swap one of this manager's players for: the best single transfers."""
+    ctx = load_team(team_id, horizon, parse_overrides(overrides), parse_made(made))
+    out = analysis.swap_options(ctx["rows"], ctx["squad_rows"], ctx["current_squad"], ctx["bank"],
+                                player_id, ctx["free_transfers"])
+    if out is None:
+        raise HTTPException(404, "That player isn't in this squad.")
+    out["horizon"] = horizon
+    out["next_gw"] = ctx["engine"].next_gw
+    return out
+
+
 class SolveRequest(BaseModel):
     team_id: int
     horizon: int = 5

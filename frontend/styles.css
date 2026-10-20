@@ -452,6 +452,8 @@ td.num{font-style:italic;font-weight:700}
 @keyframes rise{from{opacity:0;transform:translateY(24px)}}
 .sheet .x{float:right}
 .sheet .card,.sheet .tile,.sheet .plan,.sheet .mv{background:var(--surface)}
+.sheet .swap-verdict{background:var(--surface);margin-bottom:14px;font-size:15px}
+.sheet .swap-verdict b{color:var(--ink)}
 .sheet thead th{background:var(--surface-2)}
 
 /* ============================ menu sheet ============================ */

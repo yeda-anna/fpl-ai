@@ -209,8 +209,16 @@ async function phone(browser){
   await page.click('#dock button[data-tab="home"]'); await page.click('#segs button[data-seg="squad"]');
   await page.waitForSelector('#v-home-squad .pl-tok', { timeout: 20000 });
   await page.click('#v-home-squad .pl-tok');
-  ok('phone: the player sheet opens', await page.waitForSelector('.sheet .tile', { timeout: 20000 }).then(() => true, () => false));
+  ok('phone: clicking a player of your team opens his transfer ideas', await page.waitForSelector('.sheet .swap-verdict', { timeout: 20000 }).then(() => true, () => false));
+  ok('phone: the swap sheet lists replacements with the points they add', await page.$$eval('.sheet tbody tr', rs => rs.length >= 1 && rs.length <= 6 && rs.every(r => /[+−-]?\d/.test(r.textContent))));
+  ok('phone: the swap sheet fits width', await noOverflow(page), lastOverflow.join(', '));
+  await page.screenshot({ path: `${OUT}/m-03b-swap.png` });
+  await page.click('.sheet tbody tr');
+  ok('phone: a replacement opens its player sheet', await page.waitForSelector('.sheet .tile', { timeout: 20000 }).then(() => true, () => false));
   ok('phone: the player sheet gives a chance to score and to play', /\d+% to score/.test(await page.textContent('.sheet')) && /% fit to play/.test(await page.textContent('.sheet')));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  await page.click('#v-home-squad .card:nth-of-type(2) tbody tr');
+  ok('phone: a row in your fifteen opens transfer ideas too', await page.waitForSelector('.sheet .swap-verdict', { timeout: 20000 }).then(() => true, () => false));
   await page.keyboard.press('Escape'); await page.waitForTimeout(200);
 
   // ---- menu: how it works, refresh, forget ----
