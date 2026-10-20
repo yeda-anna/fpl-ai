@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-20 — Transfer ideas wherever your squad shows
+
+- On a phone, tapping a player on **Plan → Transfers** opened his stats, not the
+  transfer ideas, so it looked as if the feature was missing. Now a player you own
+  opens his top three swaps from the plan's pitch as well as from Home → My squad, and
+  his own page has a **Who could replace him?** button. Players you don't own still open
+  their page.
+
 ## 2026-10-20 — The opening film is gone
 
 - Removed, at the owner's request: the drone-swarm film that played on every launch,
