@@ -76,7 +76,7 @@ API request after boot may wait for that warm-up.
 No build, no framework, no CDN. `index.html` holds the shell (the opening
 film's stage, top bar, the page head with the season race bar, the dock, the landing screen and its pitch
 scene, the logo). `app.js`
-defines five tabs and their sub-pages in `TABS` and routes by hash
+defines six tabs and their sub-pages in `TABS` and routes by hash
 (`#home/squad`, `#plan/chips`, `#players/compare` …; old addresses like
 `#solver` are mapped in `LEGACY`). Each sub-page is a view function that fetches
 its data and renders HTML strings into its own `<section>`. `motion.js` (`FX`)

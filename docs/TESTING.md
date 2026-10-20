@@ -39,7 +39,7 @@ every action by commit, in `ci.yml`; bump them there.
 ## End-to-end (Playwright)
 
 `tests/e2e.js` drives a headless Chromium through the whole app at two sizes,
-phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team and the leagues list. 136 checks.
+phone 390×844 and desktop 1440×900, plus a reduced-motion pass and a run through the demo team, the leagues list and the Matches page. 152 checks.
 
 ```bash
 # terminal 1 — the server (offline mode is fine once .cache/ is primed)
@@ -71,7 +71,7 @@ What it covers:
 - Home is titled with the team's name from FPL; My squad opens with a roast of
   the week's score (and the same line on the way back); other Home pages keep
   their own line; other tabs keep their own title.
-- **Five tabs** in the dock and no "More". Every tab and every sub-page renders
+- **Six tabs** in the dock and no "More". Every tab and every sub-page renders
   without an error box, fits a 390px phone (**overflow scan**) and has its own
   address (`#tab/sub`).
 - The tools still work: re-sorting the projections moves the rows in place
@@ -119,6 +119,28 @@ network or the `.cache/` folder.
 
 `test_api.py` holds one `expectedFailure`: `/api/meta` returns a 500 when the
 Elo prior can't be fetched. Remove the decorator once that's fixed.
+
+## Match predictions (no server needed)
+
+```bash
+./.venv/bin/python tests/test_matches.py
+```
+
+The scoreline table sums to 1 and Dixon-Coles lifts 0-0 and 1-1 (more draws than
+independent Poisson); outcome chances add to 1, follow strength and mirror when
+home and away swap; **the predicted score always agrees with the predicted result**;
+a clear favourite is picked to win by a goal or more and two even, low-scoring
+sides to draw; scorelines are ordered; clean sheets, goals and both-to-score move
+the right way; a gameweek of fixtures comes back in kick-off order with teams,
+odds and the real score for finished matches; the round's summary; an empty
+gameweek. `tests/test_api.py` checks the route on the made-up league (next
+gameweek by default, played weeks carry real scores, an out-of-range gameweek is a 422).
+
+The e2e suite's Matches run checks, on the offline data, that the page shows every
+match, each predicted score agrees with its pick, odds add to 100%, an out-of-range
+gameweek is refused, the stepper moves and returns, played matches show the real
+score, the page fits a phone, all six dock tabs fit 390px (each ≥ 44px), and six
+top-bar links fit 1024px without crowding.
 
 ## A manager's mini-leagues (no server needed)
 

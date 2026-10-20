@@ -97,6 +97,19 @@ xpts_next, p_goal_next, fpl_ep_next`. `chance_next` is FPL's chance of playing
 next round (0–100, from `availability`). Each `per_gw` entry has `gw, fixtures[]
 (with xmins, xpts, p_goal, p_return, opp_form_* …), xpts, p_goal, blank, double`.
 
+## Match predictions
+
+`matches.py` turns the same fixture goal expectations (`Engine.fixture_goals`: Elo
+strength, this season's xG, recent form, home advantage) into a prediction for every
+match. The two means give a table of scoreline chances (Poisson, with Dixon-Coles'
+correction `RHO = -0.08` so 0-0 and 1-1 are not under-called), and the home win,
+draw and away win chances are sums over it. The predicted result is the likeliest of
+the three; the predicted score is the likeliest scoreline **inside that result** —
+otherwise the headline would often read 1-1 for a match one side wins 60% of the time.
+Clean sheets, both-to-score and 3+ goals come from the same table. Matches already
+played use the current ratings, which include them, so the "model" score beside a
+real result is in-sample, not a track record.
+
 ## Checking it
 
 ```bash

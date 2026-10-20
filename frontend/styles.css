@@ -717,6 +717,47 @@ td.num{font-style:italic;font-weight:700}
 .menu-film .t{font-size:14px;font-style:italic;font-weight:700;color:var(--ink-2)}
 .menu-film .acts{display:flex;gap:12px;flex-wrap:wrap;padding:0 4px}
 
+/* ============================ Matches ============================ */
+.mt-nav{align-items:center;gap:14px}
+.mt-nav .gw-nav{font-size:19px}
+.mt-nav .gw-nav button{width:36px;height:36px}
+.mt-when{font-style:italic;font-weight:600}
+.mt-day{margin:22px 0 10px;font-size:16px;font-style:italic;font-weight:700;color:var(--ink-2)}
+.mt-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.mt{padding:16px 18px}
+.mt-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-size:12.5px;font-style:italic;font-weight:600;color:var(--ink-3)}
+.mt-top .dim{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px}
+.mt-team{display:flex;flex-direction:column;min-width:0}
+.mt-team.away{align-items:flex-end;text-align:right}
+.mt-team b{font-size:24px;font-style:italic;font-weight:700;line-height:1.1;color:var(--ink-2)}
+.mt-team.fav b{color:var(--lime)}
+.mt-team .u2{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-score{display:grid;grid-template-columns:auto auto auto;gap:2px 8px;align-items:center;justify-items:center}
+.mt-score b{font-size:36px;font-style:italic;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.mt-score i{font-size:22px;font-style:normal;color:var(--ink-3)}
+.mt-score small{grid-column:1 / -1;font-size:11.5px;font-style:italic;font-weight:600;color:var(--ink-3);white-space:nowrap}
+/* who wins, as three slanted segments: the favoured outcome in lime */
+.mt-bar{display:flex;gap:3px;height:8px;margin:14px 0 6px}
+.mt-bar i{display:block;min-width:5px;height:100%;border-radius:1px;background:var(--surface-3);transform:skewX(-18deg)}
+.mt-bar i.d{background:var(--bar-gray)}
+.mt-bar i.pick{background:var(--lime)}
+.mt-odds{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;font-style:italic;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.mt-facts{margin-top:10px;font-size:12.5px;line-height:1.6;color:var(--ink-3)}
+.mt-more{margin-top:10px}
+.mt-more summary{cursor:pointer;list-style:none;font-size:13px;font-style:italic;font-weight:700;color:var(--ink-2)}
+.mt-more summary::-webkit-details-marker{display:none}
+.mt-more summary:after{content:' +';color:var(--lime)}
+.mt-more[open] summary:after{content:' –'}
+.mt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mt.played .mt-team b{color:var(--ink)}
+@media(max-width:760px){
+  .mt-list{grid-template-columns:minmax(0,1fr);gap:10px}
+  .mt{padding:14px 16px}
+  .mt-team b{font-size:22px}
+  .mt-score b{font-size:32px}
+}
+
 @media(max-width:1180px){
   .team-pill{padding:0 8px 0 6px;max-width:none}
   .team-pill #teamLabel{display:none}
@@ -736,9 +777,9 @@ td.num{font-style:italic;font-weight:700}
   .brand{flex:1;min-width:0}
   /* the dock: five tabs on a slab at the bottom, the open one on a lime stripe */
   .dock{display:flex;position:fixed;z-index:60;left:10px;right:10px;bottom:calc(10px + var(--safe-b));
-    height:66px;padding:6px 14px;border-radius:var(--r-xl);gap:2px;background:rgba(31,46,51,.92);box-shadow:var(--sh-3)}
+    height:66px;padding:6px 8px;border-radius:var(--r-xl);gap:2px;background:rgba(31,46,51,.92);box-shadow:var(--sh-3)}
   .dock button{position:relative;z-index:1;flex:1;min-width:0;border:0;background:transparent;color:var(--ink-2);cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-style:italic;font-weight:700;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;font-style:italic;font-weight:700;letter-spacing:-.01em;
     transition:color .25s}
   .dock button:focus-visible{outline-offset:-3px}
   .dock button svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;overflow:visible}

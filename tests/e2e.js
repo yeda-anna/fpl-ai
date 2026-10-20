@@ -70,7 +70,7 @@ async function phone(browser){
   ok('phone: first visit opens the landing screen', await page.isVisible('#landing'));
   ok('phone: landing carries a line of house humour', (await page.textContent('#landQuip')).trim().length > 20);
   ok('phone: landing has the neon pitch scene', (await page.$$('#scene .ln')).length >= 5 && !!(await page.$('#sceneBall')));
-  ok('phone: five tabs in the dock, no "More"', (await page.$$('#dock button[data-tab]')).length === 5 && !(await page.$('[data-more]')));
+  ok('phone: six tabs in the dock, no "More"', (await page.$$('#dock button[data-tab]')).length === 6 && !(await page.$('[data-more]')));
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${OUT}/m-01-landing.png` });
   await page.click('#landGo');
@@ -349,6 +349,51 @@ async function demoTeam(browser){
   await ctx.close();
 }
 
+// Matches: who wins each match of a gameweek, and the score to expect.
+async function matchesTab(browser){
+  const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
+  const page = await ctx.newPage();
+  const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/422/.test(m.text())) errs.push(m.text()); });
+  await page.addInitScript(() => { localStorage.setItem('fplai_intro', '"off"'); localStorage.setItem('fplai_team', '"1"'); });   // a returning visitor, so no landing screen
+  await page.goto(BASE + '#matches/predictions', { waitUntil: 'networkidle' });
+  await page.waitForSelector('#v-matches-predictions .mt', { timeout: 30000 });
+  const api = await page.evaluate(async () => {
+    const r = await fetch('/api/matches'); const d = await r.json();
+    const bad = await fetch('/api/matches?gw=99');
+    return { d, badStatus: bad.status };
+  });
+  const ms = api.d.matches, outcome = sc => sc[0] > sc[1] ? 'home' : sc[0] < sc[1] ? 'away' : 'draw';
+  ok('matches: the page shows every match of the gameweek', (await page.$$('#v-matches-predictions .mt')).length === ms.length && ms.length > 0, ms.length + ' matches');
+  ok('matches: each match has a predicted score that agrees with its pick', ms.every(m => outcome(m.score) === m.pick));
+  ok('matches: the three outcome chances add up to 100%', ms.every(m => Math.abs(m.p_home + m.p_draw + m.p_away - 1) < 0.01));
+  ok('matches: each card shows the score, the odds and the clean-sheet chances', await page.$$eval('.mt', cs => cs.every(c => c.querySelectorAll('.mt-score b').length === 2 && /\d+%/.test(c.querySelector('.mt-odds').textContent) && /Clean sheet/.test(c.textContent))));
+  ok('matches: an out-of-range gameweek is refused', api.badStatus === 422);
+  ok('matches: it opens on the next gameweek', (await page.textContent('#v-matches-predictions .gw-nav span')).trim() === 'GW' + api.d.next_gw);
+  await page.click('#mtNext');
+  await page.waitForFunction(g => document.querySelector('#v-matches-predictions .gw-nav span') && document.querySelector('#v-matches-predictions .gw-nav span').textContent.trim() === g, 'GW' + (api.d.next_gw + 1), { timeout: 20000 });
+  ok('matches: the next gameweek steps forward and offers a way back', !(await page.$eval('#mtNow', b => b.hidden)));
+  await page.click('#mtNow');
+  await page.waitForFunction(g => document.querySelector('#v-matches-predictions .gw-nav span') && document.querySelector('#v-matches-predictions .gw-nav span').textContent.trim() === g, 'GW' + api.d.next_gw, { timeout: 20000 });
+  await page.click('#mtPrev');
+  await page.waitForFunction(() => document.querySelector('#v-matches-predictions .mt.played'), null, { timeout: 20000 }).catch(() => {});
+  ok('matches: a played gameweek shows the real scores', await page.$$eval('.mt.played', cs => cs.length > 0 && cs.every(c => /Full time|Live/.test(c.textContent) && /model: \d+–\d+/.test(c.textContent))));
+  ok('matches: it fits the phone', await noOverflow(page), lastOverflow.join(', '));
+  await page.screenshot({ path: `${OUT}/m-31-matches.png` });
+  const dock = await page.$$eval('#dock button[data-tab]', bs => bs.map(b => { const r = b.getBoundingClientRect(); return { l: Math.round(r.left), r: Math.round(r.right), w: Math.round(r.width), t: b.textContent.trim() }; }));
+  ok('matches: all six dock tabs fit on a phone, each wide enough to tap', dock.length === 6 && dock.every(d => d.r <= 390 && d.w >= 44), JSON.stringify(dock.map(d => d.t + ':' + d.w)));
+  ok('matches: no script errors', errs.length === 0, errs.slice(0, 3).join(' || '));
+  await ctx.close();
+  // the top bar at tablet width: six links and the team pill must not run out of room
+  const wide = await browser.newContext({ viewport:{width:1024,height:800}, reducedMotion:'reduce' });
+  const p2 = await wide.newPage();
+  await p2.addInitScript(() => { localStorage.setItem('fplai_intro', '"off"'); localStorage.setItem('fplai_team', '"1"'); });
+  await p2.goto(BASE, { waitUntil: 'networkidle' }); await p2.waitForSelector('#nav button');
+  const bar = await p2.evaluate(() => { const nav = document.querySelector('.nav-in'); const kids = [...document.querySelectorAll('#nav button, .brand, .team-pill, #menuBtn')].map(e => e.getBoundingClientRect());
+    return { scroll: document.documentElement.scrollWidth, inner: innerWidth, maxRight: Math.max(...kids.map(r => r.right)), overlap: kids.some((a, i) => kids.some((b, j) => i < j && a.right > b.left + 1 && a.left < b.right - 1 && a.top < b.bottom && a.bottom > b.top)) }; });
+  ok('matches: six links fit the top bar at 1024px without crowding', bar.scroll <= bar.inner && bar.maxRight <= bar.inner && !bar.overlap, JSON.stringify(bar));
+  await wide.close();
+}
+
 // Every league a manager is in: the real endpoints offline, then a stubbed answer shaped like FPL's own.
 async function myLeagues(browser){
   const ctx = await browser.newContext({ viewport:{width:390,height:844}, reducedMotion:'reduce' });
@@ -391,6 +436,7 @@ async function myLeagues(browser){
   try { await desktop(browser); } catch (e) { ok('desktop run completed', false, e.message.split('\n')[0]); }
   try { await reducedMotion(browser); } catch (e) { ok('reduced-motion run completed', false, e.message.split('\n')[0]); }
   try { await demoTeam(browser); } catch (e) { ok('demo run completed', false, e.message.split('\n')[0]); }
+  try { await matchesTab(browser); } catch (e) { ok('matches run completed', false, e.message.split('\n')[0]); }
   try { await myLeagues(browser); } catch (e) { ok('leagues run completed', false, e.message.split('\n')[0]); }
   await browser.close();
   console.log(results.join('\n'));
