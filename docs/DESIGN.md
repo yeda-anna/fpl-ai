@@ -183,8 +183,8 @@ The **hexagonal mark** the owner supplied — interlocking strokes in a teal-to-
 gradient, drawn on a design tool's grid canvas (`docs/brand/logo-source.png`) — used
 as it is. `python3 scripts/digitize.py docs/brand/logo-source.png` lifts the mark off
 the canvas by saturation (the grid and canvas are almost colourless) and writes
-`logo.webp` (the mark on a light tile of the canvas's own colour, so its navy strokes
-read on the dark app), `logo-mark.png` (the mark alone, transparent), `icon-32.png`
+`logo.webp` (the mark on a dark tile of the app's own `--bg`, so it sits in the
+dark UI), `logo-mark.png` (the mark alone, transparent), `icon-32.png`
 (the favicon), `icon-180.png` (iOS home screen) and `icon-192/512.png` (the manifest).
 The `<symbol id="logo">` in `index.html` holds
 `logo.webp`; every logo in the app is a `<use>` of it, clipped to its slot (a
