@@ -116,6 +116,80 @@ class RateTeamTests(unittest.TestCase):
         self.assertTrue(r["notes"][0].startswith("1 flagged player"))
 
 
+class SwapOptionsTests(unittest.TestCase):
+    def setUp(self):
+        self.squad = fakes.legal_squad(ROWS)                              # a cheap squad: plenty of room to upgrade
+        self.owned = [{"id": r["id"], "purchase_price": r["now_cost"]} for r in self.squad]
+        self.bank = (1000 - sum(r["now_cost"] for r in self.squad)) / 10.0
+        self.out = next(r for r in self.squad if r["position"] == 3)
+
+    def swap(self, **kw):
+        args = dict(rows=ROWS, squad_rows=self.squad, current_squad=self.owned, bank=self.bank,
+                    out_id=self.out["id"], free_transfers=1)
+        args.update(kw)
+        return analysis.swap_options(**args)
+
+    def test_replacements_play_the_same_position_and_are_not_already_owned(self):
+        out = self.swap()
+        self.assertTrue(out["options"])
+        owned = {r["id"] for r in self.squad}
+        for o in out["options"]:
+            self.assertEqual(o["position"], self.out["position"])
+            self.assertNotIn(o["id"], owned)
+
+    def test_they_are_ranked_by_extra_points_and_the_gain_is_against_the_player_sold(self):
+        out = self.swap()
+        gains = [o["gain_total"] for o in out["options"]]
+        self.assertEqual(gains, sorted(gains, reverse=True))
+        top = out["options"][0]
+        self.assertAlmostEqual(top["gain_total"], INDEX[top["id"]]["xpts_total"] - self.out["xpts_total"], places=1)
+
+    def test_every_option_is_affordable_and_the_bank_after_is_what_is_left(self):
+        out = self.swap()
+        for o in out["options"]:
+            self.assertGreaterEqual(o["bank_after"], 0.0)
+            self.assertAlmostEqual(o["bank_after"], out["budget"] - o["price"], places=1)
+
+    def test_no_money_means_nobody_dearer_than_the_player_sold(self):
+        out = self.swap(bank=0.0)
+        self.assertTrue(all(o["price"] <= out["player"]["sells_for"] + 1e-9 for o in out["options"]))
+
+    def test_a_club_already_at_the_limit_is_ruled_out(self):
+        with mock.patch.object(analysis.solver_mod, "MAX_PER_CLUB", 1):      # one a club: the rest of the squad's clubs are full
+            out = self.swap()
+        kept = {r["team"] for r in self.squad if r["id"] != self.out["id"]}
+        self.assertTrue(out["options"])
+        self.assertTrue(all(INDEX[o["id"]]["team"] not in kept for o in out["options"]))
+
+    def test_the_fit_to_play_floor_hides_doubtful_players(self):
+        doubtful = dict(INDEX[self.swap()["options"][0]["id"]], chance_next=25)
+        rows = [doubtful if r["id"] == doubtful["id"] else r for r in ROWS]
+        out = self.swap(rows=rows)
+        self.assertNotIn(doubtful["id"], {o["id"] for o in out["options"]})
+        self.assertGreaterEqual(out["passed_over"], 1)
+
+    def test_with_no_free_transfer_the_hit_comes_off_the_gain(self):
+        free, paid = self.swap(free_transfers=1), self.swap(free_transfers=0)
+        self.assertEqual((free["hit"], paid["hit"]), (0, 4.0))
+        a, b = free["options"][0], paid["options"][0]
+        self.assertAlmostEqual(b["net_total"], b["gain_total"] - 4.0, places=1)
+        self.assertAlmostEqual(a["net_total"], a["gain_total"], places=1)
+
+    def test_keep_him_when_nobody_beats_the_player(self):
+        best = max((r for r in ROWS if r["position"] == self.out["position"] and r["status"] == "a"),
+                   key=lambda r: r["xpts_total"])
+        squad = [best if r["id"] == self.out["id"] else r for r in self.squad]
+        owned = [{"id": r["id"], "purchase_price": r["now_cost"]} for r in squad]
+        if sum(1 for r in squad if r["team"] == best["team"]) > 3:
+            self.skipTest("club limit")
+        out = analysis.swap_options(ROWS, squad, owned, 5.0, best["id"], 1)
+        self.assertTrue(out["keep"])
+
+    def test_a_player_outside_the_squad_has_no_swaps(self):
+        stranger = next(r["id"] for r in ROWS if r["id"] not in {x["id"] for x in self.squad})
+        self.assertIsNone(self.swap(out_id=stranger))
+
+
 class CompareTests(unittest.TestCase):
     def test_the_verdict_names_the_higher_projection(self):
         a, b = ROWS[0], ROWS[-1]

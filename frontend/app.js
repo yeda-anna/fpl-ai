@@ -339,7 +339,8 @@ function pitch(xi, bench, captain, vice, opts){
   const rows = {1:[],2:[],3:[],4:[]};
   xi.forEach(p => rows[p.position] && rows[p.position].push(p));
   const isC = p => captain && p.id === captain.id, isV = p => vice && p.id === vice.id;
-  const tok = p => `<div class="pl-tok" onclick="openPlayer(${p.id})" title="${esc(p.web_name)} · £${num(p.price,1)}m">
+  const open = opts.swap ? 'openSwap' : 'openPlayer';       // your own squad: a click shows who to swap him for
+  const tok = p => `<div class="pl-tok" onclick="${open}(${p.id})" title="${esc(p.web_name)} · £${num(p.price,1)}m${opts.swap ? ' — click for transfer ideas' : ''}">
       ${isC(p) ? '<span class="badge c">C</span>' : isV(p) ? '<span class="badge v">V</span>' : ''}
       ${ins.has(p.id) ? '<span class="badge in">IN</span>' : ''}
       ${shirt(p.team_short, p.position === 1)}
@@ -383,9 +384,10 @@ async function viewSquad(t){
       <div class="grid g23 mb">
         <div class="card">
           <h3>Best XI for GW${e.next_gw} <span class="r">${e.formation} · ${num(e.xi_xpts)} xPts</span></h3>
-          ${pitch(e.starting_xi, e.bench, e.captain, e.starting_xi.filter(p=>!e.captain||p.id!==e.captain.id).sort((a,b)=>b.xpts-a.xpts)[0])}
+          ${pitch(e.starting_xi, e.bench, e.captain, e.starting_xi.filter(p=>!e.captain||p.id!==e.captain.id).sort((a,b)=>b.xpts-a.xpts)[0], {swap:true})}
           <div class="legend">Captain <b>${e.captain?esc(e.captain.web_name):'–'}</b> adds another ${e.captain?num(e.captain.xpts):'0'}.
-            Bench projects ${num(e.bench_xpts)}; G is the reserve keeper, 1–3 the order outfielders come on.</div>
+            Bench projects ${num(e.bench_xpts)}; G is the reserve keeper, 1–3 the order outfielders come on.
+            <b>Tap a player</b> to see who you could swap him for.</div>
           <div class="controls" style="margin-top:14px">
             <button class="btn primary" onclick="go('plan','transfers')">Plan my transfers</button>
             <button class="btn" onclick="go('home','grade')">Grade my squad</button></div>
@@ -395,7 +397,7 @@ async function viewSquad(t){
           <div class="well"><table><thead><tr>
             <th>Player</th><th></th><th class="num">£</th><th class="num">GW${e.next_gw}</th><th class="num">${S.horizon}GW</th><th>Trend</th>
           </tr></thead><tbody>
-          ${e.squad.slice().sort((a,b)=>b.xpts_total-a.xpts_total).map(p=>`<tr onclick="openPlayer(${p.id})" style="cursor:pointer">
+          ${e.squad.slice().sort((a,b)=>b.xpts_total-a.xpts_total).map(p=>`<tr onclick="openSwap(${p.id})" style="cursor:pointer" title="Click for transfer ideas">
             <td><span class="nm">${esc(p.web_name)}</span>${flag(p)}<div class="u2">${esc(p.team_short)}</div></td>
             <td>${pos(p.position)}</td><td class="num">${num(p.price,1)}</td>
             <td class="num accent"><b>${num(p.xpts)}</b></td><td class="num">${num(p.xpts_total,1)}</td>
@@ -708,6 +710,54 @@ window.openPlayer = async function(id){
       </div>`;
     el('closeSheet').onclick = close;
   }catch(e){ root.querySelector('.sheet').innerHTML = errBox(e); }
+};
+
+/* ---------------- Swap sheet: who to bring in for one of your players ---------------- */
+const SW = { seq:0 };
+window.openSwap = async function(id){
+  const root = el('sheet-root'), mine = ++SW.seq;
+  root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet"><div class="loading">Looking for a better option</div></div></div>`;
+  const close = ()=>{ root.innerHTML = ''; document.removeEventListener('keydown', esc_); };
+  const esc_ = e=>{ if(e.key==='Escape') close(); };
+  document.addEventListener('keydown', esc_);
+  el('scrim').addEventListener('click', e=>{ if(e.target.id==='scrim') close(); });
+  try{
+    const d = await api(`/api/entry/${S.teamId}/swaps/${id}?horizon=${S.horizon}${ovQuery()}`);
+    if(mine !== SW.seq) return;                                   // a later click took over the sheet
+    const me = d.player, best = d.options[0], H = d.horizon;
+    const verdict = d.keep
+      ? `<div class="note swap-verdict"><b>Keep ${esc(me.web_name)}.</b> ${d.options.length
+          ? `The best swap you can afford, ${esc(best.web_name)}, adds only ${sign(best.gain_total,1)} over ${H} gameweeks${d.hit ? ' and costs a 4-point hit' : ''}.`
+          : 'Nobody you can afford at his position beats him.'}</div>`
+      : `<div class="note swap-verdict"><b>Best swap: ${esc(me.web_name)} → ${esc(best.web_name)}.</b>
+          ${sign(best.gain_total,1)} xPts over ${H} gameweek${H>1?'s':''}${d.hit ? `, ${sign(best.net_total,1)} after a ${num(d.hit,0)}-point hit (no free transfer left)` : ', and it uses a free transfer'}.</div>`;
+    const row = o => `<tr onclick="openPlayer(${o.id})" style="cursor:pointer">
+        <td><span class="nm">${esc(o.web_name)}</span>${flag(o)}<div class="u2">${esc(o.team_short)} · ${esc(o.opp)}${o.chance_next<100 ? ' · '+o.chance_next+'% fit' : ''}</div></td>
+        <td class="num">${num(o.price,1)}<div class="u2">£${num(o.bank_after,1)}m left</div></td>
+        <td class="num ${o.gain_next>=0?'up':'down'}">${sign(o.gain_next,1)}</td>
+        <td class="num ${o.gain_total>=0?'up':'down'}"><b>${sign(o.gain_total,1)}</b></td>
+        <td class="num accent"><b>${num(o.xpts,1)}</b></td></tr>`;
+    root.querySelector('.sheet').innerHTML = `
+      <button class="btn sm x" id="closeSheet">Close ✕</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap">
+        ${pos(me.position)}<h2 style="font-size:24px">Swap ${esc(me.web_name)}</h2>
+        <span class="sub">${esc(me.team_short)} · sells for £${num(me.sells_for,1)}m</span>
+      </div>
+      <p class="menu-sub">The best ${POS[me.position]} you could bring in with £${num(d.budget,1)}m to spend, ranked by extra points over the next ${H} gameweek${H>1?'s':''}.</p>
+      ${verdict}
+      ${d.options.length ? `<div class="card mb"><div class="well"><table><thead><tr>
+          <th>Bring in</th><th class="num">£</th><th class="num">GW${d.next_gw}</th><th class="num">${H}GW</th><th class="num">xPts</th>
+        </tr></thead><tbody>${d.options.map(row).join('')}</tbody></table></div></div>` : ''}
+      <div class="legend">Columns GW${d.next_gw} and ${H}GW are the extra points over ${esc(me.web_name)} (${num(me.xpts,1)} next gameweek, ${num(me.xpts_total,1)} over ${H}).
+        Only players who fit your budget and the three-a-club limit, and are likely to play${d.passed_over ? ` (${d.passed_over} doubtful ${d.passed_over>1?'players are':'player is'} left out)` : ''}.
+        ${d.free_transfers ? `You have ${d.free_transfers} free transfer${d.free_transfers>1?'s':''}.` : 'You have no free transfer, so a swap costs 4 points.'}</div>
+      <div class="controls" style="margin-top:14px">
+        <button class="btn primary" id="swapPlan">Plan my transfers</button>
+        <button class="btn" id="swapMe">About ${esc(me.web_name)}</button></div>`;
+    el('closeSheet').onclick = close;
+    el('swapPlan').onclick = ()=>{ close(); go('plan','transfers'); };
+    el('swapMe').onclick = ()=>{ close(); openPlayer(me.id); };
+  }catch(e){ if(mine === SW.seq) root.querySelector('.sheet').innerHTML = `<button class="btn sm x" id="closeSheet">Close ✕</button>${errBox(e)}`; if(el('closeSheet')) el('closeSheet').onclick = close; }
 };
 
 /* ---------------- Solver workspace ---------------- */

@@ -163,6 +163,29 @@ class MatchRouteTests(unittest.TestCase):
             self.assertEqual(client.get("/api/matches", params={"gw": gw}).status_code, 422)
 
 
+class SwapRouteTests(unittest.TestCase):
+    def test_a_players_swaps_on_the_demo_team(self):
+        squad = ok("/api/entry/0")["squad"]
+        mid = next(p for p in squad if p["position"] == 3)
+        d = ok("/api/entry/0/swaps/%d" % mid["id"], params={"horizon": 3})
+        self.assertEqual(d["player"]["id"], mid["id"])
+        self.assertEqual(d["horizon"], 3)
+        self.assertLessEqual(len(d["options"]), 6)
+        owned = {p["id"] for p in squad}
+        for o in d["options"]:
+            self.assertEqual(o["position"], 3)
+            self.assertNotIn(o["id"], owned)
+            self.assertGreaterEqual(o["bank_after"], 0.0)
+
+    def test_a_player_not_in_the_squad_is_a_readable_404(self):
+        owned = {p["id"] for p in ok("/api/entry/0")["squad"]}
+        stranger = next(i for i in E.players if i not in owned)
+        r = client.get("/api/entry/0/swaps/%d" % stranger)
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("isn't in this squad", r.json()["detail"])
+        self.assertEqual(client.get("/api/entry/987654321/swaps/1").status_code, 404)
+
+
 class TeamRouteTests(unittest.TestCase):
     def test_the_demo_team_loads_without_fpl(self):
         t = ok("/api/entry/0", params={"horizon": 3, "fresh": 1})

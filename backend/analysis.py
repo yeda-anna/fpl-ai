@@ -71,6 +71,71 @@ def squad_split(squad_rows: List[Dict[str, Any]], gw_index: int = 0):
     }
 
 
+# --- swaps for one player ------------------------------------------------------
+
+def swap_options(rows: List[Dict[str, Any]], squad_rows: List[Dict[str, Any]],
+                 current_squad: List[Dict[str, Any]], bank: float, out_id: int,
+                 free_transfers: int, top: int = 6,
+                 min_chance: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """The best single-transfer replacements for one player in a manager's squad.
+
+    A replacement plays the same position, fits the money (what the player sells for
+    plus the bank), keeps at most three from a club and is fit enough to play. They are
+    ranked by the extra expected points over the horizon; with no free transfer left the
+    four-point hit is taken off. Returns None when the player isn't in the squad.
+    """
+    min_chance = solver_mod.MIN_CHANCE if min_chance is None else min_chance
+    owned = {r["id"]: r for r in squad_rows}
+    out = owned.get(out_id)
+    if out is None:
+        return None
+    bought_at = next((p.get("purchase_price") for p in current_squad if p["id"] == out_id), None)
+    sells_for = solver_mod.selling_price(out["now_cost"], bought_at)
+    budget = sells_for + int(round(bank * 10))
+    club_count: Dict[int, int] = {}
+    for r in squad_rows:
+        if r["id"] != out_id:
+            club_count[r["team"]] = club_count.get(r["team"], 0) + 1
+    hit = 0 if free_transfers > 0 else solver_mod.HIT_COST
+
+    fits, passed_over = [], 0
+    for r in rows:
+        if r["position"] != out["position"] or r["id"] in owned or r["status"] in ("u", "n"):
+            continue
+        if r["now_cost"] > budget or club_count.get(r["team"], 0) >= solver_mod.MAX_PER_CLUB:
+            continue
+        if r.get("chance_next", 100) < min_chance:
+            passed_over += 1
+            continue
+        fits.append(r)
+
+    def option(r: Dict[str, Any]) -> Dict[str, Any]:
+        legs = r["per_gw"][0]["fixtures"] if r["per_gw"] else []
+        gain = r["xpts_total"] - out["xpts_total"]
+        d = light(r)
+        d.update({
+            "opp": ", ".join("%s (%s)" % (f["opponent_short"], "H" if f["home"] else "A") for f in legs) or "Blank",
+            "chance_next": r.get("chance_next", 100),
+            "gain_next": round(r["xpts_next"] - out["xpts_next"], 2),
+            "gain_total": round(gain, 2),
+            "net_total": round(gain - hit, 2),
+            "bank_after": round((budget - r["now_cost"]) / 10.0, 1),
+        })
+        return d
+
+    fits.sort(key=lambda r: -r["xpts_total"])
+    options = [option(r) for r in fits[:top]]
+    return {
+        "player": dict(light(out), chance_next=out.get("chance_next", 100),
+                       sells_for=round(sells_for / 10.0, 1)),
+        "bank": round(bank, 1), "budget": round(budget / 10.0, 1),
+        "free_transfers": free_transfers, "hit": hit,
+        "options": options,
+        "keep": not options or options[0]["net_total"] <= 0,       # nobody affordable beats him
+        "passed_over": passed_over,
+    }
+
+
 # --- season so far -----------------------------------------------------------
 
 def season_history(current: List[Dict[str, Any]]) -> Dict[str, Any]:
