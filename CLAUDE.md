@@ -48,6 +48,7 @@ python3 scripts/check_contrast.py                 # WCAG AA for the palette
 scripts/smoke.sh http://127.0.0.1:8787            # health, page, build id, assets on a running copy (--live: unknown team → 404)
 for f in app motion magic; do node --check frontend/$f.js; done   # quick syntax check
 ./.venv/bin/python scripts/calibrate.py   # model sanity vs FPL's own ep_next
+./.venv/bin/python scripts/why_transfer.py --team <id> --swap "Out>In" --swap "Out2>In2"   # why the plan makes one transfer and not another (rules, xPts, minutes, plan gain)
 ```
 
 Start the server first (offline mode is fine). Every UI change must keep the
@@ -80,6 +81,7 @@ suite at **0 failures** — see `docs/TESTING.md`.
 | `tests/e2e.js` | Playwright end-to-end suite |
 | `tests/fakes.py` | A made-up 20-club league in FPL's own shape, for the unit tests (no network) |
 | `scripts/calibrate.py` | Projection sanity check |
+| `scripts/why_transfer.py` | Explain a transfer the plan did or didn't make: rule checks, each player's xPts/minutes/fixtures, raw gain vs the solver's plan gain, the solver's own pick (`--fake` for the made-up league) |
 | `scripts/check_contrast.py` | WCAG AA check for the palette |
 | `scripts/serve_fake.py` | The app on the made-up league in `tests/fakes.py`, network off: any checkout (`--repo`), the demo team, for screenshots and UI checks without FPL |
 | `scripts/screenshots.js` | Before/after screenshots of one view at phone and desktop (Playwright from `tests/`), failing on console errors or overflow past 390px |
